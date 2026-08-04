@@ -11,7 +11,6 @@
     <ProjectReference Include="..\..\src\ResidentialComplex.Application\ResidentialComplex.Application.csproj" />
     <ProjectReference Include="..\..\src\ResidentialComplex.Persistence\ResidentialComplex.Persistence.csproj" />
     <ProjectReference Include="..\..\src\ResidentialComplex.Infrastructure\ResidentialComplex.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\ResidentialComplex.Migrations\ResidentialComplex.Migrations.csproj" />
     <ProjectReference Include="..\..\src\ResidentialComplex.Web\ResidentialComplex.Web.csproj" />
   </ItemGroup>
 </Project>

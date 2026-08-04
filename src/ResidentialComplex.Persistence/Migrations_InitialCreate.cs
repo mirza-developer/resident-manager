@@ -1,9 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
-using ResidentialComplex.Persistence;
 
-namespace ResidentialComplex.Migrations;
+namespace ResidentialComplex.Persistence.Migrations;
 
 [DbContext(typeof(ApplicationDbContext))]
 [Migration("20250101000001_InitialCreate")]

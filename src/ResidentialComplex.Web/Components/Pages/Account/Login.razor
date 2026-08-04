@@ -17,9 +17,9 @@
                 <EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="login">
                     <DataAnnotationsValidator />
                     <div class="mb-3">
-                        <label class="form-label">ایمیل</label>
-                        <InputText @bind-Value="loginModel.Email" class="form-control" placeholder="ایمیل" />
-                        <ValidationMessage For="() => loginModel.Email" />
+                        <label class="form-label">نام کاربری</label>
+                        <InputText @bind-Value="loginModel.UserName" class="form-control" placeholder="نام کاربری" />
+                        <ValidationMessage For="() => loginModel.UserName" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">رمز عبور</label>
@@ -48,26 +48,26 @@
 
     private async Task HandleLogin()
     {
-        if (string.IsNullOrWhiteSpace(loginModel.Email) || string.IsNullOrWhiteSpace(loginModel.Password))
+        if (string.IsNullOrWhiteSpace(loginModel.UserName) || string.IsNullOrWhiteSpace(loginModel.Password))
         {
-            errorMessage = "لطفاً ایمیل و رمز عبور را وارد کنید.";
+            errorMessage = "لطفاً نام کاربری و رمز عبور را وارد کنید.";
             return;
         }
 
-        var result = await SignInManager.PasswordSignInAsync(loginModel.Email, loginModel.Password, loginModel.RememberMe, lockoutOnFailure: false);
+        var result = await SignInManager.PasswordSignInAsync(loginModel.UserName, loginModel.Password, loginModel.RememberMe, lockoutOnFailure: false);
         if (result.Succeeded)
         {
             Navigation.NavigateTo(returnUrl ?? "/", forceLoad: true);
         }
         else
         {
-            errorMessage = "ایمیل یا رمز عبور نادرست است.";
+            errorMessage = "نام کاربری یا رمز عبور نادرست است.";
         }
     }
 
     private class LoginModel
     {
-        public string Email { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
         public bool RememberMe { get; set; }
     }

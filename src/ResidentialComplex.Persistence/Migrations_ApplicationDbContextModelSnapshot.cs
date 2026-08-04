@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using ResidentialComplex.Persistence;
 
-namespace ResidentialComplex.Migrations;
+namespace ResidentialComplex.Persistence.Migrations;
 
 /// <summary>
 /// Model snapshot for migrations.

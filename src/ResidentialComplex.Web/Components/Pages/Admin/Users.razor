@@ -21,8 +21,8 @@
                 <input @bind="editFullName" class="form-control" />
             </div>
             <div class="mb-2">
-                <label class="form-label">ایمیل *</label>
-                <input @bind="editEmail" class="form-control" disabled="@(!isNew)" />
+                <label class="form-label">نام کاربری *</label>
+                <input @bind="editUserName" class="form-control" disabled="@(!isNew)" />
             </div>
             @if (isNew)
             {
@@ -50,13 +50,13 @@
 }
 
 <table class="table table-striped table-bordered">
-    <thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>عملیات</th></tr></thead>
+    <thead><tr><th>نام</th><th>نام کاربری</th><th>نقش</th><th>عملیات</th></tr></thead>
     <tbody>
         @foreach (var u in users)
         {
             <tr>
                 <td>@u.FullName</td>
-                <td>@u.Email</td>
+                <td>@u.UserName</td>
                 <td>@u.Role</td>
                 <td>
                     <button class="btn btn-sm btn-warning" @onclick="() => EditUser(u)">ویرایش</button>
@@ -70,7 +70,7 @@
 @code {
     private List<UserInfo> users = new();
     private bool showForm, isNew;
-    private string editId = "", editFullName = "", editEmail = "", editPassword = "", editRole = "Resident";
+    private string editId = "", editFullName = "", editUserName = "", editPassword = "", editRole = "Resident";
     private string? message;
 
     protected override async Task OnInitializedAsync() => await LoadUsers();
@@ -82,19 +82,19 @@
         foreach (var u in allUsers)
         {
             var roles = await UserManager.GetRolesAsync(u);
-            users.Add(new UserInfo { Id = u.Id, FullName = u.FullName, Email = u.Email ?? "", Role = roles.FirstOrDefault() ?? "" });
+            users.Add(new UserInfo { Id = u.Id, FullName = u.FullName, UserName = u.UserName ?? "", Role = roles.FirstOrDefault() ?? "" });
         }
     }
 
-    private void ShowAdd() { isNew = true; editId = ""; editFullName = ""; editEmail = ""; editPassword = ""; editRole = "Resident"; showForm = true; message = null; }
+    private void ShowAdd() { isNew = true; editId = ""; editFullName = ""; editUserName = ""; editPassword = ""; editRole = "Resident"; showForm = true; message = null; }
 
-    private void EditUser(UserInfo u) { isNew = false; editId = u.Id; editFullName = u.FullName; editEmail = u.Email; editRole = u.Role; showForm = true; message = null; }
+    private void EditUser(UserInfo u) { isNew = false; editId = u.Id; editFullName = u.FullName; editUserName = u.UserName; editRole = u.Role; showForm = true; message = null; }
 
     private async Task Save()
     {
         if (isNew)
         {
-            var user = new ApplicationUser { UserName = editEmail, Email = editEmail, FullName = editFullName, EmailConfirmed = true };
+            var user = new ApplicationUser { UserName = editUserName, FullName = editFullName };
             var result = await UserManager.CreateAsync(user, editPassword);
             if (result.Succeeded)
             {
@@ -127,5 +127,5 @@
         await LoadUsers();
     }
 
-    private class UserInfo { public string Id { get; set; } = ""; public string FullName { get; set; } = ""; public string Email { get; set; } = ""; public string Role { get; set; } = ""; }
+    private class UserInfo { public string Id { get; set; } = ""; public string FullName { get; set; } = ""; public string UserName { get; set; } = ""; public string Role { get; set; } = ""; }
 }

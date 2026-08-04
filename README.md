@@ -27,9 +27,8 @@ ResidentialComplex.slnx
 ├── src/
 │   ├── ResidentialComplex.Domain          # Entities, Enums (no dependencies)
 │   ├── ResidentialComplex.Application     # Services, DTOs, Interfaces (depends on Domain)
-│   ├── ResidentialComplex.Persistence     # DbContext, EF Configurations, Repositories (depends on Domain, Application)
+│   ├── ResidentialComplex.Persistence     # DbContext, EF Configurations, Repositories, Migrations (depends on Domain, Application)
 │   ├── ResidentialComplex.Infrastructure  # Audit service implementation (depends on Application, Persistence)
-│   ├── ResidentialComplex.Migrations      # Manual EF Core migrations (depends on Persistence)
 │   └── ResidentialComplex.Web             # Blazor Server app, UI, Auth (depends on all)
 └── tests/
     └── ResidentialComplex.Tests           # Integration tests with SQLite
@@ -91,7 +90,7 @@ Supported `Provider` values: `SqlServer`, `Sqlite`
 
 ## Authentication & Authorization
 
-Uses ASP.NET Identity with cookie authentication.
+Uses ASP.NET Identity with cookie authentication. Authentication is **username-based** (not email-based), since residents may not have email addresses.
 
 ### Roles (exactly 3)
 
@@ -102,7 +101,7 @@ Uses ASP.NET Identity with cookie authentication.
 | **Resident** | View own debt, bills, payment status only |
 
 ### Default Admin
-- Email: `admin@residential.local`
+- Username: `admin`
 - Password: `Admin123`
 
 ## Billing Workflow
@@ -148,7 +147,7 @@ Filterable by: Year, Month, House
 
 ## Testing
 
-Test project: `ResidentialComplex.Tests` (21 integration tests)
+Test project: `ResidentialComplex.Tests` (25 integration tests)
 
 Uses **SQLite in-memory** database with automatic schema creation.
 

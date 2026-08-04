@@ -4,7 +4,6 @@
     <Project Path="src/ResidentialComplex.Application/ResidentialComplex.Application.csproj" />
     <Project Path="src/ResidentialComplex.Persistence/ResidentialComplex.Persistence.csproj" />
     <Project Path="src/ResidentialComplex.Infrastructure/ResidentialComplex.Infrastructure.csproj" />
-    <Project Path="src/ResidentialComplex.Migrations/ResidentialComplex.Migrations.csproj" />
     <Project Path="src/ResidentialComplex.Web/ResidentialComplex.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">

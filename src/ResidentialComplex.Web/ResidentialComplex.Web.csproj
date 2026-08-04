@@ -6,6 +6,5 @@
     <ProjectReference Include="..\ResidentialComplex.Application\ResidentialComplex.Application.csproj" />
     <ProjectReference Include="..\ResidentialComplex.Persistence\ResidentialComplex.Persistence.csproj" />
     <ProjectReference Include="..\ResidentialComplex.Infrastructure\ResidentialComplex.Infrastructure.csproj" />
-    <ProjectReference Include="..\ResidentialComplex.Migrations\ResidentialComplex.Migrations.csproj" />
   </ItemGroup>
 </Project>

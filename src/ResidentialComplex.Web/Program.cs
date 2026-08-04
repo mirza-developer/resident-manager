@@ -13,14 +13,12 @@ var builder = WebApplication.CreateBuilder(args);
 var dbProvider = builder.Configuration["Database:Provider"] ?? "Sqlite";
 var connectionString = builder.Configuration["Database:ConnectionString"] ?? "Data Source=ResidentialComplex.db";
 
-var migrationsAssembly = typeof(ResidentialComplex.Migrations.InitialCreate).Assembly.GetName().Name;
-
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
-        options.UseSqlServer(connectionString, x => x.MigrationsAssembly(migrationsAssembly));
+        options.UseSqlServer(connectionString);
     else
-        options.UseSqlite(connectionString, x => x.MigrationsAssembly(migrationsAssembly));
+        options.UseSqlite(connectionString);
 });
 
 // Identity
@@ -84,15 +82,13 @@ using (var scope = app.Services.CreateScope())
     }
 
     // Seed admin user
-    const string adminEmail = "admin@residential.local";
-    if (await userManager.FindByEmailAsync(adminEmail) == null)
+    const string adminUserName = "admin";
+    if (await userManager.FindByNameAsync(adminUserName) == null)
     {
         var admin = new ApplicationUser
         {
-            UserName = adminEmail,
-            Email = adminEmail,
-            FullName = "مدیر سیستم",
-            EmailConfirmed = true
+            UserName = adminUserName,
+            FullName = "مدیر سیستم"
         };
         var result = await userManager.CreateAsync(admin, "Admin123");
         if (result.Succeeded)

@@ -517,13 +517,27 @@ public class IdentityTests : TestBase
 
         await roleManager.CreateAsync(new IdentityRole("Administrator"));
 
-        var user = new ApplicationUser { UserName = "test@test.com", Email = "test@test.com", FullName = "تست" };
+        var user = new ApplicationUser { UserName = "testuser", FullName = "تست" };
         var result = await userManager.CreateAsync(user, "Test1234");
         Assert.True(result.Succeeded);
 
         await userManager.AddToRoleAsync(user, "Administrator");
         var roles = await userManager.GetRolesAsync(user);
         Assert.Contains("Administrator", roles);
+    }
+
+    [Fact]
+    public async Task Can_Find_User_By_Username()
+    {
+        var userManager = GetService<UserManager<ApplicationUser>>();
+
+        var user = new ApplicationUser { UserName = "resident1", FullName = "ساکن یک" };
+        var result = await userManager.CreateAsync(user, "Test1234");
+        Assert.True(result.Succeeded);
+
+        var found = await userManager.FindByNameAsync("resident1");
+        Assert.NotNull(found);
+        Assert.Equal("ساکن یک", found.FullName);
     }
 }
 
@@ -561,10 +575,9 @@ public class MigrationTests : IDisposable
 
     public MigrationTests()
     {
-        var migrationsAssembly = typeof(ResidentialComplex.Migrations.InitialCreate).Assembly.GetName().Name;
         var services = new ServiceCollection();
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlite("Data Source=:memory:", x => x.MigrationsAssembly(migrationsAssembly)));
+            options.UseSqlite("Data Source=:memory:"));
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {
             options.Password.RequireDigit = true;
@@ -616,13 +629,13 @@ public class MigrationTests : IDisposable
                 await roleManager.CreateAsync(new IdentityRole(role));
         }
 
-        // Seed admin
-        var admin = new ApplicationUser { UserName = "admin@test.local", Email = "admin@test.local", FullName = "Admin" };
+        // Seed admin by username (not email)
+        var admin = new ApplicationUser { UserName = "admin", FullName = "Admin" };
         var result = await userManager.CreateAsync(admin, "Admin1234");
         Assert.True(result.Succeeded);
         await userManager.AddToRoleAsync(admin, "Administrator");
 
-        var loaded = await userManager.FindByEmailAsync("admin@test.local");
+        var loaded = await userManager.FindByNameAsync("admin");
         Assert.NotNull(loaded);
         Assert.True(await userManager.IsInRoleAsync(loaded, "Administrator"));
     }
