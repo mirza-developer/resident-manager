@@ -13,12 +13,14 @@ var builder = WebApplication.CreateBuilder(args);
 var dbProvider = builder.Configuration["Database:Provider"] ?? "Sqlite";
 var connectionString = builder.Configuration["Database:ConnectionString"] ?? "Data Source=ResidentialComplex.db";
 
+var migrationsAssembly = typeof(ResidentialComplex.Migrations.InitialCreate).Assembly.GetName().Name;
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
-        options.UseSqlServer(connectionString);
+        options.UseSqlServer(connectionString, x => x.MigrationsAssembly(migrationsAssembly));
     else
-        options.UseSqlite(connectionString);
+        options.UseSqlite(connectionString, x => x.MigrationsAssembly(migrationsAssembly));
 });
 
 // Identity
