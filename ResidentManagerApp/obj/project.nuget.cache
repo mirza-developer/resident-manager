@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "sde47eGgAsY=",
+  "success": true,
+  "projectFilePath": "/home/runner/work/resident-manager/resident-manager/ResidentManagerApp/ResidentManagerApp.csproj",
+  "expectedPackageFiles": [
+    "/tmp/codeql-scratch-ac5becdbe3f8450e/dbs/csharp/working/packages/microsoft.netcore.app.ref/10.0.10/microsoft.netcore.app.ref.10.0.10.nupkg.sha512",
+    "/tmp/codeql-scratch-ac5becdbe3f8450e/dbs/csharp/working/packages/microsoft.aspnetcore.app.ref/10.0.10/microsoft.aspnetcore.app.ref.10.0.10.nupkg.sha512",
+    "/tmp/codeql-scratch-ac5becdbe3f8450e/dbs/csharp/working/packages/microsoft.netcore.app.host.linux-x64/10.0.10/microsoft.netcore.app.host.linux-x64.10.0.10.nupkg.sha512"
+  ],
+  "logs": []
+}
