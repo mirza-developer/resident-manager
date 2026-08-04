@@ -549,3 +549,127 @@ public class OnceTypeTests : TestBase
         Assert.False(updated!.IsActive);
     }
 }
+
+/// <summary>
+/// Tests that verify the actual migration path (MigrateAsync) works correctly,
+/// rather than using EnsureCreated which bypasses migrations entirely.
+/// </summary>
+public class MigrationTests : IDisposable
+{
+    private readonly ApplicationDbContext _db;
+    private readonly ServiceProvider _serviceProvider;
+
+    public MigrationTests()
+    {
+        var migrationsAssembly = typeof(ResidentialComplex.Migrations.InitialCreate).Assembly.GetName().Name;
+        var services = new ServiceCollection();
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlite("Data Source=:memory:", x => x.MigrationsAssembly(migrationsAssembly)));
+        services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+        {
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = false;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequiredLength = 6;
+        })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+        services.AddLogging();
+        services.AddDataProtection();
+
+        _serviceProvider = services.BuildServiceProvider();
+        _db = _serviceProvider.GetRequiredService<ApplicationDbContext>();
+        _db.Database.OpenConnection();
+    }
+
+    [Fact]
+    public async Task MigrateAsync_Creates_All_Tables()
+    {
+        await _db.Database.MigrateAsync();
+
+        // Verify Identity tables exist by querying them
+        var connection = _db.Database.GetDbConnection();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT count(*) FROM AspNetRoles";
+        var count = (long)(await cmd.ExecuteScalarAsync())!;
+        Assert.True(count >= 0);
+
+        // Verify domain tables exist by inserting data
+        _db.Apartments.Add(new Apartment { Title = "Test" });
+        await _db.SaveChangesAsync();
+        Assert.Equal(1, await _db.Apartments.CountAsync());
+    }
+
+    [Fact]
+    public async Task MigrateAsync_Supports_Seeding_Roles_And_Admin()
+    {
+        await _db.Database.MigrateAsync();
+
+        var userManager = _serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = _serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        // Seed roles
+        foreach (var role in new[] { "Administrator", "Worker", "Resident" })
+        {
+            if (!await roleManager.RoleExistsAsync(role))
+                await roleManager.CreateAsync(new IdentityRole(role));
+        }
+
+        // Seed admin
+        var admin = new ApplicationUser { UserName = "admin@test.local", Email = "admin@test.local", FullName = "Admin" };
+        var result = await userManager.CreateAsync(admin, "Admin1234");
+        Assert.True(result.Succeeded);
+        await userManager.AddToRoleAsync(admin, "Administrator");
+
+        var loaded = await userManager.FindByEmailAsync("admin@test.local");
+        Assert.NotNull(loaded);
+        Assert.True(await userManager.IsInRoleAsync(loaded, "Administrator"));
+    }
+
+    [Fact]
+    public async Task MigrateAsync_Creates_Domain_Tables_With_Correct_Schema()
+    {
+        await _db.Database.MigrateAsync();
+
+        // Create full object graph to verify FK constraints work
+        var apt = new Apartment { Title = "بلوک A" };
+        _db.Apartments.Add(apt);
+        await _db.SaveChangesAsync();
+
+        var house = new House
+        {
+            Title = "واحد 1",
+            ApartmentId = apt.Id,
+            ResidentName = "تست",
+            ResidentPhoneNumber = "09120000000",
+            NumberOfResidents = 2,
+            IsActive = true
+        };
+        _db.Houses.Add(house);
+        await _db.SaveChangesAsync();
+
+        var bill = new Bill
+        {
+            HouseId = house.Id,
+            Year = 2025,
+            Month = 1,
+            TotalAmount = 100_000m,
+            Description = "تست",
+            Status = BillStatus.Draft,
+            CreatedDate = DateTime.UtcNow
+        };
+        _db.Bills.Add(bill);
+        await _db.SaveChangesAsync();
+
+        Assert.True(bill.Id > 0);
+    }
+
+    public void Dispose()
+    {
+        _db.Database.CloseConnection();
+        _db.Dispose();
+        _serviceProvider.Dispose();
+        GC.SuppressFinalize(this);
+    }
+}

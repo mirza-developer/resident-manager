@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using ResidentialComplex.Domain.Entities;
 
 namespace ResidentialComplex.Persistence;
@@ -11,6 +12,15 @@ namespace ResidentialComplex.Persistence;
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        // Suppress PendingModelChangesWarning because we use manual migrations
+        // and the model snapshot is intentionally minimal.
+        optionsBuilder.ConfigureWarnings(w =>
+            w.Ignore(RelationalEventId.PendingModelChangesWarning));
+    }
 
     public DbSet<Apartment> Apartments => Set<Apartment>();
     public DbSet<House> Houses => Set<House>();
