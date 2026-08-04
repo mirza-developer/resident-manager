@@ -1,8 +1,0 @@
-{
-  "ResidentialComplex.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/home\/runner\/work\/resident-manager\/resident-manager\/src\/ResidentialComplex.Application",
-  "ResidentialComplex.Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/home\/runner\/work\/resident-manager\/resident-manager\/src\/ResidentialComplex.Domain",
-  "ResidentialComplex.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/home\/runner\/work\/resident-manager\/resident-manager\/src\/ResidentialComplex.Infrastructure",
-  "ResidentialComplex.Migrations, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/home\/runner\/work\/resident-manager\/resident-manager\/src\/ResidentialComplex.Migrations",
-  "ResidentialComplex.Persistence, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/home\/runner\/work\/resident-manager\/resident-manager\/src\/ResidentialComplex.Persistence",
-  "ResidentialComplex.Web, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/home\/runner\/work\/resident-manager\/resident-manager\/src\/ResidentialComplex.Web"
-}

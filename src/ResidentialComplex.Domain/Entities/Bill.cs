@@ -18,7 +18,7 @@ public class Bill
     public DateTime CreatedDate { get; set; }
     public DateTime? ApprovedDate { get; set; }
     public DateTime? PaidDate { get; set; }
-    public byte[] RowVersion { get; set; } = [];
+    public long RowVersion { get; set; }
 
     public ICollection<BillItem> BillItems { get; set; } = new List<BillItem>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();

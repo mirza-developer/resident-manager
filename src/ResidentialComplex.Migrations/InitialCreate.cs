@@ -128,7 +128,7 @@ public class InitialCreate : Migration
                 Id = table.Column<int>(nullable: false).Annotation("SqlServer:Identity", "1, 1"),
                 Title = table.Column<string>(maxLength: 200, nullable: false),
                 Description = table.Column<string>(maxLength: 500, nullable: true),
-                RowVersion = table.Column<byte[]>(rowVersion: true, nullable: false)
+                RowVersion = table.Column<long>(nullable: false, defaultValue: 0L)
             },
             constraints: table => table.PrimaryKey("PK_Apartments", x => x.Id));
 
@@ -143,7 +143,7 @@ public class InitialCreate : Migration
                 NumberOfResidents = table.Column<int>(nullable: false),
                 CurrentDebt = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                 IsActive = table.Column<bool>(nullable: false, defaultValue: true),
-                RowVersion = table.Column<byte[]>(rowVersion: true, nullable: false),
+                RowVersion = table.Column<long>(nullable: false, defaultValue: 0L),
                 ApartmentId = table.Column<int>(nullable: false),
                 ApplicationUserId = table.Column<string>(maxLength: 450, nullable: true)
             },
@@ -167,7 +167,7 @@ public class InitialCreate : Migration
                 NumberOfInstallments = table.Column<int>(nullable: true),
                 InstallmentsBilled = table.Column<int>(nullable: false, defaultValue: 0),
                 NumberOfGroups = table.Column<int>(nullable: true),
-                RowVersion = table.Column<byte[]>(rowVersion: true, nullable: false)
+                RowVersion = table.Column<long>(nullable: false, defaultValue: 0L)
             },
             constraints: table => table.PrimaryKey("PK_FinancialItems", x => x.Id));
 
@@ -218,7 +218,7 @@ public class InitialCreate : Migration
                 CreatedDate = table.Column<DateTime>(nullable: false),
                 ApprovedDate = table.Column<DateTime>(nullable: true),
                 PaidDate = table.Column<DateTime>(nullable: true),
-                RowVersion = table.Column<byte[]>(rowVersion: true, nullable: false)
+                RowVersion = table.Column<long>(nullable: false, defaultValue: 0L)
             },
             constraints: table =>
             {

@@ -11,7 +11,7 @@ public class ApartmentConfiguration : IEntityTypeConfiguration<Apartment>
         builder.HasKey(a => a.Id);
         builder.Property(a => a.Title).IsRequired().HasMaxLength(200);
         builder.Property(a => a.Description).HasMaxLength(500);
-        builder.Property(a => a.RowVersion).IsRowVersion();
+        builder.Property(a => a.RowVersion).IsConcurrencyToken();
     }
 }
 
@@ -24,7 +24,7 @@ public class HouseConfiguration : IEntityTypeConfiguration<House>
         builder.Property(h => h.ResidentName).IsRequired().HasMaxLength(200);
         builder.Property(h => h.ResidentPhoneNumber).IsRequired().HasMaxLength(20);
         builder.Property(h => h.CurrentDebt).HasColumnType("decimal(18,2)");
-        builder.Property(h => h.RowVersion).IsRowVersion();
+        builder.Property(h => h.RowVersion).IsConcurrencyToken();
         builder.HasOne(h => h.Apartment).WithMany(a => a.Houses).HasForeignKey(h => h.ApartmentId).OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -37,7 +37,7 @@ public class FinancialItemConfiguration : IEntityTypeConfiguration<FinancialItem
         builder.Property(f => f.Title).IsRequired().HasMaxLength(200);
         builder.Property(f => f.Description).HasMaxLength(500);
         builder.Property(f => f.TotalAmount).HasColumnType("decimal(18,2)");
-        builder.Property(f => f.RowVersion).IsRowVersion();
+        builder.Property(f => f.RowVersion).IsConcurrencyToken();
     }
 }
 
@@ -69,7 +69,7 @@ public class BillConfiguration : IEntityTypeConfiguration<Bill>
         builder.HasIndex(b => new { b.HouseId, b.Year, b.Month }).IsUnique();
         builder.Property(b => b.TotalAmount).HasColumnType("decimal(18,2)");
         builder.Property(b => b.Description).HasMaxLength(500);
-        builder.Property(b => b.RowVersion).IsRowVersion();
+        builder.Property(b => b.RowVersion).IsConcurrencyToken();
         builder.HasOne(b => b.House).WithMany(h => h.Bills).HasForeignKey(b => b.HouseId).OnDelete(DeleteBehavior.Restrict);
     }
 }

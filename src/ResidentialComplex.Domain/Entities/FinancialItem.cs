@@ -24,7 +24,7 @@ public class FinancialItem
     /// <summary>Number of groups for Grouping calculation type.</summary>
     public int? NumberOfGroups { get; set; }
 
-    public byte[] RowVersion { get; set; } = [];
+    public long RowVersion { get; set; }
 
     public ICollection<FinancialItemGroupPoint> GroupPoints { get; set; } = new List<FinancialItemGroupPoint>();
     public ICollection<BillItem> BillItems { get; set; } = new List<BillItem>();

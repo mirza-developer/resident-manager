@@ -12,7 +12,7 @@ public class House
     public int NumberOfResidents { get; set; }
     public decimal CurrentDebt { get; set; }
     public bool IsActive { get; set; } = true;
-    public byte[] RowVersion { get; set; } = [];
+    public long RowVersion { get; set; }
 
     public int ApartmentId { get; set; }
     public Apartment Apartment { get; set; } = null!;
