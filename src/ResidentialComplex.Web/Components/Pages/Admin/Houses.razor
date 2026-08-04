@@ -1,0 +1,107 @@
+@page "/admin/houses"
+@using Microsoft.AspNetCore.Authorization
+@using ResidentialComplex.Application.Interfaces
+@using ResidentialComplex.Domain.Entities
+@attribute [Authorize(Roles = "Administrator")]
+@inject IHouseRepository HouseRepo
+@inject IApartmentRepository ApartmentRepo
+
+<h4>مدیریت واحدها</h4>
+<HelpButton PageKey="houses" />
+
+<button class="btn btn-success mb-3" @onclick="ShowAdd">افزودن واحد جدید</button>
+
+@if (showForm)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>@(editing.Id == 0 ? "افزودن" : "ویرایش") واحد</h5>
+            <div class="mb-2">
+                <label class="form-label">عنوان *</label>
+                <input @bind="editing.Title" class="form-control" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label">آپارتمان *</label>
+                <select @bind="editing.ApartmentId" class="form-select">
+                    <option value="0">انتخاب کنید</option>
+                    @foreach (var apt in apartments)
+                    {
+                        <option value="@apt.Id">@apt.Title</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-2">
+                <label class="form-label">نام ساکن *</label>
+                <input @bind="editing.ResidentName" class="form-control" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label">شماره تلفن ساکن *</label>
+                <input @bind="editing.ResidentPhoneNumber" class="form-control" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label">تعداد ساکنین</label>
+                <input type="number" @bind="editing.NumberOfResidents" class="form-control" />
+            </div>
+            <div class="mb-2 form-check">
+                <input type="checkbox" @bind="editing.IsActive" class="form-check-input" id="isActive" />
+                <label class="form-check-label" for="isActive">فعال</label>
+            </div>
+            <button class="btn btn-primary" @onclick="Save" disabled="@(!IsValid)">ذخیره</button>
+            <button class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+        </div>
+    </div>
+}
+
+<table class="table table-striped table-bordered">
+    <thead><tr><th>عنوان</th><th>آپارتمان</th><th>ساکن</th><th>تلفن</th><th>ساکنین</th><th>بدهی</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+    <tbody>
+        @foreach (var h in houses)
+        {
+            <tr>
+                <td>@h.Title</td>
+                <td>@h.Apartment?.Title</td>
+                <td>@h.ResidentName</td>
+                <td>@h.ResidentPhoneNumber</td>
+                <td>@h.NumberOfResidents</td>
+                <td class="@(h.CurrentDebt < 0 ? "text-success" : h.CurrentDebt > 0 ? "text-danger" : "")">@h.CurrentDebt.ToString("N0")</td>
+                <td>@(h.IsActive ? "فعال" : "غیرفعال")</td>
+                <td>
+                    <button class="btn btn-sm btn-warning" @onclick="() => Edit(h)">ویرایش</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => Delete(h.Id)">حذف</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<House> houses = new();
+    private List<Apartment> apartments = new();
+    private House editing = new();
+    private bool showForm;
+    private bool IsValid => !string.IsNullOrWhiteSpace(editing.Title) && editing.ApartmentId > 0 && !string.IsNullOrWhiteSpace(editing.ResidentName) && !string.IsNullOrWhiteSpace(editing.ResidentPhoneNumber);
+
+    protected override async Task OnInitializedAsync()
+    {
+        houses = await HouseRepo.GetAllAsync();
+        apartments = await ApartmentRepo.GetAllAsync();
+    }
+
+    private void ShowAdd() { editing = new House { IsActive = true }; showForm = true; }
+    private void Edit(House h) { editing = h; showForm = true; }
+
+    private async Task Save()
+    {
+        if (!IsValid) return;
+        if (editing.Id == 0) await HouseRepo.AddAsync(editing);
+        else await HouseRepo.UpdateAsync(editing);
+        houses = await HouseRepo.GetAllAsync();
+        showForm = false;
+    }
+
+    private async Task Delete(int id)
+    {
+        await HouseRepo.DeleteAsync(id);
+        houses = await HouseRepo.GetAllAsync();
+    }
+}

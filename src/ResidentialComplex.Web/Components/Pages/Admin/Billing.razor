@@ -1,0 +1,138 @@
+@page "/admin/billing"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using ResidentialComplex.Application.Interfaces
+@using ResidentialComplex.Application.Services
+@using ResidentialComplex.Domain.Entities
+@using ResidentialComplex.Domain.Enums
+@using ResidentialComplex.Persistence
+@attribute [Authorize(Roles = "Administrator")]
+@inject BillingService BillingService
+@inject IFinancialItemRepository FinancialItemRepo
+@inject IBillRepository BillRepo
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthState
+
+<h4>صورتحساب ماهانه</h4>
+<HelpButton PageKey="billing" />
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5>تولید صورتحساب</h5>
+        <div class="row">
+            <div class="col-md-3 mb-2">
+                <label class="form-label">سال</label>
+                <input type="number" @bind="year" class="form-control" />
+            </div>
+            <div class="col-md-3 mb-2">
+                <label class="form-label">ماه</label>
+                <input type="number" @bind="month" class="form-control" min="1" max="12" />
+            </div>
+        </div>
+
+        @if (activeItems.Any())
+        {
+            <h6>مبلغ نهایی هر آیتم مالی:</h6>
+            @foreach (var fi in activeItems)
+            {
+                <div class="row mb-1">
+                    <div class="col-md-4"><label class="form-label">@fi.Title</label></div>
+                    <div class="col-md-4">
+                        <input type="number" class="form-control" @bind="finalAmounts[fi.Id]" />
+                    </div>
+                </div>
+            }
+        }
+
+        <button class="btn btn-primary mt-2" @onclick="Generate">تولید صورتحساب</button>
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert alert-info mt-2">@message</div>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5>قبوض ماه @month / @year</h5>
+        <button class="btn btn-info mb-2" @onclick="LoadBills">بارگذاری</button>
+        @if (bills.Any())
+        {
+            <button class="btn btn-success mb-2" @onclick="ApproveBills">تایید همه قبوض پیش‌نویس</button>
+        }
+        <table class="table table-striped table-bordered">
+            <thead><tr><th>واحد</th><th>مبلغ کل</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+            <tbody>
+                @foreach (var bill in bills)
+                {
+                    <tr>
+                        <td>@bill.House?.Title</td>
+                        <td>@bill.TotalAmount.ToString("N0")</td>
+                        <td>@GetStatusLabel(bill.Status)</td>
+                        <td>
+                            @if (bill.Status == BillStatus.Approved)
+                            {
+                                <button class="btn btn-sm btn-success" @onclick="() => Pay(bill.Id)">ثبت پرداخت</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    </div>
+</div>
+
+@code {
+    private int year = DateTime.Now.Year;
+    private int month = DateTime.Now.Month;
+    private List<FinancialItem> activeItems = new();
+    private Dictionary<int, decimal> finalAmounts = new();
+    private List<Bill> bills = new();
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        activeItems = await FinancialItemRepo.GetActiveAsync();
+        foreach (var fi in activeItems)
+            finalAmounts[fi.Id] = fi.TotalAmount ?? 0;
+    }
+
+    private async Task<(string userId, string userName)> GetCurrentUser()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(auth.User);
+        return (user?.Id ?? "", user?.UserName ?? "");
+    }
+
+    private async Task Generate()
+    {
+        var (userId, userName) = await GetCurrentUser();
+        try
+        {
+            var generated = await BillingService.GenerateBillsAsync(year, month, finalAmounts, userId, userName);
+            message = $"{generated.Count} قبض تولید شد.";
+            await LoadBills();
+        }
+        catch (Exception ex) { message = ex.Message; }
+    }
+
+    private async Task LoadBills() => bills = await BillRepo.GetByMonthYearAsync(year, month);
+
+    private async Task ApproveBills()
+    {
+        var (userId, userName) = await GetCurrentUser();
+        await BillingService.ApproveBillsAsync(year, month, userId, userName);
+        await LoadBills();
+        message = "قبوض تایید شدند.";
+    }
+
+    private async Task Pay(int billId)
+    {
+        var (userId, userName) = await GetCurrentUser();
+        await BillingService.RecordPaymentAsync(billId, userId, userName);
+        await LoadBills();
+    }
+
+    private static string GetStatusLabel(BillStatus s) => s switch { BillStatus.Draft => "پیش‌نویس", BillStatus.Approved => "تایید شده", BillStatus.Paid => "پرداخت شده", _ => "" };
+}

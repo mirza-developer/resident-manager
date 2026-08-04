@@ -1,0 +1,88 @@
+@page "/admin/apartments"
+@using Microsoft.AspNetCore.Authorization
+@using ResidentialComplex.Application.Interfaces
+@using ResidentialComplex.Domain.Entities
+@attribute [Authorize(Roles = "Administrator")]
+@inject IApartmentRepository ApartmentRepo
+
+<h4>مدیریت آپارتمان‌ها</h4>
+<HelpButton PageKey="apartments" />
+
+<button class="btn btn-success mb-3" @onclick="ShowAdd">افزودن آپارتمان جدید</button>
+
+@if (showForm)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>@(editingApartment.Id == 0 ? "افزودن" : "ویرایش") آپارتمان</h5>
+            <div class="mb-2">
+                <label class="form-label">عنوان *</label>
+                <input @bind="editingApartment.Title" class="form-control" />
+                @if (string.IsNullOrWhiteSpace(editingApartment.Title))
+                {
+                    <small class="text-danger">عنوان الزامی است.</small>
+                }
+            </div>
+            <div class="mb-2">
+                <label class="form-label">توضیحات</label>
+                <input @bind="editingApartment.Description" class="form-control" />
+            </div>
+            <button class="btn btn-primary" @onclick="SaveApartment" disabled="@string.IsNullOrWhiteSpace(editingApartment.Title)">ذخیره</button>
+            <button class="btn btn-secondary" @onclick="Cancel">انصراف</button>
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert alert-info mt-2">@message</div>
+            }
+        </div>
+    </div>
+}
+
+<table class="table table-striped table-bordered">
+    <thead><tr><th>شناسه</th><th>عنوان</th><th>توضیحات</th><th>تعداد واحد</th><th>عملیات</th></tr></thead>
+    <tbody>
+        @foreach (var apt in apartments)
+        {
+            <tr>
+                <td>@apt.Id</td>
+                <td>@apt.Title</td>
+                <td>@apt.Description</td>
+                <td>@apt.Houses.Count</td>
+                <td>
+                    <button class="btn btn-sm btn-warning" @onclick="() => EditApartment(apt)">ویرایش</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteApartment(apt.Id)">حذف</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Apartment> apartments = new();
+    private Apartment editingApartment = new();
+    private bool showForm;
+    private string? message;
+
+    protected override async Task OnInitializedAsync() => apartments = await ApartmentRepo.GetAllAsync();
+
+    private void ShowAdd() { editingApartment = new Apartment(); showForm = true; message = null; }
+    private void EditApartment(Apartment apt) { editingApartment = apt; showForm = true; message = null; }
+    private void Cancel() { showForm = false; message = null; }
+
+    private async Task SaveApartment()
+    {
+        if (string.IsNullOrWhiteSpace(editingApartment.Title)) return;
+        if (editingApartment.Id == 0)
+            await ApartmentRepo.AddAsync(editingApartment);
+        else
+            await ApartmentRepo.UpdateAsync(editingApartment);
+        apartments = await ApartmentRepo.GetAllAsync();
+        showForm = false;
+        message = "ذخیره شد.";
+    }
+
+    private async Task DeleteApartment(int id)
+    {
+        await ApartmentRepo.DeleteAsync(id);
+        apartments = await ApartmentRepo.GetAllAsync();
+    }
+}

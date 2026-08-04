@@ -1,0 +1,131 @@
+@page "/admin/users"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using ResidentialComplex.Persistence
+@attribute [Authorize(Roles = "Administrator")]
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+
+<h4>مدیریت کاربران</h4>
+<HelpButton PageKey="users" />
+
+<button class="btn btn-success mb-3" @onclick="ShowAdd">افزودن کاربر جدید</button>
+
+@if (showForm)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>@(isNew ? "افزودن" : "ویرایش") کاربر</h5>
+            <div class="mb-2">
+                <label class="form-label">نام کامل *</label>
+                <input @bind="editFullName" class="form-control" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label">ایمیل *</label>
+                <input @bind="editEmail" class="form-control" disabled="@(!isNew)" />
+            </div>
+            @if (isNew)
+            {
+                <div class="mb-2">
+                    <label class="form-label">رمز عبور *</label>
+                    <input type="password" @bind="editPassword" class="form-control" />
+                </div>
+            }
+            <div class="mb-2">
+                <label class="form-label">نقش</label>
+                <select @bind="editRole" class="form-select">
+                    <option value="Administrator">مدیر</option>
+                    <option value="Worker">کارگر</option>
+                    <option value="Resident">ساکن</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" @onclick="Save">ذخیره</button>
+            <button class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert alert-info mt-2">@message</div>
+            }
+        </div>
+    </div>
+}
+
+<table class="table table-striped table-bordered">
+    <thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>عملیات</th></tr></thead>
+    <tbody>
+        @foreach (var u in users)
+        {
+            <tr>
+                <td>@u.FullName</td>
+                <td>@u.Email</td>
+                <td>@u.Role</td>
+                <td>
+                    <button class="btn btn-sm btn-warning" @onclick="() => EditUser(u)">ویرایش</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteUser(u.Id)">حذف</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<UserInfo> users = new();
+    private bool showForm, isNew;
+    private string editId = "", editFullName = "", editEmail = "", editPassword = "", editRole = "Resident";
+    private string? message;
+
+    protected override async Task OnInitializedAsync() => await LoadUsers();
+
+    private async Task LoadUsers()
+    {
+        var allUsers = UserManager.Users.ToList();
+        users = new List<UserInfo>();
+        foreach (var u in allUsers)
+        {
+            var roles = await UserManager.GetRolesAsync(u);
+            users.Add(new UserInfo { Id = u.Id, FullName = u.FullName, Email = u.Email ?? "", Role = roles.FirstOrDefault() ?? "" });
+        }
+    }
+
+    private void ShowAdd() { isNew = true; editId = ""; editFullName = ""; editEmail = ""; editPassword = ""; editRole = "Resident"; showForm = true; message = null; }
+
+    private void EditUser(UserInfo u) { isNew = false; editId = u.Id; editFullName = u.FullName; editEmail = u.Email; editRole = u.Role; showForm = true; message = null; }
+
+    private async Task Save()
+    {
+        if (isNew)
+        {
+            var user = new ApplicationUser { UserName = editEmail, Email = editEmail, FullName = editFullName, EmailConfirmed = true };
+            var result = await UserManager.CreateAsync(user, editPassword);
+            if (result.Succeeded)
+            {
+                await UserManager.AddToRoleAsync(user, editRole);
+                message = "کاربر ایجاد شد.";
+            }
+            else message = string.Join(", ", result.Errors.Select(e => e.Description));
+        }
+        else
+        {
+            var user = await UserManager.FindByIdAsync(editId);
+            if (user != null)
+            {
+                user.FullName = editFullName;
+                await UserManager.UpdateAsync(user);
+                var currentRoles = await UserManager.GetRolesAsync(user);
+                await UserManager.RemoveFromRolesAsync(user, currentRoles);
+                await UserManager.AddToRoleAsync(user, editRole);
+                message = "کاربر بروزرسانی شد.";
+            }
+        }
+        await LoadUsers();
+        showForm = false;
+    }
+
+    private async Task DeleteUser(string id)
+    {
+        var user = await UserManager.FindByIdAsync(id);
+        if (user != null) await UserManager.DeleteAsync(user);
+        await LoadUsers();
+    }
+
+    private class UserInfo { public string Id { get; set; } = ""; public string FullName { get; set; } = ""; public string Email { get; set; } = ""; public string Role { get; set; } = ""; }
+}

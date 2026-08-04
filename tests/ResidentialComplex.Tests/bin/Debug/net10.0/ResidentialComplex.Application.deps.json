@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "ResidentialComplex.Application/1.0.0": {
+        "dependencies": {
+          "ResidentialComplex.Domain": "1.0.0"
+        },
+        "runtime": {
+          "ResidentialComplex.Application.dll": {}
+        }
+      },
+      "ResidentialComplex.Domain/1.0.0": {
+        "runtime": {
+          "ResidentialComplex.Domain.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ResidentialComplex.Application/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ResidentialComplex.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

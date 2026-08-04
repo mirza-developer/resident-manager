@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\ResidentialComplex.Application\ResidentialComplex.Application.csproj" />
+    <ProjectReference Include="..\ResidentialComplex.Persistence\ResidentialComplex.Persistence.csproj" />
+  </ItemGroup>
+</Project>

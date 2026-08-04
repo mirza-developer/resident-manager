@@ -1,0 +1,26 @@
+@page "/"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<h3>خوش آمدید</h3>
+<p>به سیستم مدیریت مالی مجتمع مسکونی خوش آمدید.</p>
+
+<AuthorizeView Roles="Administrator">
+    <div class="row">
+        <div class="col-md-4"><div class="card bg-primary text-white"><div class="card-body"><h5>آپارتمان‌ها</h5><a href="/admin/apartments" class="btn btn-light btn-sm">مدیریت</a></div></div></div>
+        <div class="col-md-4"><div class="card bg-success text-white"><div class="card-body"><h5>واحدها</h5><a href="/admin/houses" class="btn btn-light btn-sm">مدیریت</a></div></div></div>
+        <div class="col-md-4"><div class="card bg-info text-white"><div class="card-body"><h5>صورتحساب</h5><a href="/admin/billing" class="btn btn-light btn-sm">مدیریت</a></div></div></div>
+    </div>
+</AuthorizeView>
+
+<AuthorizeView Roles="Worker">
+    <div class="row">
+        <div class="col-md-4"><div class="card bg-warning"><div class="card-body"><h5>مصرف ماهانه</h5><a href="/worker/usage" class="btn btn-dark btn-sm">ثبت مصرف</a></div></div></div>
+    </div>
+</AuthorizeView>
+
+<AuthorizeView Roles="Resident">
+    <div class="row">
+        <div class="col-md-4"><div class="card bg-secondary text-white"><div class="card-body"><h5>پنل ساکن</h5><a href="/resident/dashboard" class="btn btn-light btn-sm">مشاهده</a></div></div></div>
+    </div>
+</AuthorizeView>
