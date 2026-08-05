@@ -1,20 +1,93 @@
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('../fonts/Vazirmatn.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
 body {
-    font-family: Tahoma, 'Segoe UI', sans-serif;
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
     direction: rtl;
+    background-color: #f5f7fa;
+    line-height: 1.8;
+}
+
+.navbar {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.15rem;
 }
 
 .btn {
     min-width: 80px;
+    border-radius: 0.5rem;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: #4361ee;
+    border-color: #4361ee;
+}
+
+.btn-primary:hover {
+    background-color: #3a56d4;
+    border-color: #3a56d4;
 }
 
 .card {
     margin-bottom: 1rem;
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+}
+
+.card-title {
+    font-weight: 700;
+}
+
+.table {
+    border-radius: 0.5rem;
+    overflow: hidden;
 }
 
 .table th {
     white-space: nowrap;
+    background-color: #4361ee;
+    color: #fff;
+    font-weight: 600;
 }
 
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: #f8f9ff;
+}
+
+h4, h5 {
+    font-weight: 700;
+    color: #2b2d42;
+}
+
+.form-control, .form-select {
+    border-radius: 0.5rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #4361ee;
+    box-shadow: 0 0 0 0.2rem rgba(67, 97, 238, 0.15);
+}
+
+.alert {
+    border-radius: 0.5rem;
+}
+
+footer {
+    background-color: #edf2f7 !important;
+}
+
+/* Help drawer */
 .help-drawer {
     position: fixed;
     top: 0;
@@ -25,8 +98,8 @@ body {
     border-right: 2px solid #dee2e6;
     z-index: 1050;
     overflow-y: auto;
-    padding: 1rem;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.15);
+    padding: 1.5rem;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.12);
     transition: transform 0.3s ease;
 }
 
@@ -40,6 +113,6 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.3);
+    background: rgba(0, 0, 0, 0.3);
     z-index: 1040;
 }

@@ -110,6 +110,28 @@ app.UseAuthorization();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+// Auth endpoints - handled outside Blazor circuit to avoid NavigationException
+app.MapPost("/Account/Login", async (HttpContext context, SignInManager<ApplicationUser> signInManager) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    var userName = form["userName"].ToString();
+    var password = form["password"].ToString();
+    var rememberMe = form["rememberMe"] == "true";
+    var returnUrl = form["returnUrl"].ToString();
+
+    var result = await signInManager.PasswordSignInAsync(userName, password, rememberMe, lockoutOnFailure: false);
+    if (result.Succeeded)
+        return Results.Redirect(string.IsNullOrEmpty(returnUrl) ? "/" : returnUrl);
+
+    return Results.Redirect("/Account/Login?error=invalid");
+}).DisableAntiforgery();
+
+app.MapGet("/Account/Logout", async (HttpContext context, SignInManager<ApplicationUser> signInManager) =>
+{
+    await signInManager.SignOutAsync();
+    return Results.Redirect("/Account/Login");
+});
+
 app.Run();
 
 /// <summary>
