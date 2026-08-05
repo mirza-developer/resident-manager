@@ -9,7 +9,21 @@
 <h4>مدیریت واحدها</h4>
 <HelpButton PageKey="houses" />
 
-<button class="btn btn-success mb-3" @onclick="ShowAdd">افزودن واحد جدید</button>
+<div class="row mb-3 align-items-end">
+    <div class="col-md-3">
+        <label class="form-label">فیلتر آپارتمان</label>
+        <select @bind="filterApartmentId" class="form-select" @bind:after="ApplyFilter">
+            <option value="0">همه آپارتمان‌ها</option>
+            @foreach (var apt in apartments)
+            {
+                <option value="@apt.Id">@apt.Title</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-success" @onclick="ShowAdd">افزودن واحد جدید</button>
+    </div>
+</div>
 
 @if (showForm)
 {
@@ -55,7 +69,7 @@
 <table class="table table-striped table-bordered">
     <thead><tr><th>عنوان</th><th>آپارتمان</th><th>ساکن</th><th>تلفن</th><th>ساکنین</th><th>بدهی</th><th>وضعیت</th><th>عملیات</th></tr></thead>
     <tbody>
-        @foreach (var h in houses)
+        @foreach (var h in filteredHouses)
         {
             <tr>
                 <td>@h.Title</td>
@@ -76,15 +90,25 @@
 
 @code {
     private List<House> houses = new();
+    private List<House> filteredHouses = new();
     private List<Apartment> apartments = new();
     private House editing = new();
     private bool showForm;
+    private int filterApartmentId;
     private bool IsValid => !string.IsNullOrWhiteSpace(editing.Title) && editing.ApartmentId > 0 && !string.IsNullOrWhiteSpace(editing.ResidentName) && !string.IsNullOrWhiteSpace(editing.ResidentPhoneNumber);
 
     protected override async Task OnInitializedAsync()
     {
         houses = await HouseRepo.GetAllAsync();
         apartments = await ApartmentRepo.GetAllAsync();
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        filteredHouses = filterApartmentId == 0
+            ? houses
+            : houses.Where(h => h.ApartmentId == filterApartmentId).ToList();
     }
 
     private void ShowAdd() { editing = new House { IsActive = true }; showForm = true; }
@@ -96,6 +120,7 @@
         if (editing.Id == 0) await HouseRepo.AddAsync(editing);
         else await HouseRepo.UpdateAsync(editing);
         houses = await HouseRepo.GetAllAsync();
+        ApplyFilter();
         showForm = false;
     }
 
@@ -103,5 +128,6 @@
     {
         await HouseRepo.DeleteAsync(id);
         houses = await HouseRepo.GetAllAsync();
+        ApplyFilter();
     }
 }

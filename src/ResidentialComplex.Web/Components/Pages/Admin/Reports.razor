@@ -1,5 +1,6 @@
 @page "/admin/reports"
 @using Microsoft.AspNetCore.Authorization
+@using ResidentialComplex.Application.Helpers
 @using ResidentialComplex.Application.DTOs
 @using ResidentialComplex.Application.Interfaces
 @using ResidentialComplex.Application.Services
@@ -19,7 +20,14 @@
             </div>
             <div class="col-md-3 mb-2">
                 <label class="form-label">ماه (اختیاری)</label>
-                <input type="number" @bind="filterMonth" class="form-control" min="0" max="12" />
+                <select @bind="filterMonth" class="form-select">
+                    <option value="0">همه</option>
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        var monthNum = m;
+                        <option value="@monthNum">@PersianCalendarHelper.GetMonthName(monthNum)</option>
+                    }
+                </select>
             </div>
             <div class="col-md-3 mb-2">
                 <label class="form-label">واحد (اختیاری)</label>
@@ -75,14 +83,14 @@
         <tbody>
             @foreach (var m in report.MonthlyBreakdown)
             {
-                <tr><td>@m.Year</td><td>@m.Month</td><td>@m.Billed.ToString("N0")</td><td>@m.Paid.ToString("N0")</td></tr>
+                <tr><td>@m.Year</td><td>@PersianCalendarHelper.GetMonthName(m.Month)</td><td>@m.Billed.ToString("N0")</td><td>@m.Paid.ToString("N0")</td></tr>
             }
         </tbody>
     </table>
 }
 
 @code {
-    private int filterYear = DateTime.Now.Year;
+    private int filterYear = PersianCalendarHelper.GetCurrentYear();
     private int filterMonth;
     private int filterHouseId;
     private FinancialReportDto? report;

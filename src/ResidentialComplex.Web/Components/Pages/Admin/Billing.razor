@@ -1,6 +1,7 @@
 @page "/admin/billing"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
+@using ResidentialComplex.Application.Helpers
 @using ResidentialComplex.Application.Interfaces
 @using ResidentialComplex.Application.Services
 @using ResidentialComplex.Domain.Entities
@@ -26,22 +27,46 @@
             </div>
             <div class="col-md-3 mb-2">
                 <label class="form-label">ماه</label>
-                <input type="number" @bind="month" class="form-control" min="1" max="12" />
+                <select @bind="month" class="form-select">
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        var monthNum = m;
+                        <option value="@monthNum">@PersianCalendarHelper.GetMonthName(monthNum)</option>
+                    }
+                </select>
             </div>
         </div>
 
         @if (activeItems.Any())
         {
-            <h6>مبلغ نهایی هر آیتم مالی:</h6>
-            @foreach (var fi in activeItems)
-            {
-                <div class="row mb-1">
-                    <div class="col-md-4"><label class="form-label">@fi.Title</label></div>
-                    <div class="col-md-4">
-                        <input type="number" class="form-control" @bind="finalAmounts[fi.Id]" />
-                    </div>
-                </div>
-            }
+            <h6 class="mt-3">مبلغ نهایی هر آیتم مالی:</h6>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th style="width: 5%">#</th>
+                        <th style="width: 30%">عنوان</th>
+                        <th style="width: 20%">نوع دوره</th>
+                        <th style="width: 20%">نوع محاسبه</th>
+                        <th style="width: 25%">مبلغ (ریال)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ var rowNum = 0; }
+                    @foreach (var fi in activeItems)
+                    {
+                        rowNum++;
+                        <tr>
+                            <td>@rowNum</td>
+                            <td>@fi.Title</td>
+                            <td>@GetPeriodLabel(fi.PeriodType)</td>
+                            <td>@GetCalcLabel(fi.CalculationType)</td>
+                            <td>
+                                <input type="number" class="form-control" @bind="finalAmounts[fi.Id]" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         }
 
         <button class="btn btn-primary mt-2" @onclick="Generate">تولید صورتحساب</button>
@@ -54,7 +79,7 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <h5>قبوض ماه @month / @year</h5>
+        <h5>قبوض @PersianCalendarHelper.FormatYearMonth(year, month)</h5>
         <button class="btn btn-info mb-2" @onclick="LoadBills">بارگذاری</button>
         @if (bills.Any())
         {
@@ -84,8 +109,8 @@
 </div>
 
 @code {
-    private int year = DateTime.Now.Year;
-    private int month = DateTime.Now.Month;
+    private int year = PersianCalendarHelper.GetCurrentYear();
+    private int month = PersianCalendarHelper.GetCurrentMonth();
     private List<FinancialItem> activeItems = new();
     private Dictionary<int, decimal> finalAmounts = new();
     private List<Bill> bills = new();
@@ -135,4 +160,6 @@
     }
 
     private static string GetStatusLabel(BillStatus s) => s switch { BillStatus.Draft => "پیش‌نویس", BillStatus.Approved => "تایید شده", BillStatus.Paid => "پرداخت شده", _ => "" };
+    private static string GetPeriodLabel(PeriodType pt) => pt switch { PeriodType.Once => "یکبار", PeriodType.Permanent => "دائمی", PeriodType.Installment => "اقساط", _ => "" };
+    private static string GetCalcLabel(CalculationType ct) => ct switch { CalculationType.EqualDivision => "تقسیم مساوی", CalculationType.Grouping => "گروه‌بندی", _ => "" };
 }

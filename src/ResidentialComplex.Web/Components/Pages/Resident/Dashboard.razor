@@ -1,6 +1,7 @@
 @page "/resident/dashboard"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
+@using ResidentialComplex.Application.Helpers
 @using ResidentialComplex.Application.Interfaces
 @using ResidentialComplex.Domain.Entities
 @using ResidentialComplex.Domain.Enums
@@ -31,7 +32,7 @@
             {
                 <tr>
                     <td>@bill.Year</td>
-                    <td>@bill.Month</td>
+                    <td>@PersianCalendarHelper.GetMonthName(bill.Month)</td>
                     <td>@bill.TotalAmount.ToString("N0")</td>
                     <td>@GetStatusLabel(bill.Status)</td>
                 </tr>

@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@using ResidentialComplex.Application.Helpers
 
 <div class="d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -45,6 +46,6 @@
     </main>
 
     <footer class="bg-light text-center py-2 mt-auto">
-        <small class="text-muted">سیستم مدیریت مجتمع مسکونی &copy; @DateTime.Now.Year</small>
+        <small class="text-muted">سیستم مدیریت مجتمع مسکونی &copy; @PersianCalendarHelper.GetCurrentYear()</small>
     </footer>
 </div>

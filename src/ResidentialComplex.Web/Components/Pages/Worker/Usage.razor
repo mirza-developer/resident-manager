@@ -1,5 +1,6 @@
 @page "/worker/usage"
 @using Microsoft.AspNetCore.Authorization
+@using ResidentialComplex.Application.Helpers
 @using ResidentialComplex.Application.Interfaces
 @using ResidentialComplex.Domain.Entities
 @attribute [Authorize(Roles = "Worker")]
@@ -18,7 +19,13 @@
             </div>
             <div class="col-md-3 mb-2">
                 <label class="form-label">ماه</label>
-                <input type="number" @bind="month" class="form-control" min="1" max="12" />
+                <select @bind="month" class="form-select">
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        var monthNum = m;
+                        <option value="@monthNum">@PersianCalendarHelper.GetMonthName(monthNum)</option>
+                    }
+                </select>
             </div>
             <div class="col-md-3 mb-2 d-flex align-items-end">
                 <button class="btn btn-primary" @onclick="Load">بارگذاری</button>
@@ -50,8 +57,8 @@
 }
 
 @code {
-    private int year = DateTime.Now.Year;
-    private int month = DateTime.Now.Month;
+    private int year = PersianCalendarHelper.GetCurrentYear();
+    private int month = PersianCalendarHelper.GetCurrentMonth();
     private List<House> houses = new();
     private Dictionary<int, int> usageCounts = new();
     private string? message;
