@@ -568,6 +568,80 @@ public class OnceTypeTests : TestBase
 /// Tests that verify the actual migration path (MigrateAsync) works correctly,
 /// rather than using EnsureCreated which bypasses migrations entirely.
 /// </summary>
+public class UserCrudTests : TestBase
+{
+    [Fact]
+    public async Task Can_Create_User_With_Worker_Role()
+    {
+        var userManager = GetService<UserManager<ApplicationUser>>();
+        var roleManager = GetService<RoleManager<IdentityRole>>();
+
+        await roleManager.CreateAsync(new IdentityRole("Worker"));
+
+        var user = new ApplicationUser { UserName = "worker1", FullName = "کارگر یک" };
+        var result = await userManager.CreateAsync(user, "Test1234");
+        Assert.True(result.Succeeded);
+
+        await userManager.AddToRoleAsync(user, "Worker");
+        var roles = await userManager.GetRolesAsync(user);
+        Assert.Contains("Worker", roles);
+
+        var found = await userManager.FindByNameAsync("worker1");
+        Assert.NotNull(found);
+        Assert.Equal("کارگر یک", found.FullName);
+    }
+
+    [Fact]
+    public async Task Can_Update_User_Role()
+    {
+        var userManager = GetService<UserManager<ApplicationUser>>();
+        var roleManager = GetService<RoleManager<IdentityRole>>();
+
+        await roleManager.CreateAsync(new IdentityRole("Worker"));
+        await roleManager.CreateAsync(new IdentityRole("Resident"));
+
+        var user = new ApplicationUser { UserName = "changeme", FullName = "تست" };
+        await userManager.CreateAsync(user, "Test1234");
+        await userManager.AddToRoleAsync(user, "Worker");
+
+        // Change role to Resident
+        var currentRoles = await userManager.GetRolesAsync(user);
+        await userManager.RemoveFromRolesAsync(user, currentRoles);
+        await userManager.AddToRoleAsync(user, "Resident");
+
+        var updatedRoles = await userManager.GetRolesAsync(user);
+        Assert.DoesNotContain("Worker", updatedRoles);
+        Assert.Contains("Resident", updatedRoles);
+    }
+
+    [Fact]
+    public async Task Can_Delete_User()
+    {
+        var userManager = GetService<UserManager<ApplicationUser>>();
+
+        var user = new ApplicationUser { UserName = "deleteme", FullName = "حذفی" };
+        await userManager.CreateAsync(user, "Test1234");
+
+        var found = await userManager.FindByNameAsync("deleteme");
+        Assert.NotNull(found);
+
+        await userManager.DeleteAsync(found);
+
+        var deleted = await userManager.FindByNameAsync("deleteme");
+        Assert.Null(deleted);
+    }
+
+    [Fact]
+    public async Task Create_User_Without_Password_Fails()
+    {
+        var userManager = GetService<UserManager<ApplicationUser>>();
+
+        var user = new ApplicationUser { UserName = "nopass", FullName = "بدون رمز" };
+        var result = await userManager.CreateAsync(user, "");
+        Assert.False(result.Succeeded);
+    }
+}
+
 public class MigrationTests : IDisposable
 {
     private readonly ApplicationDbContext _db;

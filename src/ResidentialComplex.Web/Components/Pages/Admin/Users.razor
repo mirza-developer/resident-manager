@@ -11,6 +11,14 @@
 
 <button class="btn btn-success mb-3" @onclick="ShowAdd">افزودن کاربر جدید</button>
 
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success") alert-dismissible mt-2 mb-3">
+        @message
+        <button type="button" class="btn-close" @onclick="() => message = null"></button>
+    </div>
+}
+
 @if (showForm)
 {
     <div class="card mb-3">
@@ -41,10 +49,6 @@
             </div>
             <button class="btn btn-primary" @onclick="Save">ذخیره</button>
             <button class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
-            @if (!string.IsNullOrEmpty(message))
-            {
-                <div class="alert alert-info mt-2">@message</div>
-            }
         </div>
     </div>
 }
@@ -69,7 +73,7 @@
 
 @code {
     private List<UserInfo> users = new();
-    private bool showForm, isNew;
+    private bool showForm, isNew, isError;
     private string editId = "", editFullName = "", editUserName = "", editPassword = "", editRole = "Resident";
     private string? message;
 
@@ -86,12 +90,29 @@
         }
     }
 
-    private void ShowAdd() { isNew = true; editId = ""; editFullName = ""; editUserName = ""; editPassword = ""; editRole = "Resident"; showForm = true; message = null; }
+    private void ShowAdd() { isNew = true; editId = ""; editFullName = ""; editUserName = ""; editPassword = ""; editRole = "Resident"; showForm = true; message = null; isError = false; }
 
-    private void EditUser(UserInfo u) { isNew = false; editId = u.Id; editFullName = u.FullName; editUserName = u.UserName; editRole = u.Role; showForm = true; message = null; }
+    private void EditUser(UserInfo u) { isNew = false; editId = u.Id; editFullName = u.FullName; editUserName = u.UserName; editRole = u.Role; showForm = true; message = null; isError = false; }
 
     private async Task Save()
     {
+        message = null;
+        isError = false;
+
+        if (string.IsNullOrWhiteSpace(editFullName) || string.IsNullOrWhiteSpace(editUserName))
+        {
+            message = "نام کامل و نام کاربری الزامی است.";
+            isError = true;
+            return;
+        }
+
+        if (isNew && string.IsNullOrWhiteSpace(editPassword))
+        {
+            message = "رمز عبور الزامی است.";
+            isError = true;
+            return;
+        }
+
         if (isNew)
         {
             var user = new ApplicationUser { UserName = editUserName, FullName = editFullName };
@@ -100,8 +121,13 @@
             {
                 await UserManager.AddToRoleAsync(user, editRole);
                 message = "کاربر ایجاد شد.";
+                showForm = false;
             }
-            else message = string.Join(", ", result.Errors.Select(e => e.Description));
+            else
+            {
+                message = string.Join(", ", result.Errors.Select(e => e.Description));
+                isError = true;
+            }
         }
         else
         {
@@ -114,10 +140,10 @@
                 await UserManager.RemoveFromRolesAsync(user, currentRoles);
                 await UserManager.AddToRoleAsync(user, editRole);
                 message = "کاربر بروزرسانی شد.";
+                showForm = false;
             }
         }
         await LoadUsers();
-        showForm = false;
     }
 
     private async Task DeleteUser(string id)
