@@ -37,7 +37,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
-    options.LogoutPath = "/Account/Logout";
+    options.LogoutPath = "/api/account/logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.Cookie.HttpOnly = true;
     options.ExpireTimeSpan = TimeSpan.FromDays(7);
@@ -111,7 +111,7 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 // Auth endpoints - handled outside Blazor circuit to avoid NavigationException
-app.MapPost("/Account/Login", async (HttpContext context, SignInManager<ApplicationUser> signInManager) =>
+app.MapPost("/api/account/login", async (HttpContext context, SignInManager<ApplicationUser> signInManager) =>
 {
     var form = await context.Request.ReadFormAsync();
     var userName = form["userName"].ToString();
@@ -126,7 +126,7 @@ app.MapPost("/Account/Login", async (HttpContext context, SignInManager<Applicat
     return Results.Redirect("/Account/Login?error=invalid");
 }).DisableAntiforgery();
 
-app.MapGet("/Account/Logout", async (HttpContext context, SignInManager<ApplicationUser> signInManager) =>
+app.MapGet("/api/account/logout", async (HttpContext context, SignInManager<ApplicationUser> signInManager) =>
 {
     await signInManager.SignOutAsync();
     return Results.Redirect("/Account/Login");
