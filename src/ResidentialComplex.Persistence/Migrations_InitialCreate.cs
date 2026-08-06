@@ -191,6 +191,7 @@ public class InitialCreate : Migration
             {
                 Id = table.Column<int>(nullable: false).Annotation("SqlServer:Identity", "1, 1"),
                 HouseId = table.Column<int>(nullable: false),
+                FinancialItemId = table.Column<int>(nullable: false),
                 Year = table.Column<int>(nullable: false),
                 Month = table.Column<int>(nullable: false),
                 UsageCount = table.Column<int>(nullable: false)
@@ -199,9 +200,10 @@ public class InitialCreate : Migration
             {
                 table.PrimaryKey("PK_MonthlyUsages", x => x.Id);
                 table.ForeignKey("FK_MonthlyUsages_Houses_HouseId", x => x.HouseId, "Houses", "Id", onDelete: ReferentialAction.Cascade);
+                table.ForeignKey("FK_MonthlyUsages_FinancialItems_FinancialItemId", x => x.FinancialItemId, "FinancialItems", "Id", onDelete: ReferentialAction.Cascade);
             });
 
-        migrationBuilder.CreateIndex("IX_MonthlyUsages_HouseId_Year_Month", "MonthlyUsages", new[] { "HouseId", "Year", "Month" }, unique: true);
+        migrationBuilder.CreateIndex("IX_MonthlyUsages_HouseId_FinancialItemId_Year_Month", "MonthlyUsages", new[] { "HouseId", "FinancialItemId", "Year", "Month" }, unique: true);
 
         migrationBuilder.CreateTable(
             name: "Bills",
