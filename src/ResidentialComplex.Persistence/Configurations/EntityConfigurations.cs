@@ -56,8 +56,9 @@ public class MonthlyUsageConfiguration : IEntityTypeConfiguration<MonthlyUsage>
     public void Configure(EntityTypeBuilder<MonthlyUsage> builder)
     {
         builder.HasKey(m => m.Id);
-        builder.HasIndex(m => new { m.HouseId, m.Year, m.Month }).IsUnique();
+        builder.HasIndex(m => new { m.HouseId, m.FinancialItemId, m.Year, m.Month }).IsUnique();
         builder.HasOne(m => m.House).WithMany(h => h.MonthlyUsages).HasForeignKey(m => m.HouseId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(m => m.FinancialItem).WithMany().HasForeignKey(m => m.FinancialItemId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 

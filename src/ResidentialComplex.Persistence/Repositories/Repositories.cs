@@ -83,8 +83,9 @@ public class MonthlyUsageRepository : IMonthlyUsageRepository
     private readonly ApplicationDbContext _db;
     public MonthlyUsageRepository(ApplicationDbContext db) => _db = db;
 
-    public async Task<List<MonthlyUsage>> GetByMonthYearAsync(int year, int month) => await _db.MonthlyUsages.Include(m => m.House).Where(m => m.Year == year && m.Month == month).ToListAsync();
-    public async Task<MonthlyUsage?> GetByHouseMonthYearAsync(int houseId, int year, int month) => await _db.MonthlyUsages.FirstOrDefaultAsync(m => m.HouseId == houseId && m.Year == year && m.Month == month);
+    public async Task<List<MonthlyUsage>> GetByMonthYearAsync(int year, int month) => await _db.MonthlyUsages.Include(m => m.House).Include(m => m.FinancialItem).Where(m => m.Year == year && m.Month == month).ToListAsync();
+    public async Task<List<MonthlyUsage>> GetByFinancialItemMonthYearAsync(int financialItemId, int year, int month) => await _db.MonthlyUsages.Include(m => m.House).Where(m => m.FinancialItemId == financialItemId && m.Year == year && m.Month == month).ToListAsync();
+    public async Task<MonthlyUsage?> GetByHouseItemMonthYearAsync(int houseId, int financialItemId, int year, int month) => await _db.MonthlyUsages.FirstOrDefaultAsync(m => m.HouseId == houseId && m.FinancialItemId == financialItemId && m.Year == year && m.Month == month);
     public async Task<MonthlyUsage> AddAsync(MonthlyUsage usage) { _db.MonthlyUsages.Add(usage); await _db.SaveChangesAsync(); return usage; }
     public async Task UpdateAsync(MonthlyUsage usage) { _db.MonthlyUsages.Update(usage); await _db.SaveChangesAsync(); }
 }

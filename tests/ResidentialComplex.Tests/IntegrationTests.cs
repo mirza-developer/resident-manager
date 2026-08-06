@@ -239,11 +239,6 @@ public class GroupingBillingTests : TestBase
             houses.Add(h);
         }
 
-        // Add usage: house1=low, house2=mid, house3=high
-        await usageRepo.AddAsync(new MonthlyUsage { HouseId = houses[0].Id, Year = 2025, Month = 1, UsageCount = 10 });
-        await usageRepo.AddAsync(new MonthlyUsage { HouseId = houses[1].Id, Year = 2025, Month = 1, UsageCount = 50 });
-        await usageRepo.AddAsync(new MonthlyUsage { HouseId = houses[2].Id, Year = 2025, Month = 1, UsageCount = 100 });
-
         var fi = await fiRepo.AddAsync(new FinancialItem
         {
             Title = "گاز",
@@ -258,6 +253,11 @@ public class GroupingBillingTests : TestBase
                 new() { GroupNumber = 3, PointValue = 4 }
             }
         });
+
+        // Add usage per house per financial item: house1=low, house2=mid, house3=high
+        await usageRepo.AddAsync(new MonthlyUsage { HouseId = houses[0].Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 10 });
+        await usageRepo.AddAsync(new MonthlyUsage { HouseId = houses[1].Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 50 });
+        await usageRepo.AddAsync(new MonthlyUsage { HouseId = houses[2].Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 100 });
 
         var finalAmounts = new Dictionary<int, decimal> { [fi.Id] = 700_000m };
         var bills = await billingService.GenerateBillsAsync(2025, 1, finalAmounts, "test", "test");
@@ -439,36 +439,61 @@ public class MonthlyUsageTests : TestBase
     {
         var aptRepo = GetService<IApartmentRepository>();
         var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
         var usageRepo = GetService<IMonthlyUsageRepository>();
 
         var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
         var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
 
-        var usage = await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, Year = 2025, Month = 1, UsageCount = 50 });
+        var usage = await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 50 });
         Assert.Equal(50, usage.UsageCount);
 
         usage.UsageCount = 75;
         await usageRepo.UpdateAsync(usage);
 
-        var loaded = await usageRepo.GetByHouseMonthYearAsync(house.Id, 2025, 1);
+        var loaded = await usageRepo.GetByHouseItemMonthYearAsync(house.Id, fi.Id, 2025, 1);
         Assert.Equal(75, loaded!.UsageCount);
     }
 
     [Fact]
-    public async Task Unique_Constraint_On_House_Month_Year()
+    public async Task Unique_Constraint_On_House_Item_Month_Year()
     {
         var aptRepo = GetService<IApartmentRepository>();
         var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
         var usageRepo = GetService<IMonthlyUsageRepository>();
 
         var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
         var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
 
-        await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, Year = 2025, Month = 1, UsageCount = 50 });
+        await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 50 });
 
-        // Should throw on duplicate
+        // Should throw on duplicate (same house, same item, same month/year)
         await Assert.ThrowsAnyAsync<Exception>(async () =>
-            await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, Year = 2025, Month = 1, UsageCount = 60 }));
+            await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 60 }));
+    }
+
+    [Fact]
+    public async Task Different_Items_Same_House_Month_Allowed()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var usageRepo = GetService<IMonthlyUsageRepository>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
+        var fi1 = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+        var fi2 = await fiRepo.AddAsync(new FinancialItem { Title = "آب", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+
+        // Same house, same month, different financial items — should succeed
+        await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi1.Id, Year = 2025, Month = 1, UsageCount = 50 });
+        await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi2.Id, Year = 2025, Month = 1, UsageCount = 30 });
+
+        var usages = await usageRepo.GetByMonthYearAsync(2025, 1);
+        Assert.Equal(2, usages.Count);
     }
 }
 

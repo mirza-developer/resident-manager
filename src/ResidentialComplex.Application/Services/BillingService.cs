@@ -54,7 +54,9 @@ public class BillingService
             .ToList();
 
         var usages = await _usageRepo.GetByMonthYearAsync(year, month);
-        var usageByHouse = usages.ToDictionary(u => u.HouseId, u => u.UsageCount);
+        var usageByHouseItem = usages
+            .GroupBy(u => (u.HouseId, u.FinancialItemId))
+            .ToDictionary(g => g.Key, g => g.First().UsageCount);
 
         var bills = new List<Bill>();
 
@@ -91,7 +93,7 @@ public class BillingService
                 }
                 else // Grouping
                 {
-                    houseAmount = CalculateGroupingAmount(fi, house, activeHouses, usageByHouse, finalAmount);
+                    houseAmount = CalculateGroupingAmount(fi, house, activeHouses, usageByHouseItem, finalAmount);
                 }
 
                 bill.BillItems.Add(new BillItem
@@ -253,14 +255,14 @@ public class BillingService
     }
 
     private static decimal CalculateGroupingAmount(FinancialItem fi, House house, List<House> allHouses,
-        Dictionary<int, int> usageByHouse, decimal finalAmount)
+        Dictionary<(int HouseId, int FinancialItemId), int> usageByHouseItem, decimal finalAmount)
     {
         if (fi.NumberOfGroups == null || fi.NumberOfGroups.Value <= 0 || fi.GroupPoints.Count == 0)
             return finalAmount / allHouses.Count; // Fallback to equal division
 
         var groupCount = fi.NumberOfGroups.Value;
         var sortedHouses = allHouses
-            .OrderBy(h => usageByHouse.GetValueOrDefault(h.Id, 0))
+            .OrderBy(h => usageByHouseItem.GetValueOrDefault((h.Id, fi.Id), 0))
             .ToList();
 
         var housesPerGroup = sortedHouses.Count / groupCount;

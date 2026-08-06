@@ -3,9 +3,11 @@
 @using ResidentialComplex.Application.Helpers
 @using ResidentialComplex.Application.Interfaces
 @using ResidentialComplex.Domain.Entities
+@using ResidentialComplex.Domain.Enums
 @attribute [Authorize(Roles = "Worker")]
 @inject IMonthlyUsageRepository UsageRepo
 @inject IHouseRepository HouseRepo
+@inject IFinancialItemRepository FinancialItemRepo
 
 <h4>ثبت مصرف ماهانه</h4>
 <HelpButton PageKey="usage" />
@@ -34,54 +36,110 @@
     </div>
 </div>
 
-@if (houses.Any())
-{
-    <table class="table table-bordered">
-        <thead><tr><th>واحد</th><th>مقدار مصرف</th><th>عملیات</th></tr></thead>
-        <tbody>
-            @foreach (var h in houses)
-            {
-                <tr>
-                    <td>@h.Title</td>
-                    <td><input type="number" @bind="usageCounts[h.Id]" class="form-control" style="max-width:150px" /></td>
-                    <td><button class="btn btn-sm btn-primary" @onclick="() => SaveUsage(h.Id)">ذخیره</button></td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-
 @if (!string.IsNullOrEmpty(message))
 {
-    <div class="alert alert-success">@message</div>
+    <div class="alert alert-success alert-dismissible">
+        @message
+        <button type="button" class="btn-close" @onclick="() => message = null"></button>
+    </div>
+}
+
+@if (groupingItems.Any() && houses.Any())
+{
+    @foreach (var fi in groupingItems)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">@fi.Title</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered">
+                    <thead><tr><th>واحد</th><th>مقدار مصرف</th><th>عملیات</th></tr></thead>
+                    <tbody>
+                        @foreach (var h in houses)
+                        {
+                            var key = (h.Id, fi.Id);
+                            <tr>
+                                <td>@h.Title</td>
+                                <td>
+                                    <input type="number" value="@usageCounts.GetValueOrDefault(key, 0)"
+                                           @onchange="(e) => SetUsage(key, e)"
+                                           class="form-control" style="max-width:150px" />
+                                </td>
+                                <td><button class="btn btn-sm btn-primary" @onclick="() => SaveUsage(h.Id, fi.Id)">ذخیره</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <button class="btn btn-success btn-sm" @onclick="() => SaveAllForItem(fi.Id)">ذخیره همه</button>
+            </div>
+        </div>
+    }
+}
+else if (loaded && !groupingItems.Any())
+{
+    <div class="alert alert-warning">آیتم مالی گروه‌بندی فعالی وجود ندارد.</div>
 }
 
 @code {
     private int year = PersianCalendarHelper.GetCurrentYear();
     private int month = PersianCalendarHelper.GetCurrentMonth();
     private List<House> houses = new();
-    private Dictionary<int, int> usageCounts = new();
+    private List<FinancialItem> groupingItems = new();
+    private Dictionary<(int HouseId, int FinancialItemId), int> usageCounts = new();
     private string? message;
+    private bool loaded;
 
     private async Task Load()
     {
         houses = await HouseRepo.GetActiveHousesAsync();
-        var usages = await UsageRepo.GetByMonthYearAsync(year, month);
-        usageCounts = houses.ToDictionary(h => h.Id, h => usages.FirstOrDefault(u => u.HouseId == h.Id)?.UsageCount ?? 0);
+        var allActive = await FinancialItemRepo.GetActiveAsync();
+        groupingItems = allActive.Where(fi => fi.CalculationType == CalculationType.Grouping).ToList();
+
+        usageCounts = new();
+        foreach (var fi in groupingItems)
+        {
+            var usages = await UsageRepo.GetByFinancialItemMonthYearAsync(fi.Id, year, month);
+            foreach (var h in houses)
+            {
+                var key = (h.Id, fi.Id);
+                var usage = usages.FirstOrDefault(u => u.HouseId == h.Id);
+                usageCounts[key] = usage?.UsageCount ?? 0;
+            }
+        }
+        loaded = true;
+        message = null;
     }
 
-    private async Task SaveUsage(int houseId)
+    private void SetUsage((int HouseId, int FinancialItemId) key, ChangeEventArgs e)
     {
-        var existing = await UsageRepo.GetByHouseMonthYearAsync(houseId, year, month);
+        if (int.TryParse(e.Value?.ToString(), out var val))
+            usageCounts[key] = val;
+    }
+
+    private async Task SaveUsage(int houseId, int financialItemId)
+    {
+        var key = (houseId, financialItemId);
+        var count = usageCounts.GetValueOrDefault(key, 0);
+        var existing = await UsageRepo.GetByHouseItemMonthYearAsync(houseId, financialItemId, year, month);
         if (existing != null)
         {
-            existing.UsageCount = usageCounts[houseId];
+            existing.UsageCount = count;
             await UsageRepo.UpdateAsync(existing);
         }
         else
         {
-            await UsageRepo.AddAsync(new MonthlyUsage { HouseId = houseId, Year = year, Month = month, UsageCount = usageCounts[houseId] });
+            await UsageRepo.AddAsync(new MonthlyUsage { HouseId = houseId, FinancialItemId = financialItemId, Year = year, Month = month, UsageCount = count });
         }
         message = "ذخیره شد.";
+    }
+
+    private async Task SaveAllForItem(int financialItemId)
+    {
+        foreach (var h in houses)
+        {
+            await SaveUsage(h.Id, financialItemId);
+        }
+        message = "همه مقادیر ذخیره شد.";
     }
 }
