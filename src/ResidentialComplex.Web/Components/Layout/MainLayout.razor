@@ -42,10 +42,31 @@
     </nav>
 
     <main class="container-fluid flex-grow-1 py-3">
-        @Body
+        <GlobalErrorBoundary @ref="errorBoundary">
+            <ChildContent>
+                @Body
+            </ChildContent>
+            <ErrorContent>
+                <div class="alert alert-danger m-3" role="alert">
+                    <h4 class="alert-heading">خطایی رخ داده است</h4>
+                    <p>متأسفانه خطایی در پردازش درخواست شما رخ داده است.</p>
+                    <hr />
+                    <button class="btn btn-outline-danger" @onclick="RecoverFromError">تلاش مجدد</button>
+                </div>
+            </ErrorContent>
+        </GlobalErrorBoundary>
     </main>
 
     <footer class="bg-light text-center py-2 mt-auto">
         <small class="text-muted">سیستم مدیریت مجتمع مسکونی &copy; @PersianCalendarHelper.GetCurrentYear()</small>
     </footer>
 </div>
+
+@code {
+    private GlobalErrorBoundary? errorBoundary;
+
+    private void RecoverFromError()
+    {
+        errorBoundary?.Recover();
+    }
+}
