@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ResidentialComplex.Domain\ResidentialComplex.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ResidentialComplex.Application\ResidentialComplex.Application.csproj" />
+    <ProjectReference Include="..\..\src\ResidentialComplex.Persistence\ResidentialComplex.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\ResidentialComplex.Infrastructure\ResidentialComplex.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\ResidentialComplex.Web\ResidentialComplex.Web.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ResidentialComplex.Application\ResidentialComplex.Application.csproj" />
+    <ProjectReference Include="..\ResidentialComplex.Persistence\ResidentialComplex.Persistence.csproj" />
+    <ProjectReference Include="..\ResidentialComplex.Infrastructure\ResidentialComplex.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

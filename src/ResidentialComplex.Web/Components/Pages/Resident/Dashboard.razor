@@ -1,0 +1,65 @@
+@page "/resident/dashboard"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using ResidentialComplex.Application.Helpers
+@using ResidentialComplex.Application.Interfaces
+@using ResidentialComplex.Domain.Entities
+@using ResidentialComplex.Domain.Enums
+@using ResidentialComplex.Persistence
+@attribute [Authorize(Roles = "Resident")]
+@inject IHouseRepository HouseRepo
+@inject IBillRepository BillRepo
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthState
+
+<h4>پنل ساکن</h4>
+<HelpButton PageKey="residentDashboard" />
+
+@if (house != null)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>اطلاعات واحد: @house.Title</h5>
+            <p><strong>بدهی فعلی:</strong> <span class="@(house.CurrentDebt > 0 ? "text-danger" : "text-success")">@house.CurrentDebt.ToString("N0") ریال</span></p>
+        </div>
+    </div>
+
+    <h5>تاریخچه قبوض</h5>
+    <table class="table table-bordered">
+        <thead><tr><th>سال</th><th>ماه</th><th>مبلغ</th><th>وضعیت</th></tr></thead>
+        <tbody>
+            @foreach (var bill in bills)
+            {
+                <tr>
+                    <td>@bill.Year</td>
+                    <td>@PersianCalendarHelper.GetMonthName(bill.Month)</td>
+                    <td>@bill.TotalAmount.ToString("N0")</td>
+                    <td>@GetStatusLabel(bill.Status)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="alert alert-warning">واحدی برای حساب کاربری شما تعریف نشده است.</div>
+}
+
+@code {
+    private House? house;
+    private List<Bill> bills = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(auth.User);
+        if (user != null)
+        {
+            house = await HouseRepo.GetByUserIdAsync(user.Id);
+            if (house != null)
+                bills = await BillRepo.GetByHouseIdAsync(house.Id);
+        }
+    }
+
+    private static string GetStatusLabel(BillStatus s) => s switch { BillStatus.Draft => "پیش‌نویس", BillStatus.Approved => "تایید شده", BillStatus.Paid => "پرداخت شده", _ => "" };
+}

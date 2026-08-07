@@ -1,0 +1,23 @@
+@using ResidentialComplex.Web.Components.Help
+
+<button type="button" class="btn btn-outline-secondary btn-sm" @onclick="Toggle">
+    @(isOpen ? "بستن راهنما" : "راهنما")
+</button>
+
+@if (isOpen)
+{
+    <div class="help-overlay" @onclick="Toggle"></div>
+    <div class="help-drawer">
+        <h5>راهنما</h5>
+        <hr />
+        @((MarkupString)HelpContent.GetContent(PageKey))
+        <hr />
+        <button type="button" class="btn btn-sm btn-secondary" @onclick="Toggle">بستن</button>
+    </div>
+}
+
+@code {
+    [Parameter] public string PageKey { get; set; } = "";
+    private bool isOpen;
+    private void Toggle() => isOpen = !isOpen;
+}

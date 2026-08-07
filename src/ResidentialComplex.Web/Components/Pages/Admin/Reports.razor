@@ -1,0 +1,108 @@
+@page "/admin/reports"
+@using Microsoft.AspNetCore.Authorization
+@using ResidentialComplex.Application.Helpers
+@using ResidentialComplex.Application.DTOs
+@using ResidentialComplex.Application.Interfaces
+@using ResidentialComplex.Application.Services
+@attribute [Authorize(Roles = "Administrator")]
+@inject ReportService ReportService
+@inject IHouseRepository HouseRepo
+
+<h4>گزارشات مالی</h4>
+<HelpButton PageKey="reports" />
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3 mb-2">
+                <label class="form-label">سال</label>
+                <input type="number" @bind="filterYear" class="form-control" />
+            </div>
+            <div class="col-md-3 mb-2">
+                <label class="form-label">ماه (اختیاری)</label>
+                <select @bind="filterMonth" class="form-select">
+                    <option value="0">همه</option>
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        var monthNum = m;
+                        <option value="@monthNum">@PersianCalendarHelper.GetMonthName(monthNum)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 mb-2">
+                <label class="form-label">واحد (اختیاری)</label>
+                <select @bind="filterHouseId" class="form-select">
+                    <option value="0">همه</option>
+                    @foreach (var h in houses)
+                    {
+                        <option value="@h.Id">@h.Title</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 mb-2 d-flex align-items-end">
+                <button type="button" class="btn btn-primary" @onclick="LoadReport">نمایش گزارش</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (report != null)
+{
+    <div class="row mb-3">
+        <div class="col-md-3"><div class="card bg-primary text-white"><div class="card-body"><h6>کل صورتحساب</h6><h4>@report.TotalBilled.ToString("N0")</h4></div></div></div>
+        <div class="col-md-3"><div class="card bg-success text-white"><div class="card-body"><h6>کل پرداخت</h6><h4>@report.TotalPaid.ToString("N0")</h4></div></div></div>
+        <div class="col-md-3"><div class="card bg-danger text-white"><div class="card-body"><h6>بدهی معوق</h6><h4>@report.OutstandingDebt.ToString("N0")</h4></div></div></div>
+        <div class="col-md-3"><div class="card bg-info text-white"><div class="card-body"><h6>نرخ وصول</h6><h4>@report.CollectionRate.ToString("N1")%</h4></div></div></div>
+    </div>
+
+    <h5>بدهی هر آپارتمان</h5>
+    <table class="table table-bordered">
+        <thead><tr><th>آپارتمان</th><th>بدهی کل</th></tr></thead>
+        <tbody>
+            @foreach (var a in report.DebtPerApartment)
+            {
+                <tr><td>@a.ApartmentTitle</td><td>@a.TotalDebt.ToString("N0")</td></tr>
+            }
+        </tbody>
+    </table>
+
+    <h5>بدهی هر واحد</h5>
+    <table class="table table-bordered">
+        <thead><tr><th>واحد</th><th>بدهی</th></tr></thead>
+        <tbody>
+            @foreach (var h in report.DebtPerHouse)
+            {
+                <tr><td>@h.HouseTitle</td><td class="@(h.CurrentDebt < 0 ? "text-success" : h.CurrentDebt > 0 ? "text-danger" : "")">@h.CurrentDebt.ToString("N0")</td></tr>
+            }
+        </tbody>
+    </table>
+
+    <h5>جزئیات ماهانه</h5>
+    <table class="table table-bordered">
+        <thead><tr><th>سال</th><th>ماه</th><th>صورتحساب</th><th>پرداخت شده</th></tr></thead>
+        <tbody>
+            @foreach (var m in report.MonthlyBreakdown)
+            {
+                <tr><td>@m.Year</td><td>@PersianCalendarHelper.GetMonthName(m.Month)</td><td>@m.Billed.ToString("N0")</td><td>@m.Paid.ToString("N0")</td></tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private int filterYear = PersianCalendarHelper.GetCurrentYear();
+    private int filterMonth;
+    private int filterHouseId;
+    private FinancialReportDto? report;
+    private List<ResidentialComplex.Domain.Entities.House> houses = new();
+
+    protected override async Task OnInitializedAsync() => houses = await HouseRepo.GetAllAsync();
+
+    private async Task LoadReport()
+    {
+        report = await ReportService.GenerateReportAsync(
+            filterYear > 0 ? filterYear : null,
+            filterMonth > 0 ? filterMonth : null,
+            filterHouseId > 0 ? filterHouseId : null);
+    }
+}

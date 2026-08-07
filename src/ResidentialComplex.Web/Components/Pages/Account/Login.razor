@@ -1,0 +1,42 @@
+@page "/Account/Login"
+@layout ResidentialComplex.Web.Components.Layout.MainLayout
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-body">
+                <h4 class="card-title text-center mb-4">ورود به سیستم</h4>
+                @if (showError)
+                {
+                    <div class="alert alert-danger">نام کاربری یا رمز عبور نادرست است.</div>
+                }
+                <form method="post" action="/api/account/login">
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <div class="mb-3">
+                        <label class="form-label">نام کاربری</label>
+                        <input type="text" name="userName" class="form-control" placeholder="نام کاربری" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">رمز عبور</label>
+                        <input type="password" name="password" class="form-control" placeholder="رمز عبور" required />
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" name="rememberMe" value="true" class="form-check-input" id="rememberMe" />
+                        <label class="form-check-label" for="rememberMe">مرا به خاطر بسپار</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">ورود</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    private string? returnUrl { get; set; }
+
+    [SupplyParameterFromQuery(Name = "error")]
+    private string? error { get; set; }
+
+    private bool showError => !string.IsNullOrEmpty(error);
+}
