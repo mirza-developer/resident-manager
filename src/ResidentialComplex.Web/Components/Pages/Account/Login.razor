@@ -1,31 +1,39 @@
 @page "/Account/Login"
 @layout ResidentialComplex.Web.Components.Layout.MainLayout
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using ResidentialComplex.Persistence
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
 
 <div class="row justify-content-center mt-5">
     <div class="col-md-4">
         <div class="card shadow">
             <div class="card-body">
                 <h4 class="card-title text-center mb-4">ورود به سیستم</h4>
-                @if (showError)
+                @if (!string.IsNullOrEmpty(errorMessage))
                 {
-                    <div class="alert alert-danger">نام کاربری یا رمز عبور نادرست است.</div>
+                    <div class="alert alert-danger">@errorMessage</div>
                 }
-                <form method="post" action="/api/account/login">
-                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="login">
+                    <DataAnnotationsValidator />
+                    <input type="hidden" name="loginModel.ReturnUrl" value="@loginModel.ReturnUrl" />
                     <div class="mb-3">
                         <label class="form-label">نام کاربری</label>
-                        <input type="text" name="userName" class="form-control" placeholder="نام کاربری" required />
+                        <InputText @bind-Value="loginModel.UserName" class="form-control" placeholder="نام کاربری" />
+                        <ValidationMessage For="() => loginModel.UserName" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">رمز عبور</label>
-                        <input type="password" name="password" class="form-control" placeholder="رمز عبور" required />
+                        <InputText @bind-Value="loginModel.Password" type="password" class="form-control" placeholder="رمز عبور" />
+                        <ValidationMessage For="() => loginModel.Password" />
                     </div>
                     <div class="mb-3 form-check">
-                        <input type="checkbox" name="rememberMe" value="true" class="form-check-input" id="rememberMe" />
+                        <InputCheckbox @bind-Value="loginModel.RememberMe" class="form-check-input" id="rememberMe" />
                         <label class="form-check-label" for="rememberMe">مرا به خاطر بسپار</label>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">ورود</button>
-                </form>
+                </EditForm>
             </div>
         </div>
     </div>
@@ -35,8 +43,43 @@
     [SupplyParameterFromQuery(Name = "returnUrl")]
     private string? returnUrl { get; set; }
 
-    [SupplyParameterFromQuery(Name = "error")]
-    private string? error { get; set; }
+    [SupplyParameterFromForm]
+    private LoginModel loginModel { get; set; } = null!;
 
-    private bool showError => !string.IsNullOrEmpty(error);
+    private string? errorMessage;
+
+    protected override void OnInitialized()
+    {
+        loginModel ??= new();
+
+        if (!string.IsNullOrEmpty(returnUrl))
+            loginModel.ReturnUrl = returnUrl;
+    }
+
+    private async Task HandleLogin()
+    {
+        var result = await SignInManager.PasswordSignInAsync(
+            loginModel.UserName!, loginModel.Password!, loginModel.RememberMe, lockoutOnFailure: false);
+
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo(string.IsNullOrEmpty(loginModel.ReturnUrl) ? "/" : loginModel.ReturnUrl, forceLoad: true);
+        }
+        else
+        {
+            errorMessage = "نام کاربری یا رمز عبور نادرست است.";
+        }
+    }
+
+    private sealed class LoginModel
+    {
+        [Required(ErrorMessage = "نام کاربری الزامی است.")]
+        public string? UserName { get; set; }
+
+        [Required(ErrorMessage = "رمز عبور الزامی است.")]
+        public string? Password { get; set; }
+
+        public bool RememberMe { get; set; }
+        public string? ReturnUrl { get; set; }
+    }
 }

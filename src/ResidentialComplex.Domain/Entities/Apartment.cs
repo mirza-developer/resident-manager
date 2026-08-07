@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace ResidentialComplex.Domain.Entities;
 
 /// <summary>
@@ -6,7 +8,10 @@ namespace ResidentialComplex.Domain.Entities;
 public class Apartment
 {
     public int Id { get; set; }
+
+    [Required(ErrorMessage = "عنوان الزامی است.")]
     public string Title { get; set; } = string.Empty;
+
     public string? Description { get; set; }
     public long RowVersion { get; set; }
 

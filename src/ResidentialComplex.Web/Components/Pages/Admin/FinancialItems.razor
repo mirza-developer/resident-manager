@@ -16,53 +16,57 @@
     <div class="card mb-3">
         <div class="card-body">
             <h5>@(editing.Id == 0 ? "افزودن" : "ویرایش") آیتم مالی</h5>
-            <div class="mb-2">
-                <label class="form-label">عنوان *</label>
-                <input @bind="editing.Title" class="form-control" />
-            </div>
-            <div class="mb-2">
-                <label class="form-label">توضیحات</label>
-                <input @bind="editing.Description" class="form-control" />
-            </div>
-            <div class="mb-2">
-                <label class="form-label">نوع دوره</label>
-                <select @bind="editing.PeriodType" class="form-select">
-                    <option value="@PeriodType.Once">یکبار</option>
-                    <option value="@PeriodType.Permanent">دائمی</option>
-                    <option value="@PeriodType.Installment">اقساط</option>
-                </select>
-            </div>
-            <div class="mb-2">
-                <label class="form-label">نوع محاسبه</label>
-                <select @bind="editing.CalculationType" class="form-select">
-                    <option value="@CalculationType.EqualDivision">تقسیم مساوی</option>
-                    <option value="@CalculationType.Grouping">گروه‌بندی</option>
-                </select>
-            </div>
-            @if (editing.PeriodType == PeriodType.Installment)
-            {
+            <EditForm Model="editing" OnValidSubmit="Save">
+                <DataAnnotationsValidator />
                 <div class="mb-2">
-                    <label class="form-label">مبلغ کل</label>
-                    <input type="number" @bind="editing.TotalAmount" class="form-control" />
+                    <label class="form-label">عنوان *</label>
+                    <InputText @bind-Value="editing.Title" class="form-control" />
+                    <ValidationMessage For="() => editing.Title" />
                 </div>
                 <div class="mb-2">
-                    <label class="form-label">تعداد اقساط</label>
-                    <input type="number" @bind="editing.NumberOfInstallments" class="form-control" />
+                    <label class="form-label">توضیحات</label>
+                    <InputText @bind-Value="editing.Description" class="form-control" />
                 </div>
-            }
-            @if (editing.CalculationType == CalculationType.Grouping)
-            {
                 <div class="mb-2">
-                    <label class="form-label">تعداد گروه‌ها</label>
-                    <input type="number" @bind="editing.NumberOfGroups" class="form-control" />
+                    <label class="form-label">نوع دوره</label>
+                    <InputSelect @bind-Value="editing.PeriodType" class="form-select">
+                        <option value="@PeriodType.Once">یکبار</option>
+                        <option value="@PeriodType.Permanent">دائمی</option>
+                        <option value="@PeriodType.Installment">اقساط</option>
+                    </InputSelect>
                 </div>
-            }
-            <div class="mb-2 form-check">
-                <input type="checkbox" @bind="editing.IsActive" class="form-check-input" id="fiActive" />
-                <label class="form-check-label" for="fiActive">فعال</label>
-            </div>
-            <button type="button" class="btn btn-primary" @onclick="Save" disabled="@string.IsNullOrWhiteSpace(editing.Title)">ذخیره</button>
-            <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+                <div class="mb-2">
+                    <label class="form-label">نوع محاسبه</label>
+                    <InputSelect @bind-Value="editing.CalculationType" class="form-select">
+                        <option value="@CalculationType.EqualDivision">تقسیم مساوی</option>
+                        <option value="@CalculationType.Grouping">گروه‌بندی</option>
+                    </InputSelect>
+                </div>
+                @if (editing.PeriodType == PeriodType.Installment)
+                {
+                    <div class="mb-2">
+                        <label class="form-label">مبلغ کل</label>
+                        <InputNumber @bind-Value="editing.TotalAmount" class="form-control" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">تعداد اقساط</label>
+                        <InputNumber @bind-Value="editing.NumberOfInstallments" class="form-control" />
+                    </div>
+                }
+                @if (editing.CalculationType == CalculationType.Grouping)
+                {
+                    <div class="mb-2">
+                        <label class="form-label">تعداد گروه‌ها</label>
+                        <InputNumber @bind-Value="editing.NumberOfGroups" class="form-control" />
+                    </div>
+                }
+                <div class="mb-2 form-check">
+                    <InputCheckbox @bind-Value="editing.IsActive" class="form-check-input" id="fiActive" />
+                    <label class="form-check-label" for="fiActive">فعال</label>
+                </div>
+                <button type="submit" class="btn btn-primary">ذخیره</button>
+                <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+            </EditForm>
         </div>
     </div>
 }
@@ -98,7 +102,6 @@
 
     private async Task Save()
     {
-        if (string.IsNullOrWhiteSpace(editing.Title)) return;
         if (editing.Id == 0) await FinancialItemRepo.AddAsync(editing);
         else await FinancialItemRepo.UpdateAsync(editing);
         items = await FinancialItemRepo.GetAllAsync();

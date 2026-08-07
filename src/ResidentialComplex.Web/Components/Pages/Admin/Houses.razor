@@ -30,38 +30,46 @@
     <div class="card mb-3">
         <div class="card-body">
             <h5>@(editing.Id == 0 ? "افزودن" : "ویرایش") واحد</h5>
-            <div class="mb-2">
-                <label class="form-label">عنوان *</label>
-                <input @bind="editing.Title" class="form-control" />
-            </div>
-            <div class="mb-2">
-                <label class="form-label">آپارتمان *</label>
-                <select @bind="editing.ApartmentId" class="form-select">
-                    <option value="0">انتخاب کنید</option>
-                    @foreach (var apt in apartments)
-                    {
-                        <option value="@apt.Id">@apt.Title</option>
-                    }
-                </select>
-            </div>
-            <div class="mb-2">
-                <label class="form-label">نام ساکن *</label>
-                <input @bind="editing.ResidentName" class="form-control" />
-            </div>
-            <div class="mb-2">
-                <label class="form-label">شماره تلفن ساکن *</label>
-                <input @bind="editing.ResidentPhoneNumber" class="form-control" />
-            </div>
-            <div class="mb-2">
-                <label class="form-label">تعداد ساکنین</label>
-                <input type="number" @bind="editing.NumberOfResidents" class="form-control" />
-            </div>
-            <div class="mb-2 form-check">
-                <input type="checkbox" @bind="editing.IsActive" class="form-check-input" id="isActive" />
-                <label class="form-check-label" for="isActive">فعال</label>
-            </div>
-            <button type="button" class="btn btn-primary" @onclick="Save" disabled="@(!IsValid)">ذخیره</button>
-            <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+            <EditForm Model="editing" OnValidSubmit="Save">
+                <DataAnnotationsValidator />
+                <div class="mb-2">
+                    <label class="form-label">عنوان *</label>
+                    <InputText @bind-Value="editing.Title" class="form-control" />
+                    <ValidationMessage For="() => editing.Title" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">آپارتمان *</label>
+                    <InputSelect @bind-Value="editing.ApartmentId" class="form-select">
+                        <option value="0">انتخاب کنید</option>
+                        @foreach (var apt in apartments)
+                        {
+                            <option value="@apt.Id">@apt.Title</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => editing.ApartmentId" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">نام ساکن *</label>
+                    <InputText @bind-Value="editing.ResidentName" class="form-control" />
+                    <ValidationMessage For="() => editing.ResidentName" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">شماره تلفن ساکن *</label>
+                    <InputText @bind-Value="editing.ResidentPhoneNumber" class="form-control" />
+                    <ValidationMessage For="() => editing.ResidentPhoneNumber" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">تعداد ساکنین</label>
+                    <InputNumber @bind-Value="editing.NumberOfResidents" class="form-control" />
+                    <ValidationMessage For="() => editing.NumberOfResidents" />
+                </div>
+                <div class="mb-2 form-check">
+                    <InputCheckbox @bind-Value="editing.IsActive" class="form-check-input" id="isActive" />
+                    <label class="form-check-label" for="isActive">فعال</label>
+                </div>
+                <button type="submit" class="btn btn-primary">ذخیره</button>
+                <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+            </EditForm>
         </div>
     </div>
 }
@@ -95,7 +103,6 @@
     private House editing = new();
     private bool showForm;
     private int filterApartmentId;
-    private bool IsValid => !string.IsNullOrWhiteSpace(editing.Title) && editing.ApartmentId > 0 && !string.IsNullOrWhiteSpace(editing.ResidentName) && !string.IsNullOrWhiteSpace(editing.ResidentPhoneNumber);
 
     protected override async Task OnInitializedAsync()
     {
@@ -116,7 +123,6 @@
 
     private async Task Save()
     {
-        if (!IsValid) return;
         if (editing.Id == 0) await HouseRepo.AddAsync(editing);
         else await HouseRepo.UpdateAsync(editing);
         houses = await HouseRepo.GetAllAsync();

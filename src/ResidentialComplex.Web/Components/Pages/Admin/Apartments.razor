@@ -15,24 +15,24 @@
     <div class="card mb-3">
         <div class="card-body">
             <h5>@(editingApartment.Id == 0 ? "افزودن" : "ویرایش") آپارتمان</h5>
-            <div class="mb-2">
-                <label class="form-label">عنوان *</label>
-                <input @bind="editingApartment.Title" class="form-control" />
-                @if (string.IsNullOrWhiteSpace(editingApartment.Title))
+            <EditForm Model="editingApartment" OnValidSubmit="SaveApartment">
+                <DataAnnotationsValidator />
+                <div class="mb-2">
+                    <label class="form-label">عنوان *</label>
+                    <InputText @bind-Value="editingApartment.Title" class="form-control" />
+                    <ValidationMessage For="() => editingApartment.Title" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">توضیحات</label>
+                    <InputText @bind-Value="editingApartment.Description" class="form-control" />
+                </div>
+                <button type="submit" class="btn btn-primary">ذخیره</button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancel">انصراف</button>
+                @if (!string.IsNullOrEmpty(message))
                 {
-                    <small class="text-danger">عنوان الزامی است.</small>
+                    <div class="alert alert-info mt-2">@message</div>
                 }
-            </div>
-            <div class="mb-2">
-                <label class="form-label">توضیحات</label>
-                <input @bind="editingApartment.Description" class="form-control" />
-            </div>
-            <button type="button" class="btn btn-primary" @onclick="SaveApartment" disabled="@string.IsNullOrWhiteSpace(editingApartment.Title)">ذخیره</button>
-            <button type="button" class="btn btn-secondary" @onclick="Cancel">انصراف</button>
-            @if (!string.IsNullOrEmpty(message))
-            {
-                <div class="alert alert-info mt-2">@message</div>
-            }
+            </EditForm>
         </div>
     </div>
 }
@@ -70,7 +70,6 @@
 
     private async Task SaveApartment()
     {
-        if (string.IsNullOrWhiteSpace(editingApartment.Title)) return;
         if (editingApartment.Id == 0)
             await ApartmentRepo.AddAsync(editingApartment);
         else
