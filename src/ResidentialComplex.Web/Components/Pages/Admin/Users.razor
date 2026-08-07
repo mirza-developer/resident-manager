@@ -9,7 +9,7 @@
 <h4>مدیریت کاربران</h4>
 <HelpButton PageKey="users" />
 
-<button class="btn btn-success mb-3" @onclick="ShowAdd">افزودن کاربر جدید</button>
+<button type="button" class="btn btn-success mb-3" @onclick="ShowAdd">افزودن کاربر جدید</button>
 
 @if (!string.IsNullOrEmpty(message))
 {
@@ -47,8 +47,8 @@
                     <option value="Resident">ساکن</option>
                 </select>
             </div>
-            <button class="btn btn-primary" @onclick="Save">ذخیره</button>
-            <button class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+            <button type="button" class="btn btn-primary" @onclick="Save">ذخیره</button>
+            <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
         </div>
     </div>
 }
@@ -63,8 +63,8 @@
                 <td>@u.UserName</td>
                 <td>@u.Role</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" @onclick="() => EditUser(u)">ویرایش</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteUser(u.Id)">حذف</button>
+                    <button type="button" class="btn btn-sm btn-warning" @onclick="() => EditUser(u)">ویرایش</button>
+                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteUser(u.Id)">حذف</button>
                 </td>
             </tr>
         }

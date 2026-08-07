@@ -1,6 +1,6 @@
 @using ResidentialComplex.Web.Components.Help
 
-<button class="btn btn-outline-secondary btn-sm" @onclick="Toggle">
+<button type="button" class="btn btn-outline-secondary btn-sm" @onclick="Toggle">
     @(isOpen ? "بستن راهنما" : "راهنما")
 </button>
 
@@ -12,7 +12,7 @@
         <hr />
         @((MarkupString)HelpContent.GetContent(PageKey))
         <hr />
-        <button class="btn btn-sm btn-secondary" @onclick="Toggle">بستن</button>
+        <button type="button" class="btn btn-sm btn-secondary" @onclick="Toggle">بستن</button>
     </div>
 }
 

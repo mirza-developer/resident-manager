@@ -21,7 +21,7 @@
         </select>
     </div>
     <div class="col-md-3">
-        <button class="btn btn-success" @onclick="ShowAdd">افزودن واحد جدید</button>
+        <button type="button" class="btn btn-success" @onclick="ShowAdd">افزودن واحد جدید</button>
     </div>
 </div>
 
@@ -60,8 +60,8 @@
                 <input type="checkbox" @bind="editing.IsActive" class="form-check-input" id="isActive" />
                 <label class="form-check-label" for="isActive">فعال</label>
             </div>
-            <button class="btn btn-primary" @onclick="Save" disabled="@(!IsValid)">ذخیره</button>
-            <button class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+            <button type="button" class="btn btn-primary" @onclick="Save" disabled="@(!IsValid)">ذخیره</button>
+            <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
         </div>
     </div>
 }
@@ -80,8 +80,8 @@
                 <td class="@(h.CurrentDebt < 0 ? "text-success" : h.CurrentDebt > 0 ? "text-danger" : "")">@h.CurrentDebt.ToString("N0")</td>
                 <td>@(h.IsActive ? "فعال" : "غیرفعال")</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" @onclick="() => Edit(h)">ویرایش</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Delete(h.Id)">حذف</button>
+                    <button type="button" class="btn btn-sm btn-warning" @onclick="() => Edit(h)">ویرایش</button>
+                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => Delete(h.Id)">حذف</button>
                 </td>
             </tr>
         }

@@ -38,7 +38,7 @@
                 </select>
             </div>
             <div class="col-md-3 mb-2 d-flex align-items-end">
-                <button class="btn btn-outline-secondary" @onclick="CheckUsageStatus">بررسی وضعیت مصرف</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="CheckUsageStatus">بررسی وضعیت مصرف</button>
             </div>
         </div>
 
@@ -87,7 +87,7 @@
             </table>
         }
 
-        <button class="btn btn-primary mt-2" @onclick="Generate" disabled="@missingUsageItems.Any()">تولید صورتحساب</button>
+        <button type="button" class="btn btn-primary mt-2" @onclick="Generate" disabled="@missingUsageItems.Any()">تولید صورتحساب</button>
         @if (!string.IsNullOrEmpty(message))
         {
             <div class="alert @(isError ? "alert-danger" : "alert-info") mt-2">@message</div>
@@ -98,10 +98,10 @@
 <div class="card mb-3">
     <div class="card-body">
         <h5>قبوض @PersianCalendarHelper.FormatYearMonth(year, month)</h5>
-        <button class="btn btn-info mb-2" @onclick="LoadBills">بارگذاری</button>
+        <button type="button" class="btn btn-info mb-2" @onclick="LoadBills">بارگذاری</button>
         @if (bills.Any(b => b.Status == BillStatus.Draft))
         {
-            <button class="btn btn-success mb-2" @onclick="ApproveBills">تایید همه قبوض پیش‌نویس</button>
+            <button type="button" class="btn btn-success mb-2" @onclick="ApproveBills">تایید همه قبوض پیش‌نویس</button>
         }
         @if (bills.Any())
         {
@@ -125,10 +125,10 @@
                         </td>
                         <td>@GetStatusLabel(bill.Status)</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-info me-1" @onclick="() => ToggleDetail(bill.Id)">جزئیات</button>
+                            <button type="button" class="btn btn-sm btn-outline-info me-1" @onclick="() => ToggleDetail(bill.Id)">جزئیات</button>
                             @if (bill.Status == BillStatus.Approved)
                             {
-                                <button class="btn btn-sm btn-success" @onclick="() => Pay(bill.Id)">ثبت پرداخت</button>
+                                <button type="button" class="btn btn-sm btn-success" @onclick="() => Pay(bill.Id)">ثبت پرداخت</button>
                             }
                         </td>
                     </tr>

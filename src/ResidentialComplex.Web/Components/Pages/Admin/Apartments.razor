@@ -8,7 +8,7 @@
 <h4>مدیریت آپارتمان‌ها</h4>
 <HelpButton PageKey="apartments" />
 
-<button class="btn btn-success mb-3" @onclick="ShowAdd">افزودن آپارتمان جدید</button>
+<button type="button" class="btn btn-success mb-3" @onclick="ShowAdd">افزودن آپارتمان جدید</button>
 
 @if (showForm)
 {
@@ -27,8 +27,8 @@
                 <label class="form-label">توضیحات</label>
                 <input @bind="editingApartment.Description" class="form-control" />
             </div>
-            <button class="btn btn-primary" @onclick="SaveApartment" disabled="@string.IsNullOrWhiteSpace(editingApartment.Title)">ذخیره</button>
-            <button class="btn btn-secondary" @onclick="Cancel">انصراف</button>
+            <button type="button" class="btn btn-primary" @onclick="SaveApartment" disabled="@string.IsNullOrWhiteSpace(editingApartment.Title)">ذخیره</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">انصراف</button>
             @if (!string.IsNullOrEmpty(message))
             {
                 <div class="alert alert-info mt-2">@message</div>
@@ -48,8 +48,8 @@
                 <td>@apt.Description</td>
                 <td>@apt.Houses.Count</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" @onclick="() => EditApartment(apt)">ویرایش</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteApartment(apt.Id)">حذف</button>
+                    <button type="button" class="btn btn-sm btn-warning" @onclick="() => EditApartment(apt)">ویرایش</button>
+                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteApartment(apt.Id)">حذف</button>
                 </td>
             </tr>
         }

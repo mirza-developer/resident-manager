@@ -30,7 +30,7 @@
                 </select>
             </div>
             <div class="col-md-3 mb-2 d-flex align-items-end">
-                <button class="btn btn-primary" @onclick="Load">بارگذاری</button>
+                <button type="button" class="btn btn-primary" @onclick="Load">بارگذاری</button>
             </div>
         </div>
     </div>
@@ -66,12 +66,12 @@
                                            @onchange="(e) => SetUsage(key, e)"
                                            class="form-control" style="max-width:150px" />
                                 </td>
-                                <td><button class="btn btn-sm btn-primary" @onclick="() => SaveUsage(h.Id, fi.Id)">ذخیره</button></td>
+                                <td><button type="button" class="btn btn-sm btn-primary" @onclick="() => SaveUsage(h.Id, fi.Id)">ذخیره</button></td>
                             </tr>
                         }
                     </tbody>
                 </table>
-                <button class="btn btn-success btn-sm" @onclick="() => SaveAllForItem(fi.Id)">ذخیره همه</button>
+                <button type="button" class="btn btn-success btn-sm" @onclick="() => SaveAllForItem(fi.Id)">ذخیره همه</button>
             </div>
         </div>
     }

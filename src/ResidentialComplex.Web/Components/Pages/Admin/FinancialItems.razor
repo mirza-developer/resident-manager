@@ -9,7 +9,7 @@
 <h4>مدیریت آیتم‌های مالی</h4>
 <HelpButton PageKey="financialItems" />
 
-<button class="btn btn-success mb-3" @onclick="ShowAdd">افزودن آیتم مالی جدید</button>
+<button type="button" class="btn btn-success mb-3" @onclick="ShowAdd">افزودن آیتم مالی جدید</button>
 
 @if (showForm)
 {
@@ -61,8 +61,8 @@
                 <input type="checkbox" @bind="editing.IsActive" class="form-check-input" id="fiActive" />
                 <label class="form-check-label" for="fiActive">فعال</label>
             </div>
-            <button class="btn btn-primary" @onclick="Save" disabled="@string.IsNullOrWhiteSpace(editing.Title)">ذخیره</button>
-            <button class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+            <button type="button" class="btn btn-primary" @onclick="Save" disabled="@string.IsNullOrWhiteSpace(editing.Title)">ذخیره</button>
+            <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
         </div>
     </div>
 }
@@ -78,8 +78,8 @@
                 <td>@GetCalcLabel(fi.CalculationType)</td>
                 <td>@(fi.IsActive ? "فعال" : "غیرفعال")</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" @onclick="() => Edit(fi)">ویرایش</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => Delete(fi.Id)">حذف</button>
+                    <button type="button" class="btn btn-sm btn-warning" @onclick="() => Edit(fi)">ویرایش</button>
+                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => Delete(fi.Id)">حذف</button>
                 </td>
             </tr>
         }
