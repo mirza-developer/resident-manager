@@ -148,20 +148,53 @@
                                         <tr class="table-secondary">
                                             <th>آیتم مالی</th>
                                             <th>نوع محاسبه</th>
+                                            <th>جزئیات</th>
                                             <th>مبلغ (ریال)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach (var bi in bill.BillItems)
                                         {
+                                            var fi = bi.FinancialItem;
+                                            bool isIbt = fi?.CalculationType == CalculationType.Grouping;
+                                            int usage = (fi != null && isIbt) ? usageByHouseItem.GetValueOrDefault((bill.HouseId, fi.Id), 0) : 0;
                                             <tr>
-                                                <td>@(bi.FinancialItem?.Title ?? bi.Description)</td>
-                                                <td>@(bi.FinancialItem != null ? GetCalcLabel(bi.FinancialItem.CalculationType) : "-")</td>
+                                                <td>@(fi?.Title ?? bi.Description)</td>
+                                                <td>@(fi != null ? GetCalcLabel(fi.CalculationType) : "-")</td>
+                                                <td>
+                                                    @if (isIbt && fi != null && fi.Tiers.Any())
+                                                    {
+                                                        <div><strong>مصرف:</strong> @usage واحد</div>
+                                                        var tiers = fi.Tiers.OrderBy(t => t.TierOrder).ToList();
+                                                        long prevLimit = 0;
+                                                        int consumed = 0;
+                                                        foreach (var tier in tiers)
+                                                        {
+                                                            if (consumed >= usage) break;
+                                                            long blockEnd = tier.UpperLimit.HasValue ? (long)tier.UpperLimit.Value : (long)int.MaxValue;
+                                                            long blockSize = blockEnd - prevLimit;
+                                                            int unitsInBlock = (int)Math.Min(usage - consumed, blockSize);
+                                                            decimal tierTotal = unitsInBlock * tier.RatePerUnit;
+                                                            string rangeLabel = tier.UpperLimit.HasValue
+                                                                ? $"پله {tier.TierOrder}: {prevLimit + 1}–{tier.UpperLimit}"
+                                                                : $"پله {tier.TierOrder}: بالاتر از {prevLimit}";
+                                                            <div class="small text-muted">
+                                                                @rangeLabel — @unitsInBlock واحد × @tier.RatePerUnit.ToString("N0") = @tierTotal.ToString("N0") ریال
+                                                            </div>
+                                                            consumed += unitsInBlock;
+                                                            prevLimit = blockEnd;
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>-</span>
+                                                    }
+                                                </td>
                                                 <td>@bi.Amount.ToString("N0")</td>
                                             </tr>
                                         }
                                         <tr class="fw-bold">
-                                            <td colspan="2">جمع کل</td>
+                                            <td colspan="3">جمع کل</td>
                                             <td>@bill.BillItems.Sum(bi => bi.Amount).ToString("N0")</td>
                                         </tr>
                                     </tbody>
@@ -186,6 +219,7 @@
     private bool isError;
     private List<MissingUsageInfo> missingUsageItems = new();
     private int? expandedBillId;
+    private Dictionary<(int HouseId, int FinancialItemId), int> usageByHouseItem = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -247,7 +281,14 @@
         catch (Exception ex) { message = ex.Message; isError = true; }
     }
 
-    private async Task LoadBills() => bills = await BillRepo.GetByMonthYearAsync(year, month);
+    private async Task LoadBills()
+    {
+        bills = await BillRepo.GetByMonthYearAsync(year, month);
+        var usages = await UsageRepo.GetByMonthYearAsync(year, month);
+        usageByHouseItem = usages
+            .GroupBy(u => (u.HouseId, u.FinancialItemId))
+            .ToDictionary(g => g.Key, g => g.First().UsageCount);
+    }
 
     private async Task ApproveBills()
     {

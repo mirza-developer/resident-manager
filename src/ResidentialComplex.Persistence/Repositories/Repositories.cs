@@ -57,9 +57,9 @@ public class BillRepository : IBillRepository
     public BillRepository(ApplicationDbContext db) => _db = db;
 
     public async Task<List<Bill>> GetAllAsync() => await _db.Bills.Include(b => b.BillItems).Include(b => b.House).ToListAsync();
-    public async Task<List<Bill>> GetByHouseIdAsync(int houseId) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).Include(b => b.Payments).Where(b => b.HouseId == houseId).OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ToListAsync();
-    public async Task<List<Bill>> GetByMonthYearAsync(int year, int month) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).Include(b => b.House).Where(b => b.Year == year && b.Month == month).ToListAsync();
-    public async Task<Bill?> GetByIdAsync(int id) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).Include(b => b.House).Include(b => b.Payments).FirstOrDefaultAsync(b => b.Id == id);
+    public async Task<List<Bill>> GetByHouseIdAsync(int houseId) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).ThenInclude(fi => fi.Tiers).Include(b => b.Payments).Where(b => b.HouseId == houseId).OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ToListAsync();
+    public async Task<List<Bill>> GetByMonthYearAsync(int year, int month) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).ThenInclude(fi => fi.Tiers).Include(b => b.House).Where(b => b.Year == year && b.Month == month).ToListAsync();
+    public async Task<Bill?> GetByIdAsync(int id) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).ThenInclude(fi => fi.Tiers).Include(b => b.House).Include(b => b.Payments).FirstOrDefaultAsync(b => b.Id == id);
     public async Task<Bill?> GetByHouseMonthYearAsync(int houseId, int year, int month) => await _db.Bills.FirstOrDefaultAsync(b => b.HouseId == houseId && b.Year == year && b.Month == month);
     public async Task<Bill> AddAsync(Bill bill) { _db.Bills.Add(bill); await _db.SaveChangesAsync(); return bill; }
     public async Task AddRangeAsync(IEnumerable<Bill> bills) { _db.Bills.AddRange(bills); await _db.SaveChangesAsync(); }
