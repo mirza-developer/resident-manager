@@ -13,4 +13,8 @@ public interface IFinancialItemRepository
     Task<FinancialItem> AddAsync(FinancialItem item);
     Task UpdateAsync(FinancialItem item);
     Task DeleteAsync(int id);
+
+    Task<List<FinancialItemTier>> GetTiersAsync(int financialItemId);
+    Task<FinancialItemTier> AddTierAsync(FinancialItemTier tier);
+    Task DeleteTierAsync(int tierId);
 }

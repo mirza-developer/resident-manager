@@ -79,7 +79,14 @@
                             <td>@GetPeriodLabel(fi.PeriodType)</td>
                             <td>@GetCalcLabel(fi.CalculationType)</td>
                             <td>
-                                <input type="number" class="form-control" @bind="finalAmounts[fi.Id]" />
+                                @if (fi.CalculationType == CalculationType.Grouping)
+                                {
+                                    <span class="text-muted fst-italic">تعرفه‌ای (محاسبه از مصرف)</span>
+                                }
+                                else
+                                {
+                                    <input type="number" class="form-control" @bind="finalAmounts[fi.Id]" />
+                                }
                             </td>
                         </tr>
                     }

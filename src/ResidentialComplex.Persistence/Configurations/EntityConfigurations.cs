@@ -110,3 +110,13 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.Property(a => a.Action).IsRequired().HasMaxLength(100);
     }
 }
+
+public class FinancialItemTierConfiguration : IEntityTypeConfiguration<FinancialItemTier>
+{
+    public void Configure(EntityTypeBuilder<FinancialItemTier> builder)
+    {
+        builder.HasKey(t => t.Id);
+        builder.Property(t => t.RatePerUnit).HasColumnType("decimal(18,4)");
+        builder.HasOne(t => t.FinancialItem).WithMany(f => f.Tiers).HasForeignKey(t => t.FinancialItemId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

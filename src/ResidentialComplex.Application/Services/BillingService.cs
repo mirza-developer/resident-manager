@@ -91,9 +91,9 @@ public class BillingService
                 {
                     houseAmount = finalAmount / activeHouses.Count;
                 }
-                else // Grouping
+                else // Grouping — Increasing Block Tariff
                 {
-                    houseAmount = CalculateGroupingAmount(fi, house, activeHouses, usageByHouseItem, finalAmount);
+                    houseAmount = CalculateIbtAmount(fi, house, usageByHouseItem);
                 }
 
                 bill.BillItems.Add(new BillItem
@@ -124,9 +124,12 @@ public class BillingService
             bills.Add(bill);
         }
 
-        // Apply rounding adjustments per financial item across all bills
+        // Apply rounding adjustments per financial item across all bills (EqualDivision only)
         foreach (var fi in applicableItems)
         {
+            if (fi.CalculationType == CalculationType.Grouping)
+                continue; // IBT items are billed independently; no target total to reconcile
+
             var finalAmount = finalAmounts[fi.Id];
             if (fi.PeriodType == PeriodType.Installment && fi.TotalAmount.HasValue && fi.NumberOfInstallments.HasValue && fi.NumberOfInstallments.Value > 0)
             {
@@ -254,54 +257,36 @@ public class BillingService
         return true;
     }
 
-    private static decimal CalculateGroupingAmount(FinancialItem fi, House house, List<House> allHouses,
-        Dictionary<(int HouseId, int FinancialItemId), int> usageByHouseItem, decimal finalAmount)
+    private static decimal CalculateIbtAmount(FinancialItem fi, House house,
+        Dictionary<(int HouseId, int FinancialItemId), int> usageByHouseItem)
     {
-        if (fi.NumberOfGroups == null || fi.NumberOfGroups.Value <= 0 || fi.GroupPoints.Count == 0)
-            return finalAmount / allHouses.Count; // Fallback to equal division
+        var tiers = fi.Tiers.OrderBy(t => t.TierOrder).ToList();
+        if (tiers.Count == 0)
+            return 0m;
 
-        var groupCount = fi.NumberOfGroups.Value;
-        var sortedHouses = allHouses
-            .OrderBy(h => usageByHouseItem.GetValueOrDefault((h.Id, fi.Id), 0))
-            .ToList();
+        int usage = usageByHouseItem.GetValueOrDefault((house.Id, fi.Id), 0);
+        if (usage <= 0)
+            return 0m;
 
-        var housesPerGroup = sortedHouses.Count / groupCount;
-        var remainder = sortedHouses.Count % groupCount;
+        decimal total = 0m;
+        int consumed = 0;
+        long previousLimit = 0;
 
-        // Assign groups to houses
-        var houseGroups = new Dictionary<int, int>(); // houseId -> groupNumber
-        var index = 0;
-        for (int g = 1; g <= groupCount; g++)
+        foreach (var tier in tiers)
         {
-            var count = housesPerGroup + (g <= remainder ? 1 : 0);
-            for (int i = 0; i < count && index < sortedHouses.Count; i++, index++)
-            {
-                houseGroups[sortedHouses[index].Id] = g;
-            }
+            if (consumed >= usage)
+                break;
+
+            long blockStart = previousLimit;
+            long blockEnd = tier.UpperLimit.HasValue ? (long)tier.UpperLimit.Value : (long)int.MaxValue;
+            long blockSize = blockEnd - blockStart;
+
+            int unitsInBlock = (int)Math.Min(usage - consumed, blockSize);
+            total += unitsInBlock * tier.RatePerUnit;
+            consumed += unitsInBlock;
+            previousLimit = blockEnd;
         }
 
-        // Get point values per group
-        var groupPoints = fi.GroupPoints.ToDictionary(gp => gp.GroupNumber, gp => gp.PointValue);
-
-        // Calculate house points
-        decimal housePoint = 0;
-        if (houseGroups.TryGetValue(house.Id, out var groupNum) && groupPoints.TryGetValue(groupNum, out var pointVal))
-        {
-            housePoint = pointVal;
-        }
-
-        // Calculate total points
-        decimal totalPoints = 0;
-        foreach (var h in allHouses)
-        {
-            if (houseGroups.TryGetValue(h.Id, out var gn) && groupPoints.TryGetValue(gn, out var pv))
-            {
-                totalPoints += pv;
-            }
-        }
-
-        if (totalPoints == 0) return finalAmount / allHouses.Count;
-
-        return Math.Round(housePoint / totalPoints * finalAmount, 0);
+        return Math.Round(total, 0);
     }
 }

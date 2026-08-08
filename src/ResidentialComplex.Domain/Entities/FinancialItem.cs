@@ -24,11 +24,10 @@ public class FinancialItem
     /// <summary>Number of installments already billed.</summary>
     public int InstallmentsBilled { get; set; }
 
-    /// <summary>Number of groups for Grouping calculation type.</summary>
-    public int? NumberOfGroups { get; set; }
-
     public long RowVersion { get; set; }
 
     public ICollection<FinancialItemGroupPoint> GroupPoints { get; set; } = new List<FinancialItemGroupPoint>();
+    /// <summary>IBT tiers for Grouping calculation type, ordered by TierOrder.</summary>
+    public ICollection<FinancialItemTier> Tiers { get; set; } = new List<FinancialItemTier>();
     public ICollection<BillItem> BillItems { get; set; } = new List<BillItem>();
 }

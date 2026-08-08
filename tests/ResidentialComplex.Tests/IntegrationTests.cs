@@ -223,7 +223,7 @@ public class EqualDivisionBillingTests : TestBase
 public class GroupingBillingTests : TestBase
 {
     [Fact]
-    public async Task Grouping_Distributes_By_Points()
+    public async Task Grouping_IBT_Calculates_By_Tiers()
     {
         var aptRepo = GetService<IApartmentRepository>();
         var houseRepo = GetService<IHouseRepository>();
@@ -239,35 +239,44 @@ public class GroupingBillingTests : TestBase
             houses.Add(h);
         }
 
+        // IBT tiers: 0-20 units @ 1000/unit, 21-70 units @ 2000/unit, 71+ @ 4000/unit
         var fi = await fiRepo.AddAsync(new FinancialItem
         {
             Title = "گاز",
             PeriodType = PeriodType.Permanent,
             CalculationType = CalculationType.Grouping,
-            NumberOfGroups = 3,
             IsActive = true,
-            GroupPoints = new List<FinancialItemGroupPoint>
+            Tiers = new List<FinancialItemTier>
             {
-                new() { GroupNumber = 1, PointValue = 1 },
-                new() { GroupNumber = 2, PointValue = 2 },
-                new() { GroupNumber = 3, PointValue = 4 }
+                new() { TierOrder = 1, UpperLimit = 20, RatePerUnit = 1000m },
+                new() { TierOrder = 2, UpperLimit = 70, RatePerUnit = 2000m },
+                new() { TierOrder = 3, UpperLimit = null, RatePerUnit = 4000m }
             }
         });
 
-        // Add usage per house per financial item: house1=low, house2=mid, house3=high
+        // Usage: house1=10 (tier1 only), house2=50 (tier1+2), house3=100 (all tiers)
         await usageRepo.AddAsync(new MonthlyUsage { HouseId = houses[0].Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 10 });
         await usageRepo.AddAsync(new MonthlyUsage { HouseId = houses[1].Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 50 });
         await usageRepo.AddAsync(new MonthlyUsage { HouseId = houses[2].Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 100 });
 
-        var finalAmounts = new Dictionary<int, decimal> { [fi.Id] = 700_000m };
+        // finalAmounts is ignored for IBT items; pass 0
+        var finalAmounts = new Dictionary<int, decimal> { [fi.Id] = 0m };
         var bills = await billingService.GenerateBillsAsync(2025, 1, finalAmounts, "test", "test");
 
         Assert.Equal(3, bills.Count);
-        // Total should equal final amount
-        Assert.Equal(700_000m, bills.Sum(b => b.TotalAmount));
-        // House with highest usage should pay most
-        var sortedBills = bills.OrderBy(b => b.TotalAmount).ToList();
-        Assert.True(sortedBills.Last().TotalAmount > sortedBills.First().TotalAmount);
+
+        var getBillForHouse = (int houseId) => bills.Single(b => b.HouseId == houseId).TotalAmount;
+
+        // House 1: 10 * 1000 = 10,000
+        Assert.Equal(10_000m, getBillForHouse(houses[0].Id));
+        // House 2: 20 * 1000 + 30 * 2000 = 80,000
+        Assert.Equal(80_000m, getBillForHouse(houses[1].Id));
+        // House 3: 20 * 1000 + 50 * 2000 + 30 * 4000 = 240,000
+        Assert.Equal(240_000m, getBillForHouse(houses[2].Id));
+
+        // Higher usage → higher bill
+        Assert.True(getBillForHouse(houses[2].Id) > getBillForHouse(houses[1].Id));
+        Assert.True(getBillForHouse(houses[1].Id) > getBillForHouse(houses[0].Id));
     }
 }
 

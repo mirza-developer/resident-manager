@@ -26,6 +26,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<House> Houses => Set<House>();
     public DbSet<FinancialItem> FinancialItems => Set<FinancialItem>();
     public DbSet<FinancialItemGroupPoint> FinancialItemGroupPoints => Set<FinancialItemGroupPoint>();
+    public DbSet<FinancialItemTier> FinancialItemTiers => Set<FinancialItemTier>();
     public DbSet<MonthlyUsage> MonthlyUsages => Set<MonthlyUsage>();
     public DbSet<Bill> Bills => Set<Bill>();
     public DbSet<BillItem> BillItems => Set<BillItem>();

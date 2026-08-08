@@ -36,12 +36,19 @@ public class FinancialItemRepository : IFinancialItemRepository
     private readonly ApplicationDbContext _db;
     public FinancialItemRepository(ApplicationDbContext db) => _db = db;
 
-    public async Task<List<FinancialItem>> GetAllAsync() => await _db.FinancialItems.Include(f => f.GroupPoints).ToListAsync();
-    public async Task<List<FinancialItem>> GetActiveAsync() => await _db.FinancialItems.Include(f => f.GroupPoints).Where(f => f.IsActive).ToListAsync();
-    public async Task<FinancialItem?> GetByIdAsync(int id) => await _db.FinancialItems.Include(f => f.GroupPoints).FirstOrDefaultAsync(f => f.Id == id);
+    public async Task<List<FinancialItem>> GetAllAsync() => await _db.FinancialItems.Include(f => f.Tiers).ToListAsync();
+    public async Task<List<FinancialItem>> GetActiveAsync() => await _db.FinancialItems.Include(f => f.Tiers).Where(f => f.IsActive).ToListAsync();
+    public async Task<FinancialItem?> GetByIdAsync(int id) => await _db.FinancialItems.Include(f => f.Tiers).FirstOrDefaultAsync(f => f.Id == id);
     public async Task<FinancialItem> AddAsync(FinancialItem item) { _db.FinancialItems.Add(item); await _db.SaveChangesAsync(); return item; }
     public async Task UpdateAsync(FinancialItem item) { _db.FinancialItems.Update(item); await _db.SaveChangesAsync(); }
     public async Task DeleteAsync(int id) { var e = await _db.FinancialItems.FindAsync(id); if (e != null) { _db.FinancialItems.Remove(e); await _db.SaveChangesAsync(); } }
+
+    public async Task<List<FinancialItemTier>> GetTiersAsync(int financialItemId) =>
+        await _db.FinancialItemTiers.Where(t => t.FinancialItemId == financialItemId).OrderBy(t => t.TierOrder).ToListAsync();
+
+    public async Task<FinancialItemTier> AddTierAsync(FinancialItemTier tier) { _db.FinancialItemTiers.Add(tier); await _db.SaveChangesAsync(); return tier; }
+
+    public async Task DeleteTierAsync(int tierId) { var t = await _db.FinancialItemTiers.FindAsync(tierId); if (t != null) { _db.FinancialItemTiers.Remove(t); await _db.SaveChangesAsync(); } }
 }
 
 public class BillRepository : IBillRepository
