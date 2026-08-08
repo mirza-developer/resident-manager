@@ -53,6 +53,16 @@ public class BillingService
             .Where(fi => IsApplicable(fi))
             .ToList();
 
+        // Validate that Grouping items have tiers configured
+        var groupingItemsWithoutTiers = applicableItems
+            .Where(fi => fi.CalculationType == CalculationType.Grouping && !fi.Tiers.Any())
+            .ToList();
+        if (groupingItemsWithoutTiers.Any())
+        {
+            var names = string.Join("، ", groupingItemsWithoutTiers.Select(fi => fi.Title));
+            throw new InvalidOperationException($"آیتم‌های زیر نوع گروه‌بندی (تعرفه‌ای) دارند ولی هیچ تعرفه‌ای برای آن‌ها تعریف نشده است: {names}. لطفاً ابتدا تعرفه‌ها را در صفحه آیتم‌های مالی تنظیم کنید.");
+        }
+
         var usages = await _usageRepo.GetByMonthYearAsync(year, month);
         var usageByHouseItem = usages
             .GroupBy(u => (u.HouseId, u.FinancialItemId))
@@ -277,8 +287,16 @@ public class BillingService
             if (consumed >= usage)
                 break;
 
+            if (!tier.UpperLimit.HasValue)
+            {
+                // Last (unbounded) tier: consume all remaining units
+                total += (usage - consumed) * tier.RatePerUnit;
+                consumed = usage;
+                break;
+            }
+
             long blockStart = previousLimit;
-            long blockEnd = tier.UpperLimit.HasValue ? (long)tier.UpperLimit.Value : (long)int.MaxValue;
+            long blockEnd = (long)tier.UpperLimit.Value;
             long blockSize = blockEnd - blockStart;
 
             int unitsInBlock = (int)Math.Min(usage - consumed, blockSize);
