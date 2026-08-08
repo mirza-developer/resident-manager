@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using ResidentialComplex.Domain.Enums;
 
 namespace ResidentialComplex.Domain.Entities;
@@ -8,6 +9,8 @@ namespace ResidentialComplex.Domain.Entities;
 public class FinancialItem
 {
     public int Id { get; set; }
+
+    [Required(ErrorMessage = "عنوان الزامی است.")]
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public PeriodType PeriodType { get; set; }

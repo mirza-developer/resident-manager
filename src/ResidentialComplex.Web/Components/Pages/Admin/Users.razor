@@ -1,4 +1,5 @@
 @page "/admin/users"
+@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using ResidentialComplex.Persistence
@@ -23,32 +24,38 @@
 {
     <div class="card mb-3">
         <div class="card-body">
-            <h5>@(isNew ? "افزودن" : "ویرایش") کاربر</h5>
-            <div class="mb-2">
-                <label class="form-label">نام کامل *</label>
-                <input @bind="editFullName" class="form-control" />
-            </div>
-            <div class="mb-2">
-                <label class="form-label">نام کاربری *</label>
-                <input @bind="editUserName" class="form-control" disabled="@(!isNew)" />
-            </div>
-            @if (isNew)
-            {
+            <h5>@(formModel.IsNew ? "افزودن" : "ویرایش") کاربر</h5>
+            <EditForm Model="formModel" OnValidSubmit="Save">
+                <DataAnnotationsValidator />
                 <div class="mb-2">
-                    <label class="form-label">رمز عبور *</label>
-                    <input type="password" @bind="editPassword" class="form-control" />
+                    <label class="form-label">نام کامل *</label>
+                    <InputText @bind-Value="formModel.FullName" class="form-control" />
+                    <ValidationMessage For="() => formModel.FullName" />
                 </div>
-            }
-            <div class="mb-2">
-                <label class="form-label">نقش</label>
-                <select @bind="editRole" class="form-select">
-                    <option value="Administrator">مدیر</option>
-                    <option value="Worker">کارگر</option>
-                    <option value="Resident">ساکن</option>
-                </select>
-            </div>
-            <button type="button" class="btn btn-primary" @onclick="Save">ذخیره</button>
-            <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+                <div class="mb-2">
+                    <label class="form-label">نام کاربری *</label>
+                    <InputText @bind-Value="formModel.UserName" class="form-control" disabled="@(!formModel.IsNew)" />
+                    <ValidationMessage For="() => formModel.UserName" />
+                </div>
+                @if (formModel.IsNew)
+                {
+                    <div class="mb-2">
+                        <label class="form-label">رمز عبور *</label>
+                        <InputText @bind-Value="formModel.Password" type="password" class="form-control" />
+                        <ValidationMessage For="() => formModel.Password" />
+                    </div>
+                }
+                <div class="mb-2">
+                    <label class="form-label">نقش</label>
+                    <InputSelect @bind-Value="formModel.Role" class="form-select">
+                        <option value="Administrator">مدیر</option>
+                        <option value="Worker">کارگر</option>
+                        <option value="Resident">ساکن</option>
+                    </InputSelect>
+                </div>
+                <button type="submit" class="btn btn-primary">ذخیره</button>
+                <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+            </EditForm>
         </div>
     </div>
 }
@@ -73,8 +80,8 @@
 
 @code {
     private List<UserInfo> users = new();
-    private bool showForm, isNew, isError;
-    private string editId = "", editFullName = "", editUserName = "", editPassword = "", editRole = "Resident";
+    private UserFormModel formModel = new();
+    private bool showForm, isError;
     private string? message;
 
     protected override async Task OnInitializedAsync() => await LoadUsers();
@@ -90,36 +97,30 @@
         }
     }
 
-    private void ShowAdd() { isNew = true; editId = ""; editFullName = ""; editUserName = ""; editPassword = ""; editRole = "Resident"; showForm = true; message = null; isError = false; }
+    private void ShowAdd()
+    {
+        formModel = new UserFormModel { IsNew = true, Role = "Resident" };
+        showForm = true; message = null; isError = false;
+    }
 
-    private void EditUser(UserInfo u) { isNew = false; editId = u.Id; editFullName = u.FullName; editUserName = u.UserName; editRole = u.Role; showForm = true; message = null; isError = false; }
+    private void EditUser(UserInfo u)
+    {
+        formModel = new UserFormModel { IsNew = false, Id = u.Id, FullName = u.FullName, UserName = u.UserName, Role = u.Role };
+        showForm = true; message = null; isError = false;
+    }
 
     private async Task Save()
     {
         message = null;
         isError = false;
 
-        if (string.IsNullOrWhiteSpace(editFullName) || string.IsNullOrWhiteSpace(editUserName))
+        if (formModel.IsNew)
         {
-            message = "نام کامل و نام کاربری الزامی است.";
-            isError = true;
-            return;
-        }
-
-        if (isNew && string.IsNullOrWhiteSpace(editPassword))
-        {
-            message = "رمز عبور الزامی است.";
-            isError = true;
-            return;
-        }
-
-        if (isNew)
-        {
-            var user = new ApplicationUser { UserName = editUserName, FullName = editFullName };
-            var result = await UserManager.CreateAsync(user, editPassword);
+            var user = new ApplicationUser { UserName = formModel.UserName, FullName = formModel.FullName };
+            var result = await UserManager.CreateAsync(user, formModel.Password!);
             if (result.Succeeded)
             {
-                await UserManager.AddToRoleAsync(user, editRole);
+                await UserManager.AddToRoleAsync(user, formModel.Role);
                 message = "کاربر ایجاد شد.";
                 showForm = false;
             }
@@ -131,14 +132,14 @@
         }
         else
         {
-            var user = await UserManager.FindByIdAsync(editId);
+            var user = await UserManager.FindByIdAsync(formModel.Id);
             if (user != null)
             {
-                user.FullName = editFullName;
+                user.FullName = formModel.FullName;
                 await UserManager.UpdateAsync(user);
                 var currentRoles = await UserManager.GetRolesAsync(user);
                 await UserManager.RemoveFromRolesAsync(user, currentRoles);
-                await UserManager.AddToRoleAsync(user, editRole);
+                await UserManager.AddToRoleAsync(user, formModel.Role);
                 message = "کاربر بروزرسانی شد.";
                 showForm = false;
             }
@@ -151,6 +152,29 @@
         var user = await UserManager.FindByIdAsync(id);
         if (user != null) await UserManager.DeleteAsync(user);
         await LoadUsers();
+    }
+
+    private class UserFormModel : IValidatableObject
+    {
+        public bool IsNew { get; set; }
+        public string Id { get; set; } = "";
+
+        [Required(ErrorMessage = "نام کامل الزامی است.")]
+        public string FullName { get; set; } = "";
+
+        [Required(ErrorMessage = "نام کاربری الزامی است.")]
+        public string UserName { get; set; } = "";
+
+        public string? Password { get; set; }
+
+        [Required(ErrorMessage = "نقش الزامی است.")]
+        public string Role { get; set; } = "Resident";
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (IsNew && string.IsNullOrWhiteSpace(Password))
+                yield return new ValidationResult("رمز عبور الزامی است.", new[] { nameof(Password) });
+        }
     }
 
     private class UserInfo { public string Id { get; set; } = ""; public string FullName { get; set; } = ""; public string UserName { get; set; } = ""; public string Role { get; set; } = ""; }
