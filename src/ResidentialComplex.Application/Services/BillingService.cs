@@ -72,10 +72,14 @@ public class BillingService
 
         foreach (var house in activeHouses)
         {
-            // Check uniqueness constraint
+            // Check uniqueness constraint — skip Approved/Paid bills; delete and regenerate Draft bills
             var existing = await _billRepo.GetByHouseMonthYearAsync(house.Id, year, month);
             if (existing != null)
-                continue;
+            {
+                if (existing.Status != BillStatus.Draft)
+                    continue;
+                await _billRepo.DeleteAsync(existing.Id);
+            }
 
             var bill = new Bill
             {
@@ -295,9 +299,8 @@ public class BillingService
                 break;
             }
 
-            long blockStart = previousLimit;
             long blockEnd = (long)tier.UpperLimit.Value;
-            long blockSize = blockEnd - blockStart;
+            long blockSize = blockEnd - previousLimit;
 
             int unitsInBlock = (int)Math.Min(usage - consumed, blockSize);
             total += unitsInBlock * tier.RatePerUnit;

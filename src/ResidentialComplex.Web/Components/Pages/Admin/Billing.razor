@@ -365,7 +365,7 @@
 
     private static string GetStatusLabel(BillStatus s) => s switch { BillStatus.Draft => "پیش‌نویس", BillStatus.Approved => "تایید شده", BillStatus.Paid => "پرداخت شده", _ => "" };
     private static string GetPeriodLabel(PeriodType pt) => pt switch { PeriodType.Once => "یکبار", PeriodType.Permanent => "دائمی", PeriodType.Installment => "اقساط", _ => "" };
-    private static string GetCalcLabel(CalculationType ct) => ct switch { CalculationType.EqualDivision => "تقسیم مساوی", CalculationType.Grouping => "گروه‌بندی", _ => "" };
+    private static string GetCalcLabel(CalculationType ct) => ct switch { CalculationType.EqualDivision => "تقسیم مساوی", CalculationType.Grouping => "تعرفه پلکانی (IBT)", _ => "" };
 
     private class MissingUsageInfo
     {

@@ -64,6 +64,7 @@ public class BillRepository : IBillRepository
     public async Task<Bill> AddAsync(Bill bill) { _db.Bills.Add(bill); await _db.SaveChangesAsync(); return bill; }
     public async Task AddRangeAsync(IEnumerable<Bill> bills) { _db.Bills.AddRange(bills); await _db.SaveChangesAsync(); }
     public async Task UpdateAsync(Bill bill) { _db.Bills.Update(bill); await _db.SaveChangesAsync(); }
+    public async Task DeleteAsync(int id) { var e = await _db.Bills.Include(b => b.BillItems).FirstOrDefaultAsync(b => b.Id == id); if (e != null) { _db.Bills.Remove(e); await _db.SaveChangesAsync(); } }
     public async Task<List<Bill>> GetForReportAsync(int? year, int? month, int? houseId)
     {
         var query = _db.Bills.Include(b => b.House).AsQueryable();

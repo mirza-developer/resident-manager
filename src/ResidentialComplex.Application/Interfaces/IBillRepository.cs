@@ -15,5 +15,6 @@ public interface IBillRepository
     Task<Bill> AddAsync(Bill bill);
     Task AddRangeAsync(IEnumerable<Bill> bills);
     Task UpdateAsync(Bill bill);
+    Task DeleteAsync(int id);
     Task<List<Bill>> GetForReportAsync(int? year, int? month, int? houseId);
 }
