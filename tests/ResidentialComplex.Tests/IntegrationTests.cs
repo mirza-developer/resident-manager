@@ -871,3 +871,247 @@ public class MigrationTests : IDisposable
         GC.SuppressFinalize(this);
     }
 }
+
+/// <summary>
+/// Tests that verify repository calculation methods produce precise, predetermined results.
+/// All calculations (IBT and EqualDivision) live in BillRepository.
+/// </summary>
+public class RepositoryCalculationTests : TestBase
+{
+    // ─── EqualDivision ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void CalculateEqualDivision_ExactlyDivisible_ReturnsExactQuotient()
+    {
+        // 300,000 / 3 houses = 100,000 each — no remainder
+        var billRepo = GetService<IBillRepository>();
+        var result = billRepo.CalculateEqualDivisionAmount(300_000m, 3);
+        Assert.Equal(100_000m, result);
+    }
+
+    [Fact]
+    public void CalculateEqualDivision_IndivisibleAmount_ReturnsRawQuotient()
+    {
+        // 100,001 / 3 = 33,333.666... (rounding adjustment is applied by the service, not this method)
+        var billRepo = GetService<IBillRepository>();
+        var result = billRepo.CalculateEqualDivisionAmount(100_001m, 3);
+        Assert.Equal(100_001m / 3m, result);
+    }
+
+    [Fact]
+    public void CalculateEqualDivision_SingleHouse_ReturnsTotalAmount()
+    {
+        var billRepo = GetService<IBillRepository>();
+        var result = billRepo.CalculateEqualDivisionAmount(500_000m, 1);
+        Assert.Equal(500_000m, result);
+    }
+
+    [Fact]
+    public void CalculateEqualDivision_ZeroHouses_ReturnsZero()
+    {
+        var billRepo = GetService<IBillRepository>();
+        var result = billRepo.CalculateEqualDivisionAmount(300_000m, 0);
+        Assert.Equal(0m, result);
+    }
+
+    // ─── IBT (Grouping / CalculateIbtAmountAsync) ────────────────────────────
+
+    private async Task<(FinancialItem fi, House house)> SetupIbtScenario(
+        List<FinancialItemTier> tiers, int usageCount)
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var usageRepo = GetService<IMonthlyUsageRepository>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک تست" });
+        var house = await houseRepo.AddAsync(new House
+        {
+            Title = "واحد تست",
+            ApartmentId = apt.Id,
+            ResidentName = "تست",
+            ResidentPhoneNumber = "0",
+            IsActive = true
+        });
+
+        var fi = await fiRepo.AddAsync(new FinancialItem
+        {
+            Title = "آیتم تست",
+            PeriodType = PeriodType.Permanent,
+            CalculationType = CalculationType.Grouping,
+            IsActive = true,
+            Tiers = tiers
+        });
+
+        await usageRepo.AddAsync(new MonthlyUsage
+        {
+            HouseId = house.Id,
+            FinancialItemId = fi.Id,
+            Year = 2025,
+            Month = 6,
+            UsageCount = usageCount
+        });
+
+        // Reload fi with tiers
+        fi = (await fiRepo.GetByIdAsync(fi.Id))!;
+        return (fi, house);
+    }
+
+    [Fact]
+    public async Task CalculateIbtAmount_ZeroUsage_ReturnsZero()
+    {
+        // House has no usage record — expected: 0
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var billRepo = GetService<IBillRepository>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        var house = await houseRepo.AddAsync(new House { Title = "واحد", ApartmentId = apt.Id, ResidentName = "ت", ResidentPhoneNumber = "0", IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem
+        {
+            Title = "گاز",
+            PeriodType = PeriodType.Permanent,
+            CalculationType = CalculationType.Grouping,
+            IsActive = true,
+            Tiers = new List<FinancialItemTier>
+            {
+                new() { TierOrder = 1, UpperLimit = 100, RatePerUnit = 500m },
+                new() { TierOrder = 2, UpperLimit = null, RatePerUnit = 1000m }
+            }
+        });
+        fi = (await fiRepo.GetByIdAsync(fi.Id))!;
+
+        // No MonthlyUsage record → usage = 0
+        var result = await billRepo.CalculateIbtAmountAsync(fi, house.Id, 2025, 6);
+        Assert.Equal(0m, result);
+    }
+
+    [Fact]
+    public async Task CalculateIbtAmount_UsageWithinFirstTier_OnlyAppliesFirstRate()
+    {
+        // Tiers: 0-100 @ 500/unit, 101+ @ 1000/unit
+        // Usage: 60 units  →  60 × 500 = 30,000
+        var tiers = new List<FinancialItemTier>
+        {
+            new() { TierOrder = 1, UpperLimit = 100, RatePerUnit = 500m },
+            new() { TierOrder = 2, UpperLimit = null, RatePerUnit = 1000m }
+        };
+        var (fi, house) = await SetupIbtScenario(tiers, 60);
+        var billRepo = GetService<IBillRepository>();
+
+        var result = await billRepo.CalculateIbtAmountAsync(fi, house.Id, 2025, 6);
+
+        Assert.Equal(30_000m, result); // 60 × 500
+    }
+
+    [Fact]
+    public async Task CalculateIbtAmount_UsageSpansTwoTiers_AppliesBothRates()
+    {
+        // Tiers: 0-20 @ 1000/unit, 21-70 @ 2000/unit, 71+ @ 4000/unit
+        // Usage: 50 units → 20×1000 + 30×2000 = 20,000 + 60,000 = 80,000
+        var tiers = new List<FinancialItemTier>
+        {
+            new() { TierOrder = 1, UpperLimit = 20, RatePerUnit = 1000m },
+            new() { TierOrder = 2, UpperLimit = 70, RatePerUnit = 2000m },
+            new() { TierOrder = 3, UpperLimit = null, RatePerUnit = 4000m }
+        };
+        var (fi, house) = await SetupIbtScenario(tiers, 50);
+        var billRepo = GetService<IBillRepository>();
+
+        var result = await billRepo.CalculateIbtAmountAsync(fi, house.Id, 2025, 6);
+
+        Assert.Equal(80_000m, result); // 20×1000 + 30×2000
+    }
+
+    [Fact]
+    public async Task CalculateIbtAmount_UsageSpansAllThreeTiers_AppliesAllRates()
+    {
+        // Tiers: 0-20 @ 1000/unit, 21-70 @ 2000/unit, 71+ @ 4000/unit
+        // Usage: 100 units → 20×1000 + 50×2000 + 30×4000 = 20,000 + 100,000 + 120,000 = 240,000
+        var tiers = new List<FinancialItemTier>
+        {
+            new() { TierOrder = 1, UpperLimit = 20, RatePerUnit = 1000m },
+            new() { TierOrder = 2, UpperLimit = 70, RatePerUnit = 2000m },
+            new() { TierOrder = 3, UpperLimit = null, RatePerUnit = 4000m }
+        };
+        var (fi, house) = await SetupIbtScenario(tiers, 100);
+        var billRepo = GetService<IBillRepository>();
+
+        var result = await billRepo.CalculateIbtAmountAsync(fi, house.Id, 2025, 6);
+
+        Assert.Equal(240_000m, result); // 20×1000 + 50×2000 + 30×4000
+    }
+
+    [Fact]
+    public async Task CalculateIbtAmount_UsageExactlyAtTierBoundary_CorrectAmount()
+    {
+        // Tiers: 0-50 @ 1000/unit, 51+ @ 3000/unit
+        // Usage: exactly 50 → all in first tier: 50×1000 = 50,000
+        var tiers = new List<FinancialItemTier>
+        {
+            new() { TierOrder = 1, UpperLimit = 50, RatePerUnit = 1000m },
+            new() { TierOrder = 2, UpperLimit = null, RatePerUnit = 3000m }
+        };
+        var (fi, house) = await SetupIbtScenario(tiers, 50);
+        var billRepo = GetService<IBillRepository>();
+
+        var result = await billRepo.CalculateIbtAmountAsync(fi, house.Id, 2025, 6);
+
+        Assert.Equal(50_000m, result); // 50×1000
+    }
+
+    [Fact]
+    public async Task CalculateIbtAmount_UsageOneAboveBoundary_SpillsIntoSecondTier()
+    {
+        // Tiers: 0-50 @ 1000/unit, 51+ @ 3000/unit
+        // Usage: 51 → 50×1000 + 1×3000 = 50,000 + 3,000 = 53,000
+        var tiers = new List<FinancialItemTier>
+        {
+            new() { TierOrder = 1, UpperLimit = 50, RatePerUnit = 1000m },
+            new() { TierOrder = 2, UpperLimit = null, RatePerUnit = 3000m }
+        };
+        var (fi, house) = await SetupIbtScenario(tiers, 51);
+        var billRepo = GetService<IBillRepository>();
+
+        var result = await billRepo.CalculateIbtAmountAsync(fi, house.Id, 2025, 6);
+
+        Assert.Equal(53_000m, result); // 50×1000 + 1×3000
+    }
+
+    [Fact]
+    public async Task CalculateIbtAmount_SingleUnboundedTier_AllUsageAtSameRate()
+    {
+        // Single tier (no upper limit): 0+ @ 2000/unit
+        // Usage: 200 → 200×2000 = 400,000
+        var tiers = new List<FinancialItemTier>
+        {
+            new() { TierOrder = 1, UpperLimit = null, RatePerUnit = 2000m }
+        };
+        var (fi, house) = await SetupIbtScenario(tiers, 200);
+        var billRepo = GetService<IBillRepository>();
+
+        var result = await billRepo.CalculateIbtAmountAsync(fi, house.Id, 2025, 6);
+
+        Assert.Equal(400_000m, result); // 200×2000
+    }
+
+    [Fact]
+    public async Task CalculateIbtAmount_LargeUsage_CorrectHighPrecisionResult()
+    {
+        // Tiers: 0-100 @ 500/unit, 101-300 @ 800/unit, 301+ @ 1200/unit
+        // Usage: 350 → 100×500 + 200×800 + 50×1200 = 50,000 + 160,000 + 60,000 = 270,000
+        var tiers = new List<FinancialItemTier>
+        {
+            new() { TierOrder = 1, UpperLimit = 100, RatePerUnit = 500m },
+            new() { TierOrder = 2, UpperLimit = 300, RatePerUnit = 800m },
+            new() { TierOrder = 3, UpperLimit = null, RatePerUnit = 1200m }
+        };
+        var (fi, house) = await SetupIbtScenario(tiers, 350);
+        var billRepo = GetService<IBillRepository>();
+
+        var result = await billRepo.CalculateIbtAmountAsync(fi, house.Id, 2025, 6);
+
+        Assert.Equal(270_000m, result); // 100×500 + 200×800 + 50×1200
+    }
+}

@@ -12,7 +12,6 @@ public class BillingService
     private readonly IBillRepository _billRepo;
     private readonly IHouseRepository _houseRepo;
     private readonly IFinancialItemRepository _financialItemRepo;
-    private readonly IMonthlyUsageRepository _usageRepo;
     private readonly IPaymentRepository _paymentRepo;
     private readonly IAuditService _audit;
 
@@ -20,14 +19,12 @@ public class BillingService
         IBillRepository billRepo,
         IHouseRepository houseRepo,
         IFinancialItemRepository financialItemRepo,
-        IMonthlyUsageRepository usageRepo,
         IPaymentRepository paymentRepo,
         IAuditService audit)
     {
         _billRepo = billRepo;
         _houseRepo = houseRepo;
         _financialItemRepo = financialItemRepo;
-        _usageRepo = usageRepo;
         _paymentRepo = paymentRepo;
         _audit = audit;
     }
@@ -62,11 +59,6 @@ public class BillingService
             var names = string.Join("، ", groupingItemsWithoutTiers.Select(fi => fi.Title));
             throw new InvalidOperationException($"آیتم‌های زیر نوع گروه‌بندی (تعرفه‌ای) دارند ولی هیچ تعرفه‌ای برای آن‌ها تعریف نشده است: {names}. لطفاً ابتدا تعرفه‌ها را در صفحه آیتم‌های مالی تنظیم کنید.");
         }
-
-        var usages = await _usageRepo.GetByMonthYearAsync(year, month);
-        var usageByHouseItem = usages
-            .GroupBy(u => (u.HouseId, u.FinancialItemId))
-            .ToDictionary(g => g.Key, g => g.First().UsageCount);
 
         var bills = new List<Bill>();
 
@@ -103,11 +95,11 @@ public class BillingService
 
                 if (fi.CalculationType == CalculationType.EqualDivision)
                 {
-                    houseAmount = finalAmount / activeHouses.Count;
+                    houseAmount = _billRepo.CalculateEqualDivisionAmount(finalAmount, activeHouses.Count);
                 }
                 else // Grouping — Increasing Block Tariff
                 {
-                    houseAmount = CalculateIbtAmount(fi, house, usageByHouseItem);
+                    houseAmount = await _billRepo.CalculateIbtAmountAsync(fi, house.Id, year, month);
                 }
 
                 bill.BillItems.Add(new BillItem
@@ -269,45 +261,5 @@ public class BillingService
         if (fi.PeriodType == PeriodType.Installment && fi.NumberOfInstallments.HasValue && fi.InstallmentsBilled >= fi.NumberOfInstallments.Value)
             return false;
         return true;
-    }
-
-    private static decimal CalculateIbtAmount(FinancialItem fi, House house,
-        Dictionary<(int HouseId, int FinancialItemId), int> usageByHouseItem)
-    {
-        var tiers = fi.Tiers.OrderBy(t => t.TierOrder).ToList();
-        if (tiers.Count == 0)
-            return 0m;
-
-        int usage = usageByHouseItem.GetValueOrDefault((house.Id, fi.Id), 0);
-        if (usage <= 0)
-            return 0m;
-
-        decimal total = 0m;
-        int consumed = 0;
-        long previousLimit = 0;
-
-        foreach (var tier in tiers)
-        {
-            if (consumed >= usage)
-                break;
-
-            if (!tier.UpperLimit.HasValue)
-            {
-                // Last (unbounded) tier: consume all remaining units
-                total += (usage - consumed) * tier.RatePerUnit;
-                consumed = usage;
-                break;
-            }
-
-            long blockEnd = (long)tier.UpperLimit.Value;
-            long blockSize = blockEnd - previousLimit;
-
-            int unitsInBlock = (int)Math.Min(usage - consumed, blockSize);
-            total += unitsInBlock * tier.RatePerUnit;
-            consumed += unitsInBlock;
-            previousLimit = blockEnd;
-        }
-
-        return Math.Round(total, 0);
     }
 }

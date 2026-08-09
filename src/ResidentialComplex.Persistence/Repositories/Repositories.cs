@@ -73,6 +73,53 @@ public class BillRepository : IBillRepository
         if (houseId.HasValue) query = query.Where(b => b.HouseId == houseId.Value);
         return await query.ToListAsync();
     }
+
+    public decimal CalculateEqualDivisionAmount(decimal totalAmount, int houseCount)
+    {
+        if (houseCount <= 0) return 0m;
+        return totalAmount / houseCount;
+    }
+
+    public async Task<decimal> CalculateIbtAmountAsync(FinancialItem fi, int houseId, int year, int month)
+    {
+        var tiers = fi.Tiers.OrderBy(t => t.TierOrder).ToList();
+        if (tiers.Count == 0)
+            return 0m;
+
+        var usageRecord = await _db.MonthlyUsages
+            .FirstOrDefaultAsync(m => m.HouseId == houseId && m.FinancialItemId == fi.Id && m.Year == year && m.Month == month);
+
+        int usage = usageRecord?.UsageCount ?? 0;
+        if (usage <= 0)
+            return 0m;
+
+        decimal total = 0m;
+        int consumed = 0;
+        long previousLimit = 0;
+
+        foreach (var tier in tiers)
+        {
+            if (consumed >= usage)
+                break;
+
+            if (!tier.UpperLimit.HasValue)
+            {
+                total += (usage - consumed) * tier.RatePerUnit;
+                consumed = usage;
+                break;
+            }
+
+            long blockEnd = (long)tier.UpperLimit.Value;
+            long blockSize = blockEnd - previousLimit;
+
+            int unitsInBlock = (int)Math.Min(usage - consumed, blockSize);
+            total += unitsInBlock * tier.RatePerUnit;
+            consumed += unitsInBlock;
+            previousLimit = blockEnd;
+        }
+
+        return Math.Round(total, 0);
+    }
 }
 
 public class PaymentRepository : IPaymentRepository
