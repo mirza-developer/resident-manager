@@ -110,6 +110,30 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+app.MapPost("/Account/LoginPost", async (
+    HttpContext httpContext,
+    SignInManager<ApplicationUser> signInManager) =>
+{
+    var form = await httpContext.Request.ReadFormAsync();
+    var userName = form["UserName"].ToString();
+    var password = form["Password"].ToString();
+    var rememberMe = form["RememberMe"].ToString() == "true";
+    var returnUrl = form["ReturnUrl"].ToString();
+
+    var result = await signInManager.PasswordSignInAsync(userName, password, rememberMe, lockoutOnFailure: false);
+
+    if (result.Succeeded)
+    {
+        var redirect = !string.IsNullOrEmpty(returnUrl) ? returnUrl : "/";
+        return Results.Redirect(redirect);
+    }
+
+    var errorRedirect = string.IsNullOrEmpty(returnUrl)
+        ? "/Account/Login?error=%D9%86%D8%A7%D9%85+%DA%A9%D8%A7%D8%B1%D8%A8%D8%B1%DB%8C+%DB%8C%D8%A7+%D8%B1%D9%85%D8%B2+%D8%B9%D8%A8%D9%88%D8%B1+%D9%86%D8%A7%D8%AF%D8%B1%D8%B3%D8%AA+%D8%A7%D8%B3%D8%AA."
+        : $"/Account/Login?returnUrl={Uri.EscapeDataString(returnUrl)}&error=%D9%86%D8%A7%D9%85+%DA%A9%D8%A7%D8%B1%D8%A8%D8%B1%DB%8C+%DB%8C%D8%A7+%D8%B1%D9%85%D8%B2+%D8%B9%D8%A8%D9%88%D8%B1+%D9%86%D8%A7%D8%AF%D8%B1%D8%B3%D8%AA+%D8%A7%D8%B3%D8%AA.";
+    return Results.Redirect(errorRedirect);
+});
+
 app.Run();
 
 /// <summary>
