@@ -5,12 +5,9 @@
 @inject NavigationManager Navigation
 
 @code {
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            await SignInManager.SignOutAsync();
-            Navigation.NavigateTo("/Account/Login", forceLoad: true);
-        }
+        await SignInManager.SignOutAsync();
+        Navigation.NavigateTo("/Account/Login", forceLoad: true);
     }
 }
