@@ -1,13 +1,9 @@
 @page "/Account/Logout"
-@using Microsoft.AspNetCore.Identity
-@using ResidentialComplex.Persistence
-@inject SignInManager<ApplicationUser> SignInManager
 @inject NavigationManager Navigation
 
 @code {
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        await SignInManager.SignOutAsync();
-        Navigation.NavigateTo("/Account/Login", forceLoad: true);
+        Navigation.NavigateTo("/Account/LogoutPost", forceLoad: true);
     }
 }
