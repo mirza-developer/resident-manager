@@ -134,6 +134,14 @@ app.MapPost("/Account/LoginPost", async (
     return Results.Redirect(errorRedirect);
 });
 
+app.MapGet("/Account/LogoutPost", async (
+    HttpContext httpContext,
+    SignInManager<ApplicationUser> signInManager) =>
+{
+    await signInManager.SignOutAsync();
+    return Results.Redirect("/Account/Login");
+});
+
 app.Run();
 
 /// <summary>
