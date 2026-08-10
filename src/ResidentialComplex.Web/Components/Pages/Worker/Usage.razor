@@ -4,7 +4,7 @@
 @using ResidentialComplex.Application.Interfaces
 @using ResidentialComplex.Domain.Entities
 @using ResidentialComplex.Domain.Enums
-@attribute [Authorize(Roles = "Worker")]
+@attribute [Authorize(Roles = "Administrator,Worker")]
 @inject IMonthlyUsageRepository UsageRepo
 @inject IHouseRepository HouseRepo
 @inject IFinancialItemRepository FinancialItemRepo

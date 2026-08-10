@@ -6,7 +6,7 @@
 @using ResidentialComplex.Domain.Entities
 @using ResidentialComplex.Domain.Enums
 @using ResidentialComplex.Persistence
-@attribute [Authorize(Roles = "Resident")]
+@attribute [Authorize(Roles = "Administrator,Resident")]
 @inject IHouseRepository HouseRepo
 @inject IBillRepository BillRepo
 @inject UserManager<ApplicationUser> UserManager
