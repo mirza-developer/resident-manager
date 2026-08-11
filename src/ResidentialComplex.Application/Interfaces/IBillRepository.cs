@@ -15,5 +15,17 @@ public interface IBillRepository
     Task<Bill> AddAsync(Bill bill);
     Task AddRangeAsync(IEnumerable<Bill> bills);
     Task UpdateAsync(Bill bill);
+    Task DeleteAsync(int id);
     Task<List<Bill>> GetForReportAsync(int? year, int? month, int? houseId);
+
+    /// <summary>
+    /// Calculates the per-house amount for an EqualDivision financial item.
+    /// </summary>
+    decimal CalculateEqualDivisionAmount(decimal totalAmount, int houseCount);
+
+    /// <summary>
+    /// Calculates the Increasing Block Tariff (IBT) amount for the given house, financial item, and month.
+    /// Fetches usage data from the database.
+    /// </summary>
+    Task<decimal> CalculateIbtAmountAsync(FinancialItem fi, int houseId, int year, int month);
 }

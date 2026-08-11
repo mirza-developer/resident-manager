@@ -12,7 +12,6 @@ public class BillingService
     private readonly IBillRepository _billRepo;
     private readonly IHouseRepository _houseRepo;
     private readonly IFinancialItemRepository _financialItemRepo;
-    private readonly IMonthlyUsageRepository _usageRepo;
     private readonly IPaymentRepository _paymentRepo;
     private readonly IAuditService _audit;
 
@@ -20,14 +19,12 @@ public class BillingService
         IBillRepository billRepo,
         IHouseRepository houseRepo,
         IFinancialItemRepository financialItemRepo,
-        IMonthlyUsageRepository usageRepo,
         IPaymentRepository paymentRepo,
         IAuditService audit)
     {
         _billRepo = billRepo;
         _houseRepo = houseRepo;
         _financialItemRepo = financialItemRepo;
-        _usageRepo = usageRepo;
         _paymentRepo = paymentRepo;
         _audit = audit;
     }
@@ -53,19 +50,28 @@ public class BillingService
             .Where(fi => IsApplicable(fi))
             .ToList();
 
-        var usages = await _usageRepo.GetByMonthYearAsync(year, month);
-        var usageByHouseItem = usages
-            .GroupBy(u => (u.HouseId, u.FinancialItemId))
-            .ToDictionary(g => g.Key, g => g.First().UsageCount);
+        // Validate that Grouping items have tiers configured
+        var groupingItemsWithoutTiers = applicableItems
+            .Where(fi => fi.CalculationType == CalculationType.Grouping && !fi.Tiers.Any())
+            .ToList();
+        if (groupingItemsWithoutTiers.Any())
+        {
+            var names = string.Join("، ", groupingItemsWithoutTiers.Select(fi => fi.Title));
+            throw new InvalidOperationException($"آیتم‌های زیر نوع گروه‌بندی (تعرفه‌ای) دارند ولی هیچ تعرفه‌ای برای آن‌ها تعریف نشده است: {names}. لطفاً ابتدا تعرفه‌ها را در صفحه آیتم‌های مالی تنظیم کنید.");
+        }
 
         var bills = new List<Bill>();
 
         foreach (var house in activeHouses)
         {
-            // Check uniqueness constraint
+            // Check uniqueness constraint — skip Approved/Paid bills; delete and regenerate Draft bills
             var existing = await _billRepo.GetByHouseMonthYearAsync(house.Id, year, month);
             if (existing != null)
-                continue;
+            {
+                if (existing.Status != BillStatus.Draft)
+                    continue;
+                await _billRepo.DeleteAsync(existing.Id);
+            }
 
             var bill = new Bill
             {
@@ -89,11 +95,11 @@ public class BillingService
 
                 if (fi.CalculationType == CalculationType.EqualDivision)
                 {
-                    houseAmount = finalAmount / activeHouses.Count;
+                    houseAmount = _billRepo.CalculateEqualDivisionAmount(finalAmount, activeHouses.Count);
                 }
-                else // Grouping
+                else // Grouping — Increasing Block Tariff
                 {
-                    houseAmount = CalculateGroupingAmount(fi, house, activeHouses, usageByHouseItem, finalAmount);
+                    houseAmount = await _billRepo.CalculateIbtAmountAsync(fi, house.Id, year, month);
                 }
 
                 bill.BillItems.Add(new BillItem
@@ -124,9 +130,12 @@ public class BillingService
             bills.Add(bill);
         }
 
-        // Apply rounding adjustments per financial item across all bills
+        // Apply rounding adjustments per financial item across all bills (EqualDivision only)
         foreach (var fi in applicableItems)
         {
+            if (fi.CalculationType == CalculationType.Grouping)
+                continue; // IBT items are billed independently; no target total to reconcile
+
             var finalAmount = finalAmounts[fi.Id];
             if (fi.PeriodType == PeriodType.Installment && fi.TotalAmount.HasValue && fi.NumberOfInstallments.HasValue && fi.NumberOfInstallments.Value > 0)
             {
@@ -252,56 +261,5 @@ public class BillingService
         if (fi.PeriodType == PeriodType.Installment && fi.NumberOfInstallments.HasValue && fi.InstallmentsBilled >= fi.NumberOfInstallments.Value)
             return false;
         return true;
-    }
-
-    private static decimal CalculateGroupingAmount(FinancialItem fi, House house, List<House> allHouses,
-        Dictionary<(int HouseId, int FinancialItemId), int> usageByHouseItem, decimal finalAmount)
-    {
-        if (fi.NumberOfGroups == null || fi.NumberOfGroups.Value <= 0 || fi.GroupPoints.Count == 0)
-            return finalAmount / allHouses.Count; // Fallback to equal division
-
-        var groupCount = fi.NumberOfGroups.Value;
-        var sortedHouses = allHouses
-            .OrderBy(h => usageByHouseItem.GetValueOrDefault((h.Id, fi.Id), 0))
-            .ToList();
-
-        var housesPerGroup = sortedHouses.Count / groupCount;
-        var remainder = sortedHouses.Count % groupCount;
-
-        // Assign groups to houses
-        var houseGroups = new Dictionary<int, int>(); // houseId -> groupNumber
-        var index = 0;
-        for (int g = 1; g <= groupCount; g++)
-        {
-            var count = housesPerGroup + (g <= remainder ? 1 : 0);
-            for (int i = 0; i < count && index < sortedHouses.Count; i++, index++)
-            {
-                houseGroups[sortedHouses[index].Id] = g;
-            }
-        }
-
-        // Get point values per group
-        var groupPoints = fi.GroupPoints.ToDictionary(gp => gp.GroupNumber, gp => gp.PointValue);
-
-        // Calculate house points
-        decimal housePoint = 0;
-        if (houseGroups.TryGetValue(house.Id, out var groupNum) && groupPoints.TryGetValue(groupNum, out var pointVal))
-        {
-            housePoint = pointVal;
-        }
-
-        // Calculate total points
-        decimal totalPoints = 0;
-        foreach (var h in allHouses)
-        {
-            if (houseGroups.TryGetValue(h.Id, out var gn) && groupPoints.TryGetValue(gn, out var pv))
-            {
-                totalPoints += pv;
-            }
-        }
-
-        if (totalPoints == 0) return finalAmount / allHouses.Count;
-
-        return Math.Round(housePoint / totalPoints * finalAmount, 0);
     }
 }

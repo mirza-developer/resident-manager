@@ -36,12 +36,19 @@ public class FinancialItemRepository : IFinancialItemRepository
     private readonly ApplicationDbContext _db;
     public FinancialItemRepository(ApplicationDbContext db) => _db = db;
 
-    public async Task<List<FinancialItem>> GetAllAsync() => await _db.FinancialItems.Include(f => f.GroupPoints).ToListAsync();
-    public async Task<List<FinancialItem>> GetActiveAsync() => await _db.FinancialItems.Include(f => f.GroupPoints).Where(f => f.IsActive).ToListAsync();
-    public async Task<FinancialItem?> GetByIdAsync(int id) => await _db.FinancialItems.Include(f => f.GroupPoints).FirstOrDefaultAsync(f => f.Id == id);
+    public async Task<List<FinancialItem>> GetAllAsync() => await _db.FinancialItems.Include(f => f.Tiers).ToListAsync();
+    public async Task<List<FinancialItem>> GetActiveAsync() => await _db.FinancialItems.Include(f => f.Tiers).Where(f => f.IsActive).ToListAsync();
+    public async Task<FinancialItem?> GetByIdAsync(int id) => await _db.FinancialItems.Include(f => f.Tiers).FirstOrDefaultAsync(f => f.Id == id);
     public async Task<FinancialItem> AddAsync(FinancialItem item) { _db.FinancialItems.Add(item); await _db.SaveChangesAsync(); return item; }
     public async Task UpdateAsync(FinancialItem item) { _db.FinancialItems.Update(item); await _db.SaveChangesAsync(); }
     public async Task DeleteAsync(int id) { var e = await _db.FinancialItems.FindAsync(id); if (e != null) { _db.FinancialItems.Remove(e); await _db.SaveChangesAsync(); } }
+
+    public async Task<List<FinancialItemTier>> GetTiersAsync(int financialItemId) =>
+        await _db.FinancialItemTiers.Where(t => t.FinancialItemId == financialItemId).OrderBy(t => t.TierOrder).ToListAsync();
+
+    public async Task<FinancialItemTier> AddTierAsync(FinancialItemTier tier) { _db.FinancialItemTiers.Add(tier); await _db.SaveChangesAsync(); return tier; }
+
+    public async Task DeleteTierAsync(int tierId) { var t = await _db.FinancialItemTiers.FindAsync(tierId); if (t != null) { _db.FinancialItemTiers.Remove(t); await _db.SaveChangesAsync(); } }
 }
 
 public class BillRepository : IBillRepository
@@ -50,13 +57,14 @@ public class BillRepository : IBillRepository
     public BillRepository(ApplicationDbContext db) => _db = db;
 
     public async Task<List<Bill>> GetAllAsync() => await _db.Bills.Include(b => b.BillItems).Include(b => b.House).ToListAsync();
-    public async Task<List<Bill>> GetByHouseIdAsync(int houseId) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).Include(b => b.Payments).Where(b => b.HouseId == houseId).OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ToListAsync();
-    public async Task<List<Bill>> GetByMonthYearAsync(int year, int month) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).Include(b => b.House).Where(b => b.Year == year && b.Month == month).ToListAsync();
-    public async Task<Bill?> GetByIdAsync(int id) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).Include(b => b.House).Include(b => b.Payments).FirstOrDefaultAsync(b => b.Id == id);
+    public async Task<List<Bill>> GetByHouseIdAsync(int houseId) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).ThenInclude(fi => fi.Tiers).Include(b => b.Payments).Where(b => b.HouseId == houseId).OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ToListAsync();
+    public async Task<List<Bill>> GetByMonthYearAsync(int year, int month) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).ThenInclude(fi => fi.Tiers).Include(b => b.House).Where(b => b.Year == year && b.Month == month).ToListAsync();
+    public async Task<Bill?> GetByIdAsync(int id) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).ThenInclude(fi => fi.Tiers).Include(b => b.House).Include(b => b.Payments).FirstOrDefaultAsync(b => b.Id == id);
     public async Task<Bill?> GetByHouseMonthYearAsync(int houseId, int year, int month) => await _db.Bills.FirstOrDefaultAsync(b => b.HouseId == houseId && b.Year == year && b.Month == month);
     public async Task<Bill> AddAsync(Bill bill) { _db.Bills.Add(bill); await _db.SaveChangesAsync(); return bill; }
     public async Task AddRangeAsync(IEnumerable<Bill> bills) { _db.Bills.AddRange(bills); await _db.SaveChangesAsync(); }
     public async Task UpdateAsync(Bill bill) { _db.Bills.Update(bill); await _db.SaveChangesAsync(); }
+    public async Task DeleteAsync(int id) { var e = await _db.Bills.Include(b => b.BillItems).FirstOrDefaultAsync(b => b.Id == id); if (e != null) { _db.Bills.Remove(e); await _db.SaveChangesAsync(); } }
     public async Task<List<Bill>> GetForReportAsync(int? year, int? month, int? houseId)
     {
         var query = _db.Bills.Include(b => b.House).AsQueryable();
@@ -64,6 +72,57 @@ public class BillRepository : IBillRepository
         if (month.HasValue) query = query.Where(b => b.Month == month.Value);
         if (houseId.HasValue) query = query.Where(b => b.HouseId == houseId.Value);
         return await query.ToListAsync();
+    }
+
+    public decimal CalculateEqualDivisionAmount(decimal totalAmount, int houseCount)
+    {
+        if (houseCount <= 0)
+        {
+            return 0m;
+        }
+
+        return Math.Round(totalAmount / houseCount, 0);
+    }
+
+    public async Task<decimal> CalculateIbtAmountAsync(FinancialItem fi, int houseId, int year, int month)
+    {
+        var tiers = fi.Tiers.OrderBy(t => t.TierOrder).ToList();
+        if (tiers.Count == 0)
+            return 0m;
+
+        var usageRecord = await _db.MonthlyUsages
+            .FirstOrDefaultAsync(m => m.HouseId == houseId && m.FinancialItemId == fi.Id && m.Year == year && m.Month == month);
+
+        int usage = usageRecord?.UsageCount ?? 0;
+        if (usage <= 0)
+            return 0m;
+
+        decimal total = 0m;
+        int consumed = 0;
+        long previousLimit = 0;
+
+        foreach (var tier in tiers)
+        {
+            if (consumed >= usage)
+                break;
+
+            if (!tier.UpperLimit.HasValue)
+            {
+                total += (usage - consumed) * tier.RatePerUnit;
+                consumed = usage;
+                break;
+            }
+
+            long blockEnd = (long)tier.UpperLimit.Value;
+            long blockSize = blockEnd - previousLimit;
+
+            int unitsInBlock = (int)Math.Min(usage - consumed, blockSize);
+            total += unitsInBlock * tier.RatePerUnit;
+            consumed += unitsInBlock;
+            previousLimit = blockEnd;
+        }
+
+        return Math.Round(total, 0);
     }
 }
 

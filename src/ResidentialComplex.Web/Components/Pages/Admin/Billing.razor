@@ -42,6 +42,19 @@
             </div>
         </div>
 
+        @if (missingTiersItems.Any())
+        {
+            <div class="alert alert-danger mt-3">
+                <strong>خطا:</strong> آیتم‌های گروه‌بندی زیر هیچ تعرفه‌ای ندارند. لطفاً ابتدا در صفحه آیتم‌های مالی تعرفه‌ها را تنظیم کنید:
+                <ul class="mb-0 mt-2">
+                    @foreach (var title in missingTiersItems)
+                    {
+                        <li>@title</li>
+                    }
+                </ul>
+            </div>
+        }
+
         @if (missingUsageItems.Any())
         {
             <div class="alert alert-warning mt-3">
@@ -79,7 +92,14 @@
                             <td>@GetPeriodLabel(fi.PeriodType)</td>
                             <td>@GetCalcLabel(fi.CalculationType)</td>
                             <td>
-                                <input type="number" class="form-control" @bind="finalAmounts[fi.Id]" />
+                                @if (fi.CalculationType == CalculationType.Grouping)
+                                {
+                                    <span class="text-muted fst-italic">تعرفه‌ای (محاسبه از مصرف)</span>
+                                }
+                                else
+                                {
+                                    <input type="number" class="form-control" @bind="finalAmounts[fi.Id]" />
+                                }
                             </td>
                         </tr>
                     }
@@ -87,7 +107,7 @@
             </table>
         }
 
-        <button type="button" class="btn btn-primary mt-2" @onclick="Generate" disabled="@missingUsageItems.Any()">تولید صورتحساب</button>
+        <button type="button" class="btn btn-primary mt-2" @onclick="Generate" disabled="@(missingUsageItems.Any() || missingTiersItems.Any())">تولید صورتحساب</button>
         @if (!string.IsNullOrEmpty(message))
         {
             <div class="alert @(isError ? "alert-danger" : "alert-info") mt-2">@message</div>
@@ -141,20 +161,35 @@
                                         <tr class="table-secondary">
                                             <th>آیتم مالی</th>
                                             <th>نوع محاسبه</th>
+                                            <th>جزئیات</th>
                                             <th>مبلغ (ریال)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach (var bi in bill.BillItems)
                                         {
+                                            var fi = bi.FinancialItem;
+                                            bool isIbt = fi?.CalculationType == CalculationType.Grouping;
+                                            int usage = (fi != null && isIbt) ? usageByHouseItem.GetValueOrDefault((bill.HouseId, fi.Id), 0) : 0;
                                             <tr>
-                                                <td>@(bi.FinancialItem?.Title ?? bi.Description)</td>
-                                                <td>@(bi.FinancialItem != null ? GetCalcLabel(bi.FinancialItem.CalculationType) : "-")</td>
+                                                <td>@(fi?.Title ?? bi.Description)</td>
+                                                <td>@(fi != null ? GetCalcLabel(fi.CalculationType) : "-")</td>
+                                                <td>
+                                                    @if (isIbt && fi != null && fi.Tiers.Any())
+                                                    {
+                                                        var houseTier = GetHouseTier(fi.Tiers, usage);
+                                                        <span>مصرف: @usage واحد — @houseTier</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>-</span>
+                                                    }
+                                                </td>
                                                 <td>@bi.Amount.ToString("N0")</td>
                                             </tr>
                                         }
                                         <tr class="fw-bold">
-                                            <td colspan="2">جمع کل</td>
+                                            <td colspan="3">جمع کل</td>
                                             <td>@bill.BillItems.Sum(bi => bi.Amount).ToString("N0")</td>
                                         </tr>
                                     </tbody>
@@ -178,7 +213,9 @@
     private string? message;
     private bool isError;
     private List<MissingUsageInfo> missingUsageItems = new();
+    private List<string> missingTiersItems = new();
     private int? expandedBillId;
+    private Dictionary<(int HouseId, int FinancialItemId), int> usageByHouseItem = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -191,8 +228,19 @@
     private async Task CheckUsageStatus()
     {
         missingUsageItems.Clear();
+        missingTiersItems.Clear();
         var groupingItems = activeItems.Where(fi => fi.CalculationType == CalculationType.Grouping && IsApplicable(fi)).ToList();
         if (!groupingItems.Any()) return;
+
+        // Check that each Grouping item has at least one tier configured
+        foreach (var fi in groupingItems)
+        {
+            if (!fi.Tiers.Any())
+                missingTiersItems.Add(fi.Title);
+        }
+
+        var itemsWithTiers = groupingItems.Where(fi => fi.Tiers.Any()).ToList();
+        if (!itemsWithTiers.Any()) return;
 
         var activeHouses = await HouseRepo.GetActiveHousesAsync();
         if (activeHouses.Count == 0) return;
@@ -202,7 +250,7 @@
             .Select(u => (u.HouseId, u.FinancialItemId))
             .ToHashSet();
 
-        foreach (var fi in groupingItems)
+        foreach (var fi in itemsWithTiers)
         {
             var missingCount = activeHouses.Count(h => !usageSet.Contains((h.Id, fi.Id)));
             if (missingCount > 0)
@@ -240,7 +288,14 @@
         catch (Exception ex) { message = ex.Message; isError = true; }
     }
 
-    private async Task LoadBills() => bills = await BillRepo.GetByMonthYearAsync(year, month);
+    private async Task LoadBills()
+    {
+        bills = await BillRepo.GetByMonthYearAsync(year, month);
+        var usages = await UsageRepo.GetByMonthYearAsync(year, month);
+        usageByHouseItem = usages
+            .GroupBy(u => (u.HouseId, u.FinancialItemId))
+            .ToDictionary(g => g.Key, g => g.First().UsageCount);
+    }
 
     private async Task ApproveBills()
     {
@@ -282,9 +337,35 @@
         return true;
     }
 
+    /// <summary>
+    /// Returns a label indicating which IBT tier the given usage falls in (the highest tier reached).
+    /// </summary>
+    private static string GetHouseTier(ICollection<FinancialItemTier> tiers, int usage)
+    {
+        if (usage <= 0) return "بدون مصرف";
+        var sorted = tiers.OrderBy(t => t.TierOrder).ToList();
+        long prevLimit = 0;
+        for (int i = 0; i < sorted.Count; i++)
+        {
+            var tier = sorted[i];
+            long blockEnd = tier.UpperLimit.HasValue ? (long)tier.UpperLimit.Value : long.MaxValue;
+            if (usage <= blockEnd)
+            {
+                string range = tier.UpperLimit.HasValue
+                    ? $"{prevLimit + 1}–{tier.UpperLimit} واحد"
+                    : $"بالاتر از {prevLimit} واحد";
+                return $"پله {tier.TierOrder} ({range})";
+            }
+            prevLimit = blockEnd;
+        }
+        // Fallback to last tier
+        var last = sorted.Last();
+        return $"پله {last.TierOrder}";
+    }
+
     private static string GetStatusLabel(BillStatus s) => s switch { BillStatus.Draft => "پیش‌نویس", BillStatus.Approved => "تایید شده", BillStatus.Paid => "پرداخت شده", _ => "" };
     private static string GetPeriodLabel(PeriodType pt) => pt switch { PeriodType.Once => "یکبار", PeriodType.Permanent => "دائمی", PeriodType.Installment => "اقساط", _ => "" };
-    private static string GetCalcLabel(CalculationType ct) => ct switch { CalculationType.EqualDivision => "تقسیم مساوی", CalculationType.Grouping => "گروه‌بندی", _ => "" };
+    private static string GetCalcLabel(CalculationType ct) => ct switch { CalculationType.EqualDivision => "تقسیم مساوی", CalculationType.Grouping => "تعرفه پلکانی (IBT)", _ => "" };
 
     private class MissingUsageInfo
     {
