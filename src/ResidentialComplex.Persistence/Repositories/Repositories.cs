@@ -76,8 +76,12 @@ public class BillRepository : IBillRepository
 
     public decimal CalculateEqualDivisionAmount(decimal totalAmount, int houseCount)
     {
-        if (houseCount <= 0) return 0m;
-        return totalAmount / houseCount;
+        if (houseCount <= 0)
+        {
+            return 0m;
+        }
+
+        return Math.Round(totalAmount / houseCount, 0);
     }
 
     public async Task<decimal> CalculateIbtAmountAsync(FinancialItem fi, int houseId, int year, int month)
