@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ResidentialComplex.Application.Interfaces;
 using ResidentialComplex.Application.Services;
 using ResidentialComplex.Infrastructure.Services;
+using ResidentialComplex.Infrastructure.Settings;
 using ResidentialComplex.Persistence;
 using ResidentialComplex.Persistence.Repositories;
 using ResidentialComplex.Web.Components;
@@ -56,6 +57,16 @@ builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<BillingService>();
 builder.Services.AddScoped<ReportService>();
+
+// SMS Service
+builder.Services.Configure<SmsOptions>(builder.Configuration.GetSection(SmsOptions.SectionName));
+builder.Services.AddHttpClient(nameof(SmsService), (sp, client) =>
+{
+    var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SmsOptions>>().Value;
+    if (!string.IsNullOrEmpty(options.ApiBaseAddress))
+        client.BaseAddress = new Uri(options.ApiBaseAddress);
+});
+builder.Services.AddScoped<ISmsService, SmsService>();
 
 // Blazor
 builder.Services.AddRazorComponents()
