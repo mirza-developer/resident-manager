@@ -1,181 +1,39 @@
 @page "/admin/users"
-@using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Identity
-@using ResidentialComplex.Persistence
 @attribute [Authorize(Roles = "Administrator")]
-@inject UserManager<ApplicationUser> UserManager
-@inject RoleManager<IdentityRole> RoleManager
 
-<h4>مدیریت کاربران</h4>
-<HelpButton PageKey="users" />
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">مدیریت کاربران</MudText>
+        <HelpButton PageKey="users" />
+    </MudStack>
+    <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="NavigateToCreate">
+        افزودن کاربر جدید
+    </MudButton>
+</MudStack>
 
-<button type="button" class="btn btn-success mb-3" @onclick="ShowAdd">افزودن کاربر جدید</button>
-
-@if (!string.IsNullOrEmpty(message))
+@if (isLoading)
 {
-    <div class="alert @(isError ? "alert-danger" : "alert-success") alert-dismissible mt-2 mb-3">
-        @message
-        <button type="button" class="btn-close" @onclick="() => message = null"></button>
-    </div>
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
 }
 
-@if (showForm)
-{
-    <div class="card mb-3">
-        <div class="card-body">
-            <h5>@(formModel.IsNew ? "افزودن" : "ویرایش") کاربر</h5>
-            <EditForm Model="formModel" OnValidSubmit="Save">
-                <DataAnnotationsValidator />
-                <div class="mb-2">
-                    <label class="form-label">نام کامل *</label>
-                    <InputText @bind-Value="formModel.FullName" class="form-control" />
-                    <ValidationMessage For="() => formModel.FullName" />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">نام کاربری *</label>
-                    <InputText @bind-Value="formModel.UserName" class="form-control" disabled="@(!formModel.IsNew)" />
-                    <ValidationMessage For="() => formModel.UserName" />
-                </div>
-                @if (formModel.IsNew)
-                {
-                    <div class="mb-2">
-                        <label class="form-label">رمز عبور *</label>
-                        <InputText @bind-Value="formModel.Password" type="password" class="form-control" />
-                        <ValidationMessage For="() => formModel.Password" />
-                    </div>
-                }
-                <div class="mb-2">
-                    <label class="form-label">نقش</label>
-                    <InputSelect @bind-Value="formModel.Role" class="form-select">
-                        <option value="Administrator">مدیر</option>
-                        <option value="Worker">کارگر</option>
-                        <option value="Resident">ساکن</option>
-                    </InputSelect>
-                </div>
-                <button type="submit" class="btn btn-primary">ذخیره</button>
-                <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
-            </EditForm>
-        </div>
-    </div>
-}
-
-<table class="table table-striped table-bordered">
-    <thead><tr><th>نام</th><th>نام کاربری</th><th>نقش</th><th>عملیات</th></tr></thead>
-    <tbody>
-        @foreach (var u in users)
-        {
-            <tr>
-                <td>@u.FullName</td>
-                <td>@u.UserName</td>
-                <td>@u.Role</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-warning" @onclick="() => EditUser(u)">ویرایش</button>
-                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteUser(u.Id)">حذف</button>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
-
-@code {
-    private List<UserInfo> users = new();
-    private UserFormModel formModel = new();
-    private bool showForm, isError;
-    private string? message;
-
-    protected override async Task OnInitializedAsync() => await LoadUsers();
-
-    private async Task LoadUsers()
-    {
-        var allUsers = UserManager.Users.ToList();
-        users = new List<UserInfo>();
-        foreach (var u in allUsers)
-        {
-            var roles = await UserManager.GetRolesAsync(u);
-            users.Add(new UserInfo { Id = u.Id, FullName = u.FullName, UserName = u.UserName ?? "", Role = roles.FirstOrDefault() ?? "" });
-        }
-    }
-
-    private void ShowAdd()
-    {
-        formModel = new UserFormModel { IsNew = true, Role = "Resident" };
-        showForm = true; message = null; isError = false;
-    }
-
-    private void EditUser(UserInfo u)
-    {
-        formModel = new UserFormModel { IsNew = false, Id = u.Id, FullName = u.FullName, UserName = u.UserName, Role = u.Role };
-        showForm = true; message = null; isError = false;
-    }
-
-    private async Task Save()
-    {
-        message = null;
-        isError = false;
-
-        if (formModel.IsNew)
-        {
-            var user = new ApplicationUser { UserName = formModel.UserName, FullName = formModel.FullName };
-            var result = await UserManager.CreateAsync(user, formModel.Password!);
-            if (result.Succeeded)
-            {
-                await UserManager.AddToRoleAsync(user, formModel.Role);
-                message = "کاربر ایجاد شد.";
-                showForm = false;
-            }
-            else
-            {
-                message = string.Join(", ", result.Errors.Select(e => e.Description));
-                isError = true;
-            }
-        }
-        else
-        {
-            var user = await UserManager.FindByIdAsync(formModel.Id);
-            if (user != null)
-            {
-                user.FullName = formModel.FullName;
-                await UserManager.UpdateAsync(user);
-                var currentRoles = await UserManager.GetRolesAsync(user);
-                await UserManager.RemoveFromRolesAsync(user, currentRoles);
-                await UserManager.AddToRoleAsync(user, formModel.Role);
-                message = "کاربر بروزرسانی شد.";
-                showForm = false;
-            }
-        }
-        await LoadUsers();
-    }
-
-    private async Task DeleteUser(string id)
-    {
-        var user = await UserManager.FindByIdAsync(id);
-        if (user != null) await UserManager.DeleteAsync(user);
-        await LoadUsers();
-    }
-
-    private class UserFormModel : IValidatableObject
-    {
-        public bool IsNew { get; set; }
-        public string Id { get; set; } = "";
-
-        [Required(ErrorMessage = "نام کامل الزامی است.")]
-        public string FullName { get; set; } = "";
-
-        [Required(ErrorMessage = "نام کاربری الزامی است.")]
-        public string UserName { get; set; } = "";
-
-        public string? Password { get; set; }
-
-        [Required(ErrorMessage = "نقش الزامی است.")]
-        public string Role { get; set; } = "Resident";
-
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-        {
-            if (IsNew && string.IsNullOrWhiteSpace(Password))
-                yield return new ValidationResult("رمز عبور الزامی است.", new[] { nameof(Password) });
-        }
-    }
-
-    private class UserInfo { public string Id { get; set; } = ""; public string FullName { get; set; } = ""; public string UserName { get; set; } = ""; public string Role { get; set; } = ""; }
-}
+<MudPaper Class="pa-4">
+    <MudDataGrid T="UserInfo" Items="@users" Filterable="true" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
+        <Columns>
+            <PropertyColumn Property="x => x.FullName" Title="نام" />
+            <PropertyColumn Property="x => x.UserName" Title="نام کاربری" />
+            <PropertyColumn Property="x => x.Role" Title="نقش" />
+            <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small" OnClick="@(() => NavigateToEdit(context.Item.Id))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUserAsync(context.Item.Id))" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            <MudText>کاربری برای نمایش وجود ندارد.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudDataGridPager T="UserInfo" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>

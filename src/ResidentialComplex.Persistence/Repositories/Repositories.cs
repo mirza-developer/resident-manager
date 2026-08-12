@@ -81,7 +81,7 @@ public class BillRepository : IBillRepository
             return 0m;
         }
 
-        return Math.Round(totalAmount / houseCount, 0);
+        return totalAmount / houseCount;
     }
 
     public async Task<decimal> CalculateIbtAmountAsync(FinancialItem fi, int houseId, int year, int month)

@@ -1,40 +1,26 @@
 @page "/Account/Login"
 @layout ResidentialComplex.Web.Components.Layout.MainLayout
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-4">
-        <div class="card shadow">
-            <div class="card-body">
-                <h4 class="card-title text-center mb-4">ورود به سیستم</h4>
-                @if (!string.IsNullOrEmpty(ErrorMessage))
-                {
-                    <div class="alert alert-danger">@ErrorMessage</div>
-                }
-                <form method="post" action="/Account/LoginPost">
-                    <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
-                    <div class="mb-3">
-                        <label class="form-label">نام کاربری</label>
-                        <input type="text" name="UserName" class="form-control" placeholder="نام کاربری" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">رمز عبور</label>
-                        <input type="password" name="Password" class="form-control" placeholder="رمز عبور" required />
-                    </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" name="RememberMe" value="true" class="form-check-input" id="rememberMe" />
-                        <label class="form-check-label" for="rememberMe">مرا به خاطر بسپار</label>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">ورود</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-@code {
-    [SupplyParameterFromQuery(Name = "returnUrl")]
-    public string? ReturnUrl { get; set; }
-
-    [SupplyParameterFromQuery(Name = "error")]
-    public string? ErrorMessage { get; set; }
-}
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-10">
+    <MudPaper Class="pa-6">
+        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-4">ورود به سیستم</MudText>
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@ErrorMessage</MudAlert>
+        }
+        <form method="post" action="/Account/LoginPost">
+            <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+            <input type="hidden" name="UserName" value="@loginModel.UserName" />
+            <input type="hidden" name="Password" value="@loginModel.Password" />
+            <input type="hidden" name="RememberMe" value="@loginModel.RememberMe.ToString().ToLowerInvariant()" />
+            <MudStack Spacing="3">
+                <MudTextField T="string" @bind-Value="loginModel.UserName" Label="نام کاربری" Variant="Variant.Outlined" Required="true" />
+                <MudTextField T="string" @bind-Value="loginModel.Password" Label="رمز عبور" Variant="Variant.Outlined" InputType="InputType.Password" Required="true" />
+                <MudCheckBox T="bool" @bind-Value="loginModel.RememberMe" Label="مرا به خاطر بسپار" Color="Color.Primary" />
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Filled.Login">
+                    ورود
+                </MudButton>
+            </MudStack>
+        </form>
+    </MudPaper>
+</MudContainer>

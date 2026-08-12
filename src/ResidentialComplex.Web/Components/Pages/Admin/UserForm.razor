@@ -1,0 +1,61 @@
+@page "/admin/users/create"
+@page "/admin/users/edit/{Id}"
+@attribute [Authorize(Roles = "Administrator")]
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">@(IsEditMode ? "ویرایش کاربر" : "ایجاد کاربر")</MudText>
+        <HelpButton PageKey="users" />
+    </MudStack>
+    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="GoBack">
+        بازگشت
+    </MudButton>
+</MudStack>
+
+@if (isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+}
+
+@if (notFound)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true">کاربر موردنظر یافت نشد.</MudAlert>
+}
+else
+{
+    <MudPaper Class="pa-4">
+        <EditForm Model="formModel" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="formModel.FullName" For="@(() => formModel.FullName)" Label="نام کامل *" Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="formModel.UserName" For="@(() => formModel.UserName)" Label="نام کاربری *" Variant="Variant.Outlined" Disabled="@IsEditMode" Required="true" />
+                </MudItem>
+                @if (!IsEditMode)
+                {
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="formModel.Password" For="@(() => formModel.Password)" Label="رمز عبور *" Variant="Variant.Outlined" InputType="InputType.Password" Required="true" />
+                    </MudItem>
+                }
+                <MudItem xs="12" md="6">
+                    <MudSelect T="string" @bind-Value="formModel.Role" Label="نقش" Variant="Variant.Outlined">
+                        @foreach (var role in roles)
+                        {
+                            <MudSelectItem T="string" Value="@role">@GetRoleLabel(role)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+            <MudStack Row="true" Spacing="2" Class="mt-4">
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
+                    ذخیره
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoBack">
+                    انصراف
+                </MudButton>
+            </MudStack>
+        </EditForm>
+    </MudPaper>
+}

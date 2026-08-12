@@ -23,14 +23,14 @@ public class BillingService
         IFinancialItemRepository financialItemRepo,
         IPaymentRepository paymentRepo,
         IAuditService audit,
-        ISmsService smsService)
+        ISmsService? smsService = null)
     {
         _billRepo = billRepo;
         _houseRepo = houseRepo;
         _financialItemRepo = financialItemRepo;
         _paymentRepo = paymentRepo;
         _audit = audit;
-        _smsService = smsService;
+        _smsService = smsService ?? NullSmsService.Instance;
     }
 
     /// <summary>
@@ -273,5 +273,12 @@ public class BillingService
         if (fi.PeriodType == PeriodType.Installment && fi.NumberOfInstallments.HasValue && fi.InstallmentsBilled >= fi.NumberOfInstallments.Value)
             return false;
         return true;
+    }
+
+    private sealed class NullSmsService : ISmsService
+    {
+        public static NullSmsService Instance { get; } = new();
+
+        public Task SendAsync(string toPhone, string text) => Task.CompletedTask;
     }
 }

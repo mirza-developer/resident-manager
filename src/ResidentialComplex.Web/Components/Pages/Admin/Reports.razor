@@ -1,108 +1,114 @@
 @page "/admin/reports"
-@using Microsoft.AspNetCore.Authorization
-@using ResidentialComplex.Application.Helpers
-@using ResidentialComplex.Application.DTOs
-@using ResidentialComplex.Application.Interfaces
-@using ResidentialComplex.Application.Services
 @attribute [Authorize(Roles = "Administrator")]
-@inject ReportService ReportService
-@inject IHouseRepository HouseRepo
+@using ResidentialComplex.Application.DTOs
 
-<h4>گزارشات مالی</h4>
-<HelpButton PageKey="reports" />
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">گزارشات مالی</MudText>
+        <HelpButton PageKey="reports" />
+    </MudStack>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="LoadReportAsync">
+        نمایش گزارش
+    </MudButton>
+</MudStack>
 
-<div class="card mb-3">
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-3 mb-2">
-                <label class="form-label">سال</label>
-                <input type="number" @bind="filterYear" class="form-control" />
-            </div>
-            <div class="col-md-3 mb-2">
-                <label class="form-label">ماه (اختیاری)</label>
-                <select @bind="filterMonth" class="form-select">
-                    <option value="0">همه</option>
-                    @for (int m = 1; m <= 12; m++)
-                    {
-                        var monthNum = m;
-                        <option value="@monthNum">@PersianCalendarHelper.GetMonthName(monthNum)</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-3 mb-2">
-                <label class="form-label">واحد (اختیاری)</label>
-                <select @bind="filterHouseId" class="form-select">
-                    <option value="0">همه</option>
-                    @foreach (var h in houses)
-                    {
-                        <option value="@h.Id">@h.Title</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-3 mb-2 d-flex align-items-end">
-                <button type="button" class="btn btn-primary" @onclick="LoadReport">نمایش گزارش</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-@if (report != null)
+@if (isLoading)
 {
-    <div class="row mb-3">
-        <div class="col-md-3"><div class="card bg-primary text-white"><div class="card-body"><h6>کل صورتحساب</h6><h4>@report.TotalBilled.ToString("N0")</h4></div></div></div>
-        <div class="col-md-3"><div class="card bg-success text-white"><div class="card-body"><h6>کل پرداخت</h6><h4>@report.TotalPaid.ToString("N0")</h4></div></div></div>
-        <div class="col-md-3"><div class="card bg-danger text-white"><div class="card-body"><h6>بدهی معوق</h6><h4>@report.OutstandingDebt.ToString("N0")</h4></div></div></div>
-        <div class="col-md-3"><div class="card bg-info text-white"><div class="card-body"><h6>نرخ وصول</h6><h4>@report.CollectionRate.ToString("N1")%</h4></div></div></div>
-    </div>
-
-    <h5>بدهی هر آپارتمان</h5>
-    <table class="table table-bordered">
-        <thead><tr><th>آپارتمان</th><th>بدهی کل</th></tr></thead>
-        <tbody>
-            @foreach (var a in report.DebtPerApartment)
-            {
-                <tr><td>@a.ApartmentTitle</td><td>@a.TotalDebt.ToString("N0")</td></tr>
-            }
-        </tbody>
-    </table>
-
-    <h5>بدهی هر واحد</h5>
-    <table class="table table-bordered">
-        <thead><tr><th>واحد</th><th>بدهی</th></tr></thead>
-        <tbody>
-            @foreach (var h in report.DebtPerHouse)
-            {
-                <tr><td>@h.HouseTitle</td><td class="@(h.CurrentDebt < 0 ? "text-success" : h.CurrentDebt > 0 ? "text-danger" : "")">@h.CurrentDebt.ToString("N0")</td></tr>
-            }
-        </tbody>
-    </table>
-
-    <h5>جزئیات ماهانه</h5>
-    <table class="table table-bordered">
-        <thead><tr><th>سال</th><th>ماه</th><th>صورتحساب</th><th>پرداخت شده</th></tr></thead>
-        <tbody>
-            @foreach (var m in report.MonthlyBreakdown)
-            {
-                <tr><td>@m.Year</td><td>@PersianCalendarHelper.GetMonthName(m.Month)</td><td>@m.Billed.ToString("N0")</td><td>@m.Paid.ToString("N0")</td></tr>
-            }
-        </tbody>
-    </table>
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
 }
 
-@code {
-    private int filterYear = PersianCalendarHelper.GetCurrentYear();
-    private int filterMonth;
-    private int filterHouseId;
-    private FinancialReportDto? report;
-    private List<ResidentialComplex.Domain.Entities.House> houses = new();
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="3">
+            <MudNumericField T="int" @bind-Value="filterYear" Label="سال" Variant="Variant.Outlined" Min="0" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudSelect T="int" @bind-Value="filterMonth" Label="ماه (اختیاری)" Variant="Variant.Outlined">
+                <MudSelectItem T="int" Value="0">همه</MudSelectItem>
+                @for (var month = 1; month <= 12; month++)
+                {
+                    <MudSelectItem T="int" Value="@month">@GetMonthName(month)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudSelect T="int" @bind-Value="filterHouseId" Label="واحد (اختیاری)" Variant="Variant.Outlined">
+                <MudSelectItem T="int" Value="0">همه</MudSelectItem>
+                @foreach (var house in houses)
+                {
+                    <MudSelectItem T="int" Value="@house.Id">@house.Title</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="3" Class="d-flex align-center">
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadFiltersAsync">
+                بروزرسانی فهرست
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
 
-    protected override async Task OnInitializedAsync() => houses = await HouseRepo.GetAllAsync();
+@if (report is not null)
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4 mud-theme-primary"><MudText Typo="Typo.subtitle2">کل صورتحساب</MudText><MudText Typo="Typo.h5">@report.TotalBilled.ToString("N0")</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">کل پرداخت</MudText><MudText Typo="Typo.h5" Color="Color.Success">@report.TotalPaid.ToString("N0")</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">بدهی معوق</MudText><MudText Typo="Typo.h5" Color="Color.Error">@report.OutstandingDebt.ToString("N0")</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">نرخ وصول</MudText><MudText Typo="Typo.h5">@report.CollectionRate.ToString("N1")%</MudText></MudPaper></MudItem>
+    </MudGrid>
 
-    private async Task LoadReport()
-    {
-        report = await ReportService.GenerateReportAsync(
-            filterYear > 0 ? filterYear : null,
-            filterMonth > 0 ? filterMonth : null,
-            filterHouseId > 0 ? filterHouseId : null);
-    }
+    <MudPaper Class="pa-4 mb-4">
+        <MudText Typo="Typo.h6" Class="mb-2">بدهی هر آپارتمان</MudText>
+        <MudDataGrid T="ApartmentDebtDto" Items="@report.DebtPerApartment" RowsPerPage="10" Hover="true" Dense="true">
+            <Columns>
+                <PropertyColumn Property="x => x.ApartmentTitle" Title="آپارتمان" />
+                <TemplateColumn Title="بدهی کل">
+                    <CellTemplate>@context.Item.TotalDebt.ToString("N0")</CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="ApartmentDebtDto" />
+            </PagerContent>
+        </MudDataGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mb-4">
+        <MudText Typo="Typo.h6" Class="mb-2">بدهی هر واحد</MudText>
+        <MudDataGrid T="HouseDebtDto" Items="@report.DebtPerHouse" RowsPerPage="10" Hover="true" Dense="true">
+            <Columns>
+                <PropertyColumn Property="x => x.HouseTitle" Title="واحد" />
+                <TemplateColumn Title="بدهی">
+                    <CellTemplate>
+                        <MudText Color="@(context.Item.CurrentDebt > 0 ? Color.Error : context.Item.CurrentDebt < 0 ? Color.Success : Color.Default)">
+                            @context.Item.CurrentDebt.ToString("N0")
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="HouseDebtDto" />
+            </PagerContent>
+        </MudDataGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h6" Class="mb-2">جزئیات ماهانه</MudText>
+        <MudDataGrid T="MonthlyBreakdownDto" Items="@report.MonthlyBreakdown" RowsPerPage="10" Hover="true" Dense="true">
+            <Columns>
+                <PropertyColumn Property="x => x.Year" Title="سال" />
+                <TemplateColumn Title="ماه">
+                    <CellTemplate>@GetMonthName(context.Item.Month)</CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="صورتحساب">
+                    <CellTemplate>@context.Item.Billed.ToString("N0")</CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="پرداخت شده">
+                    <CellTemplate>@context.Item.Paid.ToString("N0")</CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="MonthlyBreakdownDto" />
+            </PagerContent>
+        </MudDataGrid>
+    </MudPaper>
 }

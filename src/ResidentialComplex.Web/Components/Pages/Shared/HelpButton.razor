@@ -1,23 +1,17 @@
 @using ResidentialComplex.Web.Components.Help
 
-<button type="button" class="btn btn-outline-secondary btn-sm" @onclick="Toggle">
+<MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" StartIcon="@Icons.Material.Filled.HelpOutline" OnClick="Toggle">
     @(isOpen ? "بستن راهنما" : "راهنما")
-</button>
+</MudButton>
 
 @if (isOpen)
 {
     <div class="help-overlay" @onclick="Toggle"></div>
-    <div class="help-drawer">
-        <h5>راهنما</h5>
-        <hr />
+    <MudPaper Class="help-drawer pa-4">
+        <MudText Typo="Typo.h6">راهنما</MudText>
+        <MudDivider Class="my-3" />
         @((MarkupString)HelpContent.GetContent(PageKey))
-        <hr />
-        <button type="button" class="btn btn-sm btn-secondary" @onclick="Toggle">بستن</button>
-    </div>
-}
-
-@code {
-    [Parameter] public string PageKey { get; set; } = "";
-    private bool isOpen;
-    private void Toggle() => isOpen = !isOpen;
+        <MudDivider Class="my-3" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Toggle">بستن</MudButton>
+    </MudPaper>
 }

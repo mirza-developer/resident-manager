@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using MudBlazor.Services;
 using ResidentialComplex.Application.Interfaces;
 using ResidentialComplex.Application.Services;
 using ResidentialComplex.Infrastructure.Services;
@@ -73,6 +74,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthorization();
+builder.Services.AddMudServices();
 
 var app = builder.Build();
 

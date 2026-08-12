@@ -1,72 +1,64 @@
 @inherits LayoutComponentBase
 @using ResidentialComplex.Application.Helpers
 
-<div class="d-flex flex-column min-vh-100">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">مدیریت مجتمع مسکونی</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <AuthorizeView Roles="Administrator">
-                        <li class="nav-item"><a class="nav-link" href="/admin/apartments">آپارتمان‌ها</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/houses">واحدها</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/financial-items">آیتم‌های مالی</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/billing">صورتحساب</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/reports">گزارشات</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/users">کاربران</a></li>
-                    </AuthorizeView>
-                    <AuthorizeView Roles="Worker">
-                        <li class="nav-item"><a class="nav-link" href="/worker/usage">مصرف ماهانه</a></li>
-                    </AuthorizeView>
-                    <AuthorizeView Roles="Resident">
-                        <li class="nav-item"><a class="nav-link" href="/resident/dashboard">پنل ساکن</a></li>
-                    </AuthorizeView>
-                </ul>
-                <AuthorizeView>
-                    <Authorized>
-                        <ul class="navbar-nav">
-                            <li class="nav-item">
-                                <span class="nav-link text-light">@context.User.Identity?.Name</span>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/Account/Logout">خروج</a>
-                            </li>
-                        </ul>
-                    </Authorized>
-                </AuthorizeView>
-            </div>
-        </div>
-    </nav>
+<MudThemeProvider RightToLeft="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
-    <main class="container-fluid flex-grow-1 py-3">
-        <GlobalErrorBoundary @ref="errorBoundary">
-            <ChildContent>
-                @Body
-            </ChildContent>
-            <ErrorContent>
-                <div class="alert alert-danger m-3" role="alert">
-                    <h4 class="alert-heading">خطایی رخ داده است</h4>
-                    <p>متأسفانه خطایی در پردازش درخواست شما رخ داده است.</p>
-                    <hr />
-                    <button type="button" class="btn btn-outline-danger" @onclick="RecoverFromError">تلاش مجدد</button>
-                </div>
-            </ErrorContent>
-        </GlobalErrorBoundary>
-    </main>
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
+        <MudText Typo="Typo.h6">مدیریت مجتمع مسکونی</MudText>
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+                <MudText Class="ms-2">@context.User.Identity?.Name</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Href="/Account/Logout" />
+            </Authorized>
+        </AuthorizeView>
+    </MudAppBar>
 
-    <footer class="bg-light text-center py-2 mt-auto">
-        <small class="text-muted">سیستم مدیریت مجتمع مسکونی &copy; @PersianCalendarHelper.GetCurrentYear()</small>
-    </footer>
-</div>
+    <MudDrawer @bind-Open="drawerOpen" Elevation="2" Variant="DrawerVariant.Responsive">
+        <MudNavMenu>
+            <AuthorizeView Roles="Administrator">
+                <MudNavLink Href="/admin/apartments" Icon="@Icons.Material.Filled.Apartment">آپارتمان‌ها</MudNavLink>
+                <MudNavLink Href="/admin/houses" Icon="@Icons.Material.Filled.Home">واحدها</MudNavLink>
+                <MudNavLink Href="/admin/financial-items" Icon="@Icons.Material.Filled.AttachMoney">آیتم‌های مالی</MudNavLink>
+                <MudNavLink Href="/admin/billing" Icon="@Icons.Material.Filled.Receipt">صورتحساب</MudNavLink>
+                <MudNavLink Href="/admin/reports" Icon="@Icons.Material.Filled.Assessment">گزارشات</MudNavLink>
+                <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">کاربران</MudNavLink>
+            </AuthorizeView>
+            <AuthorizeView Roles="Worker">
+                <MudNavLink Href="/worker/usage" Icon="@Icons.Material.Filled.BarChart">مصرف ماهانه</MudNavLink>
+            </AuthorizeView>
+            <AuthorizeView Roles="Resident">
+                <MudNavLink Href="/resident/dashboard" Icon="@Icons.Material.Filled.Dashboard">پنل ساکن</MudNavLink>
+            </AuthorizeView>
+        </MudNavMenu>
+    </MudDrawer>
 
-@code {
-    private GlobalErrorBoundary? errorBoundary;
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+            <GlobalErrorBoundary @ref="errorBoundary">
+                <ChildContent>
+                    @Body
+                </ChildContent>
+                <ErrorContent>
+                    <MudAlert Severity="Severity.Error" Class="ma-4">
+                        <MudText Typo="Typo.h6">خطایی رخ داده است</MudText>
+                        <MudText>متأسفانه خطایی در پردازش درخواست شما رخ داده است.</MudText>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="RecoverFromError" Class="mt-2">
+                            تلاش مجدد
+                        </MudButton>
+                    </MudAlert>
+                </ErrorContent>
+            </GlobalErrorBoundary>
 
-    private void RecoverFromError()
-    {
-        errorBoundary?.Recover();
-    }
-}
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.caption" Class="d-flex justify-center">
+                سیستم مدیریت مجتمع مسکونی &copy; @PersianCalendarHelper.GetCurrentYear()
+            </MudText>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
