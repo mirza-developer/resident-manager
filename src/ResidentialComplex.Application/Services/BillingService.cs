@@ -1,6 +1,7 @@
 using ResidentialComplex.Domain.Entities;
 using ResidentialComplex.Domain.Enums;
 using ResidentialComplex.Application.Interfaces;
+using ResidentialComplex.Application.Helpers;
 
 namespace ResidentialComplex.Application.Services;
 
@@ -14,19 +15,22 @@ public class BillingService
     private readonly IFinancialItemRepository _financialItemRepo;
     private readonly IPaymentRepository _paymentRepo;
     private readonly IAuditService _audit;
+    private readonly ISmsService _smsService;
 
     public BillingService(
         IBillRepository billRepo,
         IHouseRepository houseRepo,
         IFinancialItemRepository financialItemRepo,
         IPaymentRepository paymentRepo,
-        IAuditService audit)
+        IAuditService audit,
+        ISmsService smsService)
     {
         _billRepo = billRepo;
         _houseRepo = houseRepo;
         _financialItemRepo = financialItemRepo;
         _paymentRepo = paymentRepo;
         _audit = audit;
+        _smsService = smsService;
     }
 
     /// <summary>
@@ -192,6 +196,14 @@ public class BillingService
             {
                 house.CurrentDebt += bill.TotalAmount;
                 await _houseRepo.UpdateAsync(house);
+
+                // Send SMS notification to household owner (only on Draft→Approved transition)
+                if (!string.IsNullOrWhiteSpace(house.ResidentPhoneNumber))
+                {
+                    var periodTitle = PersianCalendarHelper.FormatYearMonth(bill.Year, bill.Month);
+                    var smsText = $"مالک محترم\nقبض شارژ {periodTitle}\nصادر شد.\nمبلغ قابل پرداخت {bill.TotalAmount:N0} تومان\nلطفا در اسرع وقت اقدام به پرداخت نمایید";
+                    await _smsService.SendAsync(house.ResidentPhoneNumber, smsText);
+                }
             }
 
             await _audit.LogAsync(userId, userName, nameof(Bill), bill.Id.ToString(), "Approved", null,
