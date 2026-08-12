@@ -9,46 +9,48 @@
 
 @if (isLoading)
 {
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
 }
 
 @if (house is null)
 {
-    <MudAlert Severity="Severity.Warning">واحدی برای حساب کاربری شما تعریف نشده است.</MudAlert>
+    <div><MudAlert Severity="Severity.Warning">واحدی برای حساب کاربری شما تعریف نشده است.</MudAlert></div>
 }
 else
 {
-    <MudPaper Class="pa-4 mb-4">
-        <MudText Typo="Typo.h6">اطلاعات واحد: @house.Title</MudText>
-        <MudText Typo="Typo.subtitle1" Class="mt-2">
-            بدهی فعلی:
-            <MudText Inline="true" Color="@(house.CurrentDebt > 0 ? Color.Error : Color.Success)">
-                @house.CurrentDebt.ToString("N0") ریال
+    <div>
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6">اطلاعات واحد: @house.Title</MudText>
+            <MudText Typo="Typo.subtitle1" Class="mt-2">
+                بدهی فعلی:
+                <MudText Inline="true" Color="@(house.CurrentDebt > 0 ? Color.Error : Color.Success)">
+                    @house.CurrentDebt.ToString("N0") ریال
+                </MudText>
             </MudText>
-        </MudText>
-    </MudPaper>
+        </MudPaper>
 
-    <MudPaper Class="pa-4">
-        <MudText Typo="Typo.h6" Class="mb-2">تاریخچه قبوض</MudText>
-        <MudDataGrid T="Bill" Items="@bills" RowsPerPage="10" Hover="true" Dense="true">
-            <Columns>
-                <PropertyColumn Property="x => x.Year" Title="سال" />
-                <TemplateColumn Title="ماه">
-                    <CellTemplate>@GetMonthName(context.Item.Month)</CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="مبلغ">
-                    <CellTemplate>@context.Item.TotalAmount.ToString("N0")</CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="وضعیت">
-                    <CellTemplate>@GetStatusLabel(context.Item.Status)</CellTemplate>
-                </TemplateColumn>
-            </Columns>
-            <NoRecordsContent>
-                <MudText>قبضی برای نمایش وجود ندارد.</MudText>
-            </NoRecordsContent>
-            <PagerContent>
-                <MudDataGridPager T="Bill" />
-            </PagerContent>
-        </MudDataGrid>
-    </MudPaper>
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-2">تاریخچه قبوض</MudText>
+            <MudDataGrid T="Bill" Items="@bills" RowsPerPage="10" Hover="true" Dense="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.Year" Title="سال" />
+                    <TemplateColumn Title="ماه">
+                        <CellTemplate>@GetMonthName(context.Item.Month)</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="مبلغ">
+                        <CellTemplate>@context.Item.TotalAmount.ToString("N0")</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="وضعیت">
+                        <CellTemplate>@GetStatusLabel(context.Item.Status)</CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <NoRecordsContent>
+                    <MudText>قبضی برای نمایش وجود ندارد.</MudText>
+                </NoRecordsContent>
+                <PagerContent>
+                    <MudDataGridPager T="Bill" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
+    </div>
 }

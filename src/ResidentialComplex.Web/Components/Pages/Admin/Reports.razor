@@ -14,7 +14,7 @@
 
 @if (isLoading)
 {
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
 }
 
 <MudPaper Class="pa-4 mb-4">
@@ -24,19 +24,23 @@
         </MudItem>
         <MudItem xs="12" md="3">
             <MudSelect T="int" @bind-Value="filterMonth" Label="ماه (اختیاری)" Variant="Variant.Outlined">
-                <MudSelectItem T="int" Value="0">همه</MudSelectItem>
-                @for (var month = 1; month <= 12; month++)
+                @for (var currentMonth = 0; currentMonth <= 12; currentMonth++)
                 {
-                    <MudSelectItem T="int" Value="@month">@GetMonthName(month)</MudSelectItem>
+                    var m = currentMonth;
+                    <span @key="m" style="display:contents"><MudSelectItem T="int" Value="@m">@GetMonthFilterName(m)</MudSelectItem></span>
                 }
             </MudSelect>
         </MudItem>
         <MudItem xs="12" md="3">
             <MudSelect T="int" @bind-Value="filterHouseId" Label="واحد (اختیاری)" Variant="Variant.Outlined">
-                <MudSelectItem T="int" Value="0">همه</MudSelectItem>
-                @foreach (var house in houses)
+                @{
+                    var allHouses = new List<(int Id, string Title)> { (0, "همه") }
+                        .Concat(houses.Select(h => (h.Id, h.Title))).ToList();
+                }
+                @foreach (var houseOpt in allHouses)
                 {
-                    <MudSelectItem T="int" Value="@house.Id">@house.Title</MudSelectItem>
+                    var opt = houseOpt;
+                    <span @key="opt.Id" style="display:contents"><MudSelectItem T="int" Value="@opt.Id">@opt.Title</MudSelectItem></span>
                 }
             </MudSelect>
         </MudItem>
@@ -50,65 +54,67 @@
 
 @if (report is not null)
 {
-    <MudGrid Class="mb-4">
-        <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4 mud-theme-primary"><MudText Typo="Typo.subtitle2">کل صورتحساب</MudText><MudText Typo="Typo.h5">@report.TotalBilled.ToString("N0")</MudText></MudPaper></MudItem>
-        <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">کل پرداخت</MudText><MudText Typo="Typo.h5" Color="Color.Success">@report.TotalPaid.ToString("N0")</MudText></MudPaper></MudItem>
-        <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">بدهی معوق</MudText><MudText Typo="Typo.h5" Color="Color.Error">@report.OutstandingDebt.ToString("N0")</MudText></MudPaper></MudItem>
-        <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">نرخ وصول</MudText><MudText Typo="Typo.h5">@report.CollectionRate.ToString("N1")%</MudText></MudPaper></MudItem>
-    </MudGrid>
+    <div>
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4 mud-theme-primary"><MudText Typo="Typo.subtitle2">کل صورتحساب</MudText><MudText Typo="Typo.h5">@report.TotalBilled.ToString("N0")</MudText></MudPaper></MudItem>
+            <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">کل پرداخت</MudText><MudText Typo="Typo.h5" Color="Color.Success">@report.TotalPaid.ToString("N0")</MudText></MudPaper></MudItem>
+            <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">بدهی معوق</MudText><MudText Typo="Typo.h5" Color="Color.Error">@report.OutstandingDebt.ToString("N0")</MudText></MudPaper></MudItem>
+            <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">نرخ وصول</MudText><MudText Typo="Typo.h5">@report.CollectionRate.ToString("N1")%</MudText></MudPaper></MudItem>
+        </MudGrid>
 
-    <MudPaper Class="pa-4 mb-4">
-        <MudText Typo="Typo.h6" Class="mb-2">بدهی هر آپارتمان</MudText>
-        <MudDataGrid T="ApartmentDebtDto" Items="@report.DebtPerApartment" RowsPerPage="10" Hover="true" Dense="true">
-            <Columns>
-                <PropertyColumn Property="x => x.ApartmentTitle" Title="آپارتمان" />
-                <TemplateColumn Title="بدهی کل">
-                    <CellTemplate>@context.Item.TotalDebt.ToString("N0")</CellTemplate>
-                </TemplateColumn>
-            </Columns>
-            <PagerContent>
-                <MudDataGridPager T="ApartmentDebtDto" />
-            </PagerContent>
-        </MudDataGrid>
-    </MudPaper>
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-2">بدهی هر آپارتمان</MudText>
+            <MudDataGrid T="ApartmentDebtDto" Items="@report.DebtPerApartment" RowsPerPage="10" Hover="true" Dense="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.ApartmentTitle" Title="آپارتمان" />
+                    <TemplateColumn Title="بدهی کل">
+                        <CellTemplate>@context.Item.TotalDebt.ToString("N0")</CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="ApartmentDebtDto" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
 
-    <MudPaper Class="pa-4 mb-4">
-        <MudText Typo="Typo.h6" Class="mb-2">بدهی هر واحد</MudText>
-        <MudDataGrid T="HouseDebtDto" Items="@report.DebtPerHouse" RowsPerPage="10" Hover="true" Dense="true">
-            <Columns>
-                <PropertyColumn Property="x => x.HouseTitle" Title="واحد" />
-                <TemplateColumn Title="بدهی">
-                    <CellTemplate>
-                        <MudText Color="@(context.Item.CurrentDebt > 0 ? Color.Error : context.Item.CurrentDebt < 0 ? Color.Success : Color.Default)">
-                            @context.Item.CurrentDebt.ToString("N0")
-                        </MudText>
-                    </CellTemplate>
-                </TemplateColumn>
-            </Columns>
-            <PagerContent>
-                <MudDataGridPager T="HouseDebtDto" />
-            </PagerContent>
-        </MudDataGrid>
-    </MudPaper>
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-2">بدهی هر واحد</MudText>
+            <MudDataGrid T="HouseDebtDto" Items="@report.DebtPerHouse" RowsPerPage="10" Hover="true" Dense="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.HouseTitle" Title="واحد" />
+                    <TemplateColumn Title="بدهی">
+                        <CellTemplate>
+                            <MudText Color="@(context.Item.CurrentDebt > 0 ? Color.Error : context.Item.CurrentDebt < 0 ? Color.Success : Color.Default)">
+                                @context.Item.CurrentDebt.ToString("N0")
+                            </MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="HouseDebtDto" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
 
-    <MudPaper Class="pa-4">
-        <MudText Typo="Typo.h6" Class="mb-2">جزئیات ماهانه</MudText>
-        <MudDataGrid T="MonthlyBreakdownDto" Items="@report.MonthlyBreakdown" RowsPerPage="10" Hover="true" Dense="true">
-            <Columns>
-                <PropertyColumn Property="x => x.Year" Title="سال" />
-                <TemplateColumn Title="ماه">
-                    <CellTemplate>@GetMonthName(context.Item.Month)</CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="صورتحساب">
-                    <CellTemplate>@context.Item.Billed.ToString("N0")</CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="پرداخت شده">
-                    <CellTemplate>@context.Item.Paid.ToString("N0")</CellTemplate>
-                </TemplateColumn>
-            </Columns>
-            <PagerContent>
-                <MudDataGridPager T="MonthlyBreakdownDto" />
-            </PagerContent>
-        </MudDataGrid>
-    </MudPaper>
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-2">جزئیات ماهانه</MudText>
+            <MudDataGrid T="MonthlyBreakdownDto" Items="@report.MonthlyBreakdown" RowsPerPage="10" Hover="true" Dense="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.Year" Title="سال" />
+                    <TemplateColumn Title="ماه">
+                        <CellTemplate>@GetMonthName(context.Item.Month)</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="صورتحساب">
+                        <CellTemplate>@context.Item.Billed.ToString("N0")</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="پرداخت شده">
+                        <CellTemplate>@context.Item.Paid.ToString("N0")</CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="MonthlyBreakdownDto" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
+    </div>
 }

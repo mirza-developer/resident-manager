@@ -68,4 +68,5 @@ public partial class Reports : ComponentBase
     }
 
     private static string GetMonthName(int month) => PersianCalendarHelper.GetMonthName(month);
+    private static string GetMonthFilterName(int month) => month == 0 ? "همه" : PersianCalendarHelper.GetMonthName(month);
 }

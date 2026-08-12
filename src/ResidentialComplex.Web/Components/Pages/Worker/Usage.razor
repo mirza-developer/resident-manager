@@ -13,7 +13,7 @@
 
 @if (isLoading)
 {
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
 }
 
 <MudPaper Class="pa-4 mb-4">
@@ -25,7 +25,8 @@
             <MudSelect T="int" @bind-Value="month" Label="ماه" Variant="Variant.Outlined">
                 @for (var currentMonth = 1; currentMonth <= 12; currentMonth++)
                 {
-                    <MudSelectItem T="int" Value="@currentMonth">@GetMonthName(currentMonth)</MudSelectItem>
+                    var m = currentMonth;
+                    <span @key="m" style="display:contents"><MudSelectItem T="int" Value="@m">@GetMonthName(m)</MudSelectItem></span>
                 }
             </MudSelect>
         </MudItem>
@@ -39,36 +40,38 @@
 
 @if (!usageItems.Any() && loaded)
 {
-    <MudAlert Severity="Severity.Warning">آیتم مالی گروه‌بندی فعالی وجود ندارد.</MudAlert>
+    <div><MudAlert Severity="Severity.Warning">آیتم مالی گروه‌بندی فعالی وجود ندارد.</MudAlert></div>
 }
 
 @foreach (var usageItem in usageItems)
 {
-    <MudPaper Class="pa-4 mb-4">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-3">
-            <MudText Typo="Typo.h6">@usageItem.Title</MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Save" OnClick="@(() => SaveAllForItemAsync(usageItem.FinancialItemId))">
-                ذخیره همه
-            </MudButton>
-        </MudStack>
+    <div>
+        <MudPaper Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-3">
+                <MudText Typo="Typo.h6">@usageItem.Title</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Save" OnClick="@(() => SaveAllForItemAsync(usageItem.FinancialItemId))">
+                    ذخیره همه
+                </MudButton>
+            </MudStack>
 
-        <MudDataGrid T="UsageRow" Items="@usageItem.Rows" RowsPerPage="10" Hover="true" Dense="true">
-            <Columns>
-                <PropertyColumn Property="x => x.HouseTitle" Title="واحد" />
-                <TemplateColumn Title="مقدار مصرف">
-                    <CellTemplate>
-                        <MudNumericField T="int" @bind-Value="context.Item.UsageCount" Variant="Variant.Outlined" HideSpinButtons="true" Min="0" />
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
-                    <CellTemplate>
-                        <MudIconButton Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SaveUsageAsync(context.Item))" />
-                    </CellTemplate>
-                </TemplateColumn>
-            </Columns>
-            <PagerContent>
-                <MudDataGridPager T="UsageRow" />
-            </PagerContent>
-        </MudDataGrid>
-    </MudPaper>
+            <MudDataGrid T="UsageRow" Items="@usageItem.Rows" RowsPerPage="10" Hover="true" Dense="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.HouseTitle" Title="واحد" />
+                    <TemplateColumn Title="مقدار مصرف">
+                        <CellTemplate>
+                            <MudNumericField T="int" @bind-Value="context.Item.UsageCount" Variant="Variant.Outlined" HideSpinButtons="true" Min="0" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                        <CellTemplate>
+                            <MudIconButton Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SaveUsageAsync(context.Item))" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="UsageRow" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
+    </div>
 }

@@ -14,34 +14,36 @@
 
 @if (isLoading)
 {
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
 }
 
 @if (notFound)
 {
-    <MudAlert Severity="Severity.Warning" Dense="true">آپارتمان موردنظر یافت نشد.</MudAlert>
+    <div><MudAlert Severity="Severity.Warning" Dense="true">آپارتمان موردنظر یافت نشد.</MudAlert></div>
 }
 else
 {
-    <MudPaper Class="pa-4">
-        <EditForm Model="apartment" OnValidSubmit="SaveAsync">
-            <DataAnnotationsValidator />
-            <MudGrid>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="apartment.Title" For="@(() => apartment.Title)" Label="عنوان *" Variant="Variant.Outlined" Required="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField T="string" @bind-Value="apartment.Description" Label="توضیحات" Variant="Variant.Outlined" Lines="3" />
-                </MudItem>
-            </MudGrid>
-            <MudStack Row="true" Spacing="2" Class="mt-4">
-                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
-                    ذخیره
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoBack">
-                    انصراف
-                </MudButton>
-            </MudStack>
-        </EditForm>
-    </MudPaper>
+    <div>
+        <MudPaper Class="pa-4">
+            <EditForm Model="apartment" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="apartment.Title" For="@(() => apartment.Title)" Label="عنوان *" Variant="Variant.Outlined" Required="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="apartment.Description" Label="توضیحات" Variant="Variant.Outlined" Lines="3" />
+                    </MudItem>
+                </MudGrid>
+                <MudStack Row="true" Spacing="2" Class="mt-4">
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
+                        ذخیره
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoBack">
+                        انصراف
+                    </MudButton>
+                </MudStack>
+            </EditForm>
+        </MudPaper>
+    </div>
 }

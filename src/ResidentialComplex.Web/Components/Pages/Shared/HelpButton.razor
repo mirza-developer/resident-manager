@@ -6,12 +6,14 @@
 
 @if (isOpen)
 {
-    <div class="help-overlay" @onclick="Toggle"></div>
-    <MudPaper Class="help-drawer pa-4">
-        <MudText Typo="Typo.h6">راهنما</MudText>
-        <MudDivider Class="my-3" />
-        @((MarkupString)HelpContent.GetContent(PageKey))
-        <MudDivider Class="my-3" />
-        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Toggle">بستن</MudButton>
-    </MudPaper>
+    <div>
+        <div class="help-overlay" @onclick="Toggle"></div>
+        <MudPaper Class="help-drawer pa-4">
+            <MudText Typo="Typo.h6">راهنما</MudText>
+            <MudDivider Class="my-3" />
+            @((MarkupString)HelpContent.GetContent(PageKey))
+            <MudDivider Class="my-3" />
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Toggle">بستن</MudButton>
+        </MudPaper>
+    </div>
 }

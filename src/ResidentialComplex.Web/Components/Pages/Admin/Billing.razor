@@ -15,7 +15,7 @@
 
 @if (isLoading)
 {
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
 }
 
 <MudPaper Class="pa-4 mb-4">
@@ -28,7 +28,7 @@
             <MudSelect T="int" @bind-Value="month" Label="ماه" Variant="Variant.Outlined">
                 @for (var currentMonth = 1; currentMonth <= 12; currentMonth++)
                 {
-                    <MudSelectItem T="int" Value="@currentMonth">@GetMonthName(currentMonth)</MudSelectItem>
+                    <text><MudSelectItem T="int" Value="@currentMonth">@GetMonthName(currentMonth)</MudSelectItem></text>
                 }
             </MudSelect>
         </MudItem>
@@ -44,53 +44,59 @@
 
     @if (missingTiersItems.Any())
     {
-        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-4">
-            آیتم‌های گروه‌بندی زیر تعرفه ندارند: @string.Join("، ", missingTiersItems)
-        </MudAlert>
+        <div>
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mt-4">
+                آیتم‌های گروه‌بندی زیر تعرفه ندارند: @string.Join("، ", missingTiersItems)
+            </MudAlert>
+        </div>
     }
 
     @if (missingUsageItems.Any())
     {
-        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-4">
-            @foreach (var item in missingUsageItems)
-            {
-                <div>@item.Title — @item.MissingCount واحد بدون مقدار مصرف</div>
-            }
-        </MudAlert>
+        <div>
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-4">
+                @foreach (var item in missingUsageItems)
+                {
+                    <div>@item.Title — @item.MissingCount واحد بدون مقدار مصرف</div>
+                }
+            </MudAlert>
+        </div>
     }
 
     @if (financialAmountRows.Any())
     {
-        <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">مبلغ نهایی هر آیتم مالی</MudText>
-        <MudDataGrid T="FinancialItemAmountRow" Items="@financialAmountRows" RowsPerPage="10" Hover="true" Dense="true">
-            <Columns>
-                <TemplateColumn Title="#">
-                    <CellTemplate>@(financialAmountRows.IndexOf(context.Item) + 1)</CellTemplate>
-                </TemplateColumn>
-                <PropertyColumn Property="x => x.Title" Title="عنوان" />
-                <TemplateColumn Title="نوع دوره">
-                    <CellTemplate>@GetPeriodLabel(context.Item.PeriodType)</CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="نوع محاسبه">
-                    <CellTemplate>@GetCalcLabel(context.Item.CalculationType)</CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="مبلغ (ریال)">
-                    <CellTemplate>
-                        @if (context.Item.CalculationType == CalculationType.Grouping)
-                        {
-                            <MudText Color="Color.Secondary">تعرفه‌ای (محاسبه از مصرف)</MudText>
-                        }
-                        else
-                        {
-                            <MudNumericField T="decimal" @bind-Value="context.Item.Amount" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" Immediate="false" />
-                        }
-                    </CellTemplate>
-                </TemplateColumn>
-            </Columns>
-            <PagerContent>
-                <MudDataGridPager T="FinancialItemAmountRow" />
-            </PagerContent>
-        </MudDataGrid>
+        <div>
+            <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">مبلغ نهایی هر آیتم مالی</MudText>
+            <MudDataGrid T="FinancialItemAmountRow" Items="@financialAmountRows" RowsPerPage="10" Hover="true" Dense="true">
+                <Columns>
+                    <TemplateColumn Title="#">
+                        <CellTemplate>@(financialAmountRows.IndexOf(context.Item) + 1)</CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.Title" Title="عنوان" />
+                    <TemplateColumn Title="نوع دوره">
+                        <CellTemplate>@GetPeriodLabel(context.Item.PeriodType)</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="نوع محاسبه">
+                        <CellTemplate>@GetCalcLabel(context.Item.CalculationType)</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="مبلغ (ریال)">
+                        <CellTemplate>
+                            @if (context.Item.CalculationType == CalculationType.Grouping)
+                            {
+                                <text><MudText Color="Color.Secondary">تعرفه‌ای (محاسبه از مصرف)</MudText></text>
+                            }
+                            else
+                            {
+                                <text><MudNumericField T="decimal" @bind-Value="context.Item.Amount" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" Immediate="false" /></text>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="FinancialItemAmountRow" />
+                </PagerContent>
+            </MudDataGrid>
+        </div>
     }
 </MudPaper>
 
@@ -101,7 +107,7 @@
             <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadBillsAsync">بارگذاری</MudButton>
             @if (bills.Any(x => x.Status == BillStatus.Draft))
             {
-                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Check" OnClick="ApproveBillsAsync">تایید قبوض پیش‌نویس</MudButton>
+                <text><MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Check" OnClick="ApproveBillsAsync">تایید قبوض پیش‌نویس</MudButton></text>
             }
         </MudStack>
     </MudStack>
@@ -113,7 +119,7 @@
                 <CellTemplate>
                     @if (context.Item.Status == BillStatus.Draft)
                     {
-                        <MudNumericField T="decimal" Value="@context.Item.TotalAmount" ValueChanged="@((decimal value) => UpdateBillAmountAsync(context.Item, value))" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" Immediate="false" />
+                        <text><MudNumericField T="decimal" Value="@context.Item.TotalAmount" ValueChanged="@((decimal value) => UpdateBillAmountAsync(context.Item, value))" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" Immediate="false" /></text>
                     }
                     else
                     {
@@ -129,7 +135,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowBillDetails(context.Item.Id))" />
                     @if (context.Item.Status == BillStatus.Approved)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.Payments" Color="Color.Success" Size="Size.Small" OnClick="@(() => PayAsync(context.Item.Id))" />
+                        <text><MudIconButton Icon="@Icons.Material.Filled.Payments" Color="Color.Success" Size="Size.Small" OnClick="@(() => PayAsync(context.Item.Id))" /></text>
                     }
                 </CellTemplate>
             </TemplateColumn>
@@ -145,28 +151,30 @@
 
 @if (selectedBill is not null)
 {
-    <MudPaper Class="pa-4">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3" Wrap="Wrap.Wrap">
-            <MudText Typo="Typo.h6">جزئیات قبض واحد @selectedBill.House?.Title</MudText>
-            <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="ClearBillDetails">بستن جزئیات</MudButton>
-        </MudStack>
-        <MudDataGrid T="BillItem" Items="@selectedBill.BillItems" RowsPerPage="10" Hover="true" Dense="true">
-            <Columns>
-                <PropertyColumn Property="x => x.FinancialItem!.Title" Title="آیتم مالی" />
-                <TemplateColumn Title="نوع محاسبه">
-                    <CellTemplate>@(context.Item.FinancialItem is null ? "-" : GetCalcLabel(context.Item.FinancialItem.CalculationType))</CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="جزئیات">
-                    <CellTemplate>@GetBillItemDetail(selectedBill, context.Item)</CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="مبلغ (ریال)">
-                    <CellTemplate>@context.Item.Amount.ToString("N0")</CellTemplate>
-                </TemplateColumn>
-            </Columns>
-            <PagerContent>
-                <MudDataGridPager T="BillItem" />
-            </PagerContent>
-        </MudDataGrid>
-        <MudText Typo="Typo.subtitle1" Class="mt-3">جمع کل: @selectedBill.BillItems.Sum(x => x.Amount).ToString("N0")</MudText>
-    </MudPaper>
+    <div>
+        <MudPaper Class="pa-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3" Wrap="Wrap.Wrap">
+                <MudText Typo="Typo.h6">جزئیات قبض واحد @selectedBill.House?.Title</MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="ClearBillDetails">بستن جزئیات</MudButton>
+            </MudStack>
+            <MudDataGrid T="BillItem" Items="@selectedBill.BillItems" RowsPerPage="10" Hover="true" Dense="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.FinancialItem!.Title" Title="آیتم مالی" />
+                    <TemplateColumn Title="نوع محاسبه">
+                        <CellTemplate>@(context.Item.FinancialItem is null ? "-" : GetCalcLabel(context.Item.FinancialItem.CalculationType))</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="جزئیات">
+                        <CellTemplate>@GetBillItemDetail(selectedBill, context.Item)</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="مبلغ (ریال)">
+                        <CellTemplate>@context.Item.Amount.ToString("N0")</CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="BillItem" />
+                </PagerContent>
+            </MudDataGrid>
+            <MudText Typo="Typo.subtitle1" Class="mt-3">جمع کل: @selectedBill.BillItems.Sum(x => x.Amount).ToString("N0")</MudText>
+        </MudPaper>
+    </div>
 }

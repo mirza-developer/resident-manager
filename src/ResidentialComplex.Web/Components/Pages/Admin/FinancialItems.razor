@@ -15,106 +15,112 @@
 
 @if (isLoading)
 {
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
 }
 
 @if (showForm)
 {
-    <MudPaper Class="pa-4 mb-4">
-        <EditForm Model="editing" OnValidSubmit="SaveAsync">
-            <DataAnnotationsValidator />
-            <MudGrid>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="editing.Title" For="@(() => editing.Title)" Label="عنوان *" Variant="Variant.Outlined" Required="true" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="editing.Description" Label="توضیحات" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudSelect T="PeriodType" @bind-Value="editing.PeriodType" Label="نوع دوره" Variant="Variant.Outlined">
-                        <MudSelectItem T="PeriodType" Value="@PeriodType.Once">یکبار</MudSelectItem>
-                        <MudSelectItem T="PeriodType" Value="@PeriodType.Permanent">دائمی</MudSelectItem>
-                        <MudSelectItem T="PeriodType" Value="@PeriodType.Installment">اقساط</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudSelect T="CalculationType" @bind-Value="editing.CalculationType" Label="نوع محاسبه" Variant="Variant.Outlined">
-                        <MudSelectItem T="CalculationType" Value="@CalculationType.EqualDivision">تقسیم مساوی</MudSelectItem>
-                        <MudSelectItem T="CalculationType" Value="@CalculationType.Grouping">تعرفه پلکانی (IBT)</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                @if (editing.PeriodType == PeriodType.Installment)
-                {
+    <div>
+        <MudPaper Class="pa-4 mb-4">
+            <EditForm Model="editing" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
+                <MudGrid>
                     <MudItem xs="12" md="6">
-                        <MudNumericField T="decimal?" @bind-Value="editing.TotalAmount" Label="مبلغ کل" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" />
+                        <MudTextField T="string" @bind-Value="editing.Title" For="@(() => editing.Title)" Label="عنوان *" Variant="Variant.Outlined" Required="true" />
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudNumericField T="int?" @bind-Value="editing.NumberOfInstallments" Label="تعداد اقساط" Variant="Variant.Outlined" Min="1" HideSpinButtons="true" />
+                        <MudTextField T="string" @bind-Value="editing.Description" Label="توضیحات" Variant="Variant.Outlined" />
                     </MudItem>
-                }
-                <MudItem xs="12">
-                    <MudCheckBox T="bool" @bind-Value="editing.IsActive" Label="فعال" Color="Color.Primary" />
-                </MudItem>
-            </MudGrid>
-            <MudStack Row="true" Spacing="2" Class="mt-4">
-                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
-                    ذخیره
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="CancelEdit">
-                    انصراف
-                </MudButton>
-            </MudStack>
-        </EditForm>
-
-        @if (editing.CalculationType == CalculationType.Grouping && editing.Id != 0)
-        {
-            <MudDivider Class="my-4" />
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2" Wrap="Wrap.Wrap">
-                <MudText Typo="Typo.h6">تعرفه‌های پلکانی (IBT)</MudText>
-                <MudStack Row="true" Spacing="2">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddTierRow">افزودن تعرفه</MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveTiersAsync">ذخیره تعرفه‌ها</MudButton>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="PeriodType" @bind-Value="editing.PeriodType" Label="نوع دوره" Variant="Variant.Outlined">
+                            <MudSelectItem T="PeriodType" Value="@PeriodType.Once">یکبار</MudSelectItem>
+                            <MudSelectItem T="PeriodType" Value="@PeriodType.Permanent">دائمی</MudSelectItem>
+                            <MudSelectItem T="PeriodType" Value="@PeriodType.Installment">اقساط</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="CalculationType" @bind-Value="editing.CalculationType" Label="نوع محاسبه" Variant="Variant.Outlined">
+                            <MudSelectItem T="CalculationType" Value="@CalculationType.EqualDivision">تقسیم مساوی</MudSelectItem>
+                            <MudSelectItem T="CalculationType" Value="@CalculationType.Grouping">تعرفه پلکانی (IBT)</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    @if (editing.PeriodType == PeriodType.Installment)
+                    {
+                        <div style="display:contents">
+                            <MudItem xs="12" md="6">
+                                <MudNumericField T="decimal?" @bind-Value="editing.TotalAmount" Label="مبلغ کل" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudNumericField T="int?" @bind-Value="editing.NumberOfInstallments" Label="تعداد اقساط" Variant="Variant.Outlined" Min="1" HideSpinButtons="true" />
+                            </MudItem>
+                        </div>
+                    }
+                    <MudItem xs="12">
+                        <MudCheckBox T="bool" @bind-Value="editing.IsActive" Label="فعال" Color="Color.Primary" />
+                    </MudItem>
+                </MudGrid>
+                <MudStack Row="true" Spacing="2" Class="mt-4">
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
+                        ذخیره
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="CancelEdit">
+                        انصراف
+                    </MudButton>
                 </MudStack>
-            </MudStack>
-            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">تعرفه‌ها به ترتیب از کمترین مصرف تعریف می‌شوند و فقط آخرین تعرفه می‌تواند نامحدود باشد.</MudAlert>
-            <MudDataGrid T="TierRow" Items="@editingTiers" RowsPerPage="10" Hover="true" Dense="true">
-                <Columns>
-                    <TemplateColumn Title="#">
-                        <CellTemplate>@(editingTiers.IndexOf(context.Item) + 1)</CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="حد بالای مصرف (واحد)">
-                        <CellTemplate>
-                            @if (context.Item == editingTiers.LastOrDefault())
-                            {
-                                <MudText>نامحدود</MudText>
-                            }
-                            else
-                            {
-                                <MudNumericField T="int?" @bind-Value="context.Item.UpperLimit" Variant="Variant.Outlined" HideSpinButtons="true" />
-                            }
-                        </CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="نرخ هر واحد (ریال)">
-                        <CellTemplate>
-                            <MudNumericField T="decimal" @bind-Value="context.Item.RatePerUnit" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" />
-                        </CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
-                        <CellTemplate>
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => RemoveTier(context.Item))" />
-                        </CellTemplate>
-                    </TemplateColumn>
-                </Columns>
-                <PagerContent>
-                    <MudDataGridPager T="TierRow" />
-                </PagerContent>
-            </MudDataGrid>
-        }
-        else if (editing.CalculationType == CalculationType.Grouping)
-        {
-            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">پس از ذخیره آیتم، می‌توانید تعرفه‌های پلکانی را تعریف کنید.</MudAlert>
-        }
-    </MudPaper>
+            </EditForm>
+
+            @if (editing.CalculationType == CalculationType.Grouping && editing.Id != 0)
+            {
+                <div>
+                    <MudDivider Class="my-4" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2" Wrap="Wrap.Wrap">
+                        <MudText Typo="Typo.h6">تعرفه‌های پلکانی (IBT)</MudText>
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddTierRow">افزودن تعرفه</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveTiersAsync">ذخیره تعرفه‌ها</MudButton>
+                        </MudStack>
+                    </MudStack>
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">تعرفه‌ها به ترتیب از کمترین مصرف تعریف می‌شوند و فقط آخرین تعرفه می‌تواند نامحدود باشد.</MudAlert>
+                    <MudDataGrid T="TierRow" Items="@editingTiers" RowsPerPage="10" Hover="true" Dense="true">
+                        <Columns>
+                            <TemplateColumn Title="#">
+                                <CellTemplate>@(editingTiers.IndexOf(context.Item) + 1)</CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="حد بالای مصرف (واحد)">
+                                <CellTemplate>
+                                    @if (context.Item == editingTiers.LastOrDefault())
+                                    {
+                                        <div><MudText>نامحدود</MudText></div>
+                                    }
+                                    else
+                                    {
+                                        <div><MudNumericField T="int?" @bind-Value="context.Item.UpperLimit" Variant="Variant.Outlined" HideSpinButtons="true" /></div>
+                                    }
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="نرخ هر واحد (ریال)">
+                                <CellTemplate>
+                                    <MudNumericField T="decimal" @bind-Value="context.Item.RatePerUnit" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" />
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                                <CellTemplate>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => RemoveTier(context.Item))" />
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+                        <PagerContent>
+                            <MudDataGridPager T="TierRow" />
+                        </PagerContent>
+                    </MudDataGrid>
+                </div>
+            }
+            else if (editing.CalculationType == CalculationType.Grouping)
+            {
+                <div><MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">پس از ذخیره آیتم، می‌توانید تعرفه‌های پلکانی را تعریف کنید.</MudAlert></div>
+            }
+        </MudPaper>
+    </div>
 }
 
 <MudPaper Class="pa-4">
