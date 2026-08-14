@@ -30,8 +30,6 @@ public partial class Billing : ComponentBase
     private List<FinancialItem> activeItems = new();
     private List<FinancialItemAmountRow> financialAmountRows = new();
     private List<Bill> bills = new();
-    private List<MissingUsageInfo> missingUsageItems = new();
-    private List<string> missingTiersItems = new();
     private Dictionary<(int HouseId, int FinancialItemId), int> usageByHouseItem = new();
     private Bill? selectedBill;
     private bool isLoading;
@@ -69,30 +67,8 @@ public partial class Billing : ComponentBase
         }
     }
 
-    private async Task CheckUsageStatusAsync()
-    {
-        isLoading = true;
-        try
-        {
-            await LoadMissingUsageDataAsync();
-            Snackbar.Add("وضعیت مصرف بروزرسانی شد.", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"خطا در بررسی وضعیت مصرف: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            isLoading = false;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
     private async Task LoadMissingUsageDataAsync()
     {
-        missingUsageItems.Clear();
-        missingTiersItems.Clear();
-
         var groupingItems = activeItems.Where(item => item.CalculationType == CalculationType.Grouping && IsApplicable(item)).ToList();
         if (!groupingItems.Any())
         {
@@ -103,11 +79,12 @@ public partial class Billing : ComponentBase
         {
             if (!item.Tiers.Any())
             {
-                missingTiersItems.Add(item.Title);
+                Snackbar.Add("ابتدا مقادیر مصرف تمام آیتم‌های گروه‌بندی را ثبت کنید.", Severity.Warning);
             }
         }
 
         var itemsWithTiers = groupingItems.Where(item => item.Tiers.Any()).ToList();
+
         if (!itemsWithTiers.Any())
         {
             return;
@@ -120,13 +97,16 @@ public partial class Billing : ComponentBase
         }
 
         var usages = await UsageRepo.GetByMonthYearAsync(year, month);
+
         var usageSet = usages.Select(usage => (usage.HouseId, usage.FinancialItemId)).ToHashSet();
+
         foreach (var item in itemsWithTiers)
         {
             var missingCount = activeHouses.Count(house => !usageSet.Contains((house.Id, item.Id)));
+
             if (missingCount > 0)
             {
-                missingUsageItems.Add(new MissingUsageInfo { Title = item.Title, MissingCount = missingCount });
+                Snackbar.Add($"{item.Title} — {missingCount} واحد بدون مقدار مصرف", Severity.Error);
             }
         }
     }
@@ -137,22 +117,15 @@ public partial class Billing : ComponentBase
         try
         {
             await LoadMissingUsageDataAsync();
-            if (missingUsageItems.Any())
-            {
-                Snackbar.Add("ابتدا مقادیر مصرف تمام آیتم‌های گروه‌بندی را ثبت کنید.", Severity.Warning);
-                return;
-            }
-
-            if (missingTiersItems.Any())
-            {
-                Snackbar.Add("ابتدا تعرفه‌های آیتم‌های گروه‌بندی را تکمیل کنید.", Severity.Warning);
-                return;
-            }
 
             var finalAmounts = financialAmountRows.ToDictionary(row => row.Id, row => row.Amount);
+        
             var (userId, userName) = await GetCurrentUserAsync();
+
             var generated = await BillingService.GenerateBillsAsync(year, month, finalAmounts, userId, userName);
+
             Snackbar.Add($"{generated.Count} قبض تولید شد.", Severity.Success);
+
             await LoadBillsCoreAsync();
         }
         catch (Exception ex)
@@ -215,9 +188,13 @@ public partial class Billing : ComponentBase
         try
         {
             var (userId, userName) = await GetCurrentUserAsync();
+            
             await BillingService.ApproveBillsAsync(year, month, userId, userName);
+            
             await LoadBillsCoreAsync();
+            
             activeItems = await FinancialItemRepo.GetActiveAsync();
+            
             financialAmountRows = activeItems.Select(item => new FinancialItemAmountRow
             {
                 Id = item.Id,
@@ -226,6 +203,7 @@ public partial class Billing : ComponentBase
                 CalculationType = item.CalculationType,
                 Amount = item.TotalAmount ?? 0m
             }).ToList();
+        
             Snackbar.Add("قبوض تایید شدند.", Severity.Success);
         }
         catch (Exception ex)
@@ -235,6 +213,7 @@ public partial class Billing : ComponentBase
         finally
         {
             isLoading = false;
+
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -255,8 +234,11 @@ public partial class Billing : ComponentBase
         try
         {
             var (userId, userName) = await GetCurrentUserAsync();
+
             await BillingService.RecordPaymentAsync(billId, userId, userName);
+
             await LoadBillsCoreAsync();
+
             Snackbar.Add("پرداخت قبض ثبت شد.", Severity.Success);
         }
         catch (Exception ex)
@@ -276,8 +258,11 @@ public partial class Billing : ComponentBase
         try
         {
             bill.TotalAmount = value;
+
             await BillRepo.UpdateAsync(bill);
+            
             await LoadBillsCoreAsync();
+            
             Snackbar.Add("مبلغ قبض بروزرسانی شد.", Severity.Success);
         }
         catch (Exception ex)
@@ -287,6 +272,7 @@ public partial class Billing : ComponentBase
         finally
         {
             isLoading = false;
+
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -379,16 +365,6 @@ public partial class Billing : ComponentBase
         CalculationType.Grouping => "تعرفه پلکانی (IBT)",
         _ => string.Empty
     };
-
-    private static string GetMonthName(int currentMonth) => PersianCalendarHelper.GetMonthName(currentMonth);
-
-    private static string FormatYearMonth(int currentYear, int currentMonth) => PersianCalendarHelper.FormatYearMonth(currentYear, currentMonth);
-
-    public sealed class MissingUsageInfo
-    {
-        public string Title { get; set; } = string.Empty;
-        public int MissingCount { get; set; }
-    }
 
     public sealed class FinancialItemAmountRow
     {

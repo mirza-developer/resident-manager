@@ -2,22 +2,14 @@
 @attribute [Authorize(Roles = "Administrator")]
 @using ResidentialComplex.Domain.Entities
 @using ResidentialComplex.Domain.Enums
+@using ResidentialComplex.Application.Helpers
 
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
         <MudText Typo="Typo.h4">صورتحساب ماهانه</MudText>
         <HelpButton PageKey="billing" />
     </MudStack>
-    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="InitializeDataAsync">
-        بروزرسانی
-    </MudButton>
 </MudStack>
-
-@if (isLoading)
-{
-    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
-}
-
 <MudPaper Class="pa-4 mb-4">
     <MudText Typo="Typo.h6" Class="mb-3">تولید صورتحساب</MudText>
     <MudGrid>
@@ -26,42 +18,20 @@
         </MudItem>
         <MudItem xs="12" md="3">
             <MudSelect T="int" @bind-Value="month" Label="ماه" Variant="Variant.Outlined">
-                @for (var currentMonth = 1; currentMonth <= 12; currentMonth++)
+                @foreach (var month in Enumerable.Range(1, 12))
                 {
-                    <text><MudSelectItem T="int" Value="@currentMonth">@GetMonthName(currentMonth)</MudSelectItem></text>
+                    <MudSelectItem T="int" Value="@month">
+                        @PersianCalendarHelper.GetMonthName(month)
+                    </MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
         <MudItem xs="12" md="6" Class="d-flex align-center gap-2 flex-wrap">
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Search" OnClick="CheckUsageStatusAsync">
-                بررسی وضعیت مصرف
-            </MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@(missingUsageItems.Any() || missingTiersItems.Any())" OnClick="GenerateAsync">
-                تولید صورتحساب
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GenerateAsync">
+                <MudIcon Icon="@Icons.Material.Filled.Calculate" Size="@Size.Medium" />
             </MudButton>
         </MudItem>
     </MudGrid>
-
-    @if (missingTiersItems.Any())
-    {
-        <div>
-            <MudAlert Severity="Severity.Error" Dense="true" Class="mt-4">
-                آیتم‌های گروه‌بندی زیر تعرفه ندارند: @string.Join("، ", missingTiersItems)
-            </MudAlert>
-        </div>
-    }
-
-    @if (missingUsageItems.Any())
-    {
-        <div>
-            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-4">
-                @foreach (var item in missingUsageItems)
-                {
-                    <div>@item.Title — @item.MissingCount واحد بدون مقدار مصرف</div>
-                }
-            </MudAlert>
-        </div>
-    }
 
     @if (financialAmountRows.Any())
     {
@@ -102,7 +72,7 @@
 
 <MudPaper Class="pa-4 mb-4">
     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-3">
-        <MudText Typo="Typo.h6">قبوض @FormatYearMonth(year, month)</MudText>
+        <MudText Typo="Typo.h6">قبوض @PersianCalendarHelper.FormatYearMonth(year, month)</MudText>
         <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
             <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadBillsAsync">بارگذاری</MudButton>
             @if (bills.Any(x => x.Status == BillStatus.Draft))
@@ -135,7 +105,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowBillDetails(context.Item.Id))" />
                     @if (context.Item.Status == BillStatus.Approved)
                     {
-                        <text><MudIconButton Icon="@Icons.Material.Filled.Payments" Color="Color.Success" Size="Size.Small" OnClick="@(() => PayAsync(context.Item.Id))" /></text>
+                        <text><MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" OnClick="@(() => PayAsync(context.Item.Id))" /></text>
                     }
                 </CellTemplate>
             </TemplateColumn>
@@ -178,3 +148,10 @@
         </MudPaper>
     </div>
 }
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

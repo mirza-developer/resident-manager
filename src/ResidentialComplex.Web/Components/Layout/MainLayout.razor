@@ -1,64 +1,63 @@
 @inherits LayoutComponentBase
 @using ResidentialComplex.Application.Helpers
 
-<MudThemeProvider RightToLeft="true" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+<MudRTLProvider RightToLeft="true">
+    <MudThemeProvider />
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
-        <MudText Typo="Typo.h6">مدیریت مجتمع مسکونی</MudText>
-        <MudSpacer />
-        <AuthorizeView>
-            <Authorized>
-                <MudText Class="ms-2">@context.User.Identity?.Name</MudText>
-                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Href="/Account/Logout" />
-            </Authorized>
-        </AuthorizeView>
-    </MudAppBar>
-
-    <MudDrawer @bind-Open="drawerOpen" Elevation="2" Variant="DrawerVariant.Responsive">
-        <MudNavMenu>
-            <AuthorizeView Roles="Administrator">
-                <MudNavLink Href="/admin/apartments" Icon="@Icons.Material.Filled.Apartment">آپارتمان‌ها</MudNavLink>
-                <MudNavLink Href="/admin/houses" Icon="@Icons.Material.Filled.Home">واحدها</MudNavLink>
-                <MudNavLink Href="/admin/financial-items" Icon="@Icons.Material.Filled.AttachMoney">آیتم‌های مالی</MudNavLink>
-                <MudNavLink Href="/admin/billing" Icon="@Icons.Material.Filled.Receipt">صورتحساب</MudNavLink>
-                <MudNavLink Href="/admin/reports" Icon="@Icons.Material.Filled.Assessment">گزارشات</MudNavLink>
-                <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">کاربران</MudNavLink>
+    <MudLayout>
+        <MudAppBar Elevation="1">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
+            <MudText Typo="Typo.h6">مدیریت مجتمع مسکونی @Configuration["ComplexName"]</MudText>
+            <MudSpacer />
+            <AuthorizeView>
+                <Authorized>
+                    <MudText Class="ms-2">@context.User.Identity?.Name</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Href="/Account/Logout" />
+                </Authorized>
             </AuthorizeView>
-            <AuthorizeView Roles="Worker">
-                <MudNavLink Href="/worker/usage" Icon="@Icons.Material.Filled.BarChart">مصرف ماهانه</MudNavLink>
-            </AuthorizeView>
-            <AuthorizeView Roles="Resident">
-                <MudNavLink Href="/resident/dashboard" Icon="@Icons.Material.Filled.Dashboard">پنل ساکن</MudNavLink>
-            </AuthorizeView>
-        </MudNavMenu>
-    </MudDrawer>
+        </MudAppBar>
 
-    <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
-            <GlobalErrorBoundary @ref="errorBoundary">
-                <ChildContent>
-                    @Body
-                </ChildContent>
-                <ErrorContent>
-                    <MudAlert Severity="Severity.Error" Class="ma-4">
-                        <MudText Typo="Typo.h6">خطایی رخ داده است</MudText>
-                        <MudText>متأسفانه خطایی در پردازش درخواست شما رخ داده است.</MudText>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="RecoverFromError" Class="mt-2">
-                            تلاش مجدد
-                        </MudButton>
-                    </MudAlert>
-                </ErrorContent>
-            </GlobalErrorBoundary>
+        <MudDrawer @bind-Open="drawerOpen" Elevation="2" Variant="DrawerVariant.Responsive">
+            <MudNavMenu>
+                <AuthorizeView Roles="Administrator">
+                    <MudNavLink Href="/admin/apartments" Icon="@Icons.Material.Filled.Apartment">آپارتمان‌ها</MudNavLink>
+                    <MudNavLink Href="/admin/houses" Icon="@Icons.Material.Filled.Home">واحدها</MudNavLink>
+                    <MudNavLink Href="/admin/financial-items" Icon="@Icons.Material.Filled.AttachMoney">آیتم‌های مالی</MudNavLink>
+                    <MudNavLink Href="/admin/billing" Icon="@Icons.Material.Filled.Receipt">صورتحساب</MudNavLink>
+                    <MudNavLink Href="/admin/reports" Icon="@Icons.Material.Filled.Assessment">گزارشات</MudNavLink>
+                    <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">کاربران</MudNavLink>
+                </AuthorizeView>
+                <AuthorizeView Roles="Worker">
+                    <MudNavLink Href="/worker/usage" Icon="@Icons.Material.Filled.BarChart">مصرف ماهانه</MudNavLink>
+                </AuthorizeView>
+                <AuthorizeView Roles="Resident">
+                    <MudNavLink Href="/resident/dashboard" Icon="@Icons.Material.Filled.Dashboard">پنل ساکن</MudNavLink>
+                </AuthorizeView>
+            </MudNavMenu>
+        </MudDrawer>
 
-            <MudDivider Class="my-4" />
-            <MudText Typo="Typo.caption" Class="d-flex justify-center">
-                سیستم مدیریت مجتمع مسکونی &copy; @PersianCalendarHelper.GetCurrentYear()
-            </MudText>
-        </MudContainer>
-    </MudMainContent>
-</MudLayout>
+        <MudMainContent>
+            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+                <GlobalErrorBoundary @ref="errorBoundary">
+                    <ChildContent>
+                        @Body
+                    </ChildContent>
+                    <ErrorContent>
+                        <MudAlert Severity="Severity.Error" Class="ma-4">
+                            <MudText Typo="Typo.h6">خطایی رخ داده است</MudText>
+                            <MudText>متأسفانه خطایی در پردازش درخواست شما رخ داده است.</MudText>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="RecoverFromError" Class="mt-2">
+                                تلاش مجدد
+                            </MudButton>
+                        </MudAlert>
+                    </ErrorContent>
+                </GlobalErrorBoundary>
+
+                <MudDivider Class="my-4" />
+            </MudContainer>
+        </MudMainContent>
+    </MudLayout>
+</MudRTLProvider>
