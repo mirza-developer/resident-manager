@@ -1,65 +1,56 @@
 @page "/resident/dashboard"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Identity
-@using ResidentialComplex.Application.Helpers
-@using ResidentialComplex.Application.Interfaces
-@using ResidentialComplex.Domain.Entities
-@using ResidentialComplex.Domain.Enums
-@using ResidentialComplex.Persistence
 @attribute [Authorize(Roles = "Administrator,Resident")]
-@inject IHouseRepository HouseRepo
-@inject IBillRepository BillRepo
-@inject UserManager<ApplicationUser> UserManager
-@inject AuthenticationStateProvider AuthState
+@using ResidentialComplex.Domain.Entities
 
-<h4>پنل ساکن</h4>
-<HelpButton PageKey="residentDashboard" />
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+    <MudText Typo="Typo.h4">پنل ساکن</MudText>
+    <HelpButton PageKey="residentDashboard" />
+</MudStack>
 
-@if (house != null)
+@if (isLoading)
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <h5>اطلاعات واحد: @house.Title</h5>
-            <p><strong>بدهی فعلی:</strong> <span class="@(house.CurrentDebt > 0 ? "text-danger" : "text-success")">@house.CurrentDebt.ToString("N0") ریال</span></p>
-        </div>
-    </div>
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
+}
 
-    <h5>تاریخچه قبوض</h5>
-    <table class="table table-bordered">
-        <thead><tr><th>سال</th><th>ماه</th><th>مبلغ</th><th>وضعیت</th></tr></thead>
-        <tbody>
-            @foreach (var bill in bills)
-            {
-                <tr>
-                    <td>@bill.Year</td>
-                    <td>@PersianCalendarHelper.GetMonthName(bill.Month)</td>
-                    <td>@bill.TotalAmount.ToString("N0")</td>
-                    <td>@GetStatusLabel(bill.Status)</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+@if (house is null)
+{
+    <div><MudAlert Severity="Severity.Warning">واحدی برای حساب کاربری شما تعریف نشده است.</MudAlert></div>
 }
 else
 {
-    <div class="alert alert-warning">واحدی برای حساب کاربری شما تعریف نشده است.</div>
-}
+    <div>
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6">اطلاعات واحد: @house.Title</MudText>
+            <MudText Typo="Typo.subtitle1" Class="mt-2">
+                بدهی فعلی:
+                <MudText Inline="true" Color="@(house.CurrentDebt > 0 ? Color.Error : Color.Success)">
+                    @house.CurrentDebt.ToString("N0") ریال
+                </MudText>
+            </MudText>
+        </MudPaper>
 
-@code {
-    private House? house;
-    private List<Bill> bills = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-        var auth = await AuthState.GetAuthenticationStateAsync();
-        var user = await UserManager.GetUserAsync(auth.User);
-        if (user != null)
-        {
-            house = await HouseRepo.GetByUserIdAsync(user.Id);
-            if (house != null)
-                bills = await BillRepo.GetByHouseIdAsync(house.Id);
-        }
-    }
-
-    private static string GetStatusLabel(BillStatus s) => s switch { BillStatus.Draft => "پیش‌نویس", BillStatus.Approved => "تایید شده", BillStatus.Paid => "پرداخت شده", _ => "" };
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-2">تاریخچه قبوض</MudText>
+            <MudDataGrid T="Bill" Items="@bills" RowsPerPage="10" Hover="true" Dense="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.Year" Title="سال" />
+                    <TemplateColumn Title="ماه">
+                        <CellTemplate>@GetMonthName(context.Item.Month)</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="مبلغ">
+                        <CellTemplate>@context.Item.TotalAmount.ToString("N0")</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="وضعیت">
+                        <CellTemplate>@GetStatusLabel(context.Item.Status)</CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <NoRecordsContent>
+                    <MudText>قبضی برای نمایش وجود ندارد.</MudText>
+                </NoRecordsContent>
+                <PagerContent>
+                    <MudDataGridPager T="Bill" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
+    </div>
 }

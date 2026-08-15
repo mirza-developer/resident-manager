@@ -1,277 +1,160 @@
 @page "/admin/financial-items"
-@using Microsoft.AspNetCore.Authorization
-@using ResidentialComplex.Application.Interfaces
+@attribute [Authorize(Roles = "Administrator")]
 @using ResidentialComplex.Domain.Entities
 @using ResidentialComplex.Domain.Enums
-@attribute [Authorize(Roles = "Administrator")]
-@inject IFinancialItemRepository FinancialItemRepo
 
-<h4>مدیریت آیتم‌های مالی</h4>
-<HelpButton PageKey="financialItems" />
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">مدیریت آیتم‌های مالی</MudText>
+        <HelpButton PageKey="financialItems" />
+    </MudStack>
+    <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="ShowAdd">
+        افزودن آیتم مالی جدید
+    </MudButton>
+</MudStack>
 
-<button type="button" class="btn btn-success mb-3" @onclick="ShowAdd">افزودن آیتم مالی جدید</button>
+@if (isLoading)
+{
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
+}
 
 @if (showForm)
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <h5>@(editing.Id == 0 ? "افزودن" : "ویرایش") آیتم مالی</h5>
-            <EditForm Model="editing" OnValidSubmit="Save">
+    <div>
+        <MudPaper Class="pa-4 mb-4">
+            <EditForm Model="editing" OnValidSubmit="SaveAsync">
                 <DataAnnotationsValidator />
-                <div class="mb-2">
-                    <label class="form-label">عنوان *</label>
-                    <InputText @bind-Value="editing.Title" class="form-control" />
-                    <ValidationMessage For="() => editing.Title" />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">توضیحات</label>
-                    <InputText @bind-Value="editing.Description" class="form-control" />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">نوع دوره</label>
-                    <InputSelect @bind-Value="editing.PeriodType" class="form-select">
-                        <option value="@PeriodType.Once">یکبار</option>
-                        <option value="@PeriodType.Permanent">دائمی</option>
-                        <option value="@PeriodType.Installment">اقساط</option>
-                    </InputSelect>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">نوع محاسبه</label>
-                    <InputSelect @bind-Value="editing.CalculationType" class="form-select">
-                        <option value="@CalculationType.EqualDivision">تقسیم مساوی</option>
-                        <option value="@CalculationType.Grouping">تعرفه پلکانی (IBT)</option>
-                    </InputSelect>
-                </div>
-                @if (editing.PeriodType == PeriodType.Installment)
-                {
-                    <div class="mb-2">
-                        <label class="form-label">مبلغ کل</label>
-                        <InputNumber @bind-Value="editing.TotalAmount" class="form-control" />
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">تعداد اقساط</label>
-                        <InputNumber @bind-Value="editing.NumberOfInstallments" class="form-control" />
-                    </div>
-                }
-                <div class="mb-2 form-check">
-                    <InputCheckbox @bind-Value="editing.IsActive" class="form-check-input" id="fiActive" />
-                    <label class="form-check-label" for="fiActive">فعال</label>
-                </div>
-                <button type="submit" class="btn btn-primary">ذخیره</button>
-                <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="editing.Title" For="@(() => editing.Title)" Label="عنوان *" Variant="Variant.Outlined" Required="true" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="editing.Description" Label="توضیحات" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="PeriodType" @bind-Value="editing.PeriodType" Label="نوع دوره" Variant="Variant.Outlined">
+                            <MudSelectItem T="PeriodType" Value="@PeriodType.Once">یکبار</MudSelectItem>
+                            <MudSelectItem T="PeriodType" Value="@PeriodType.Permanent">دائمی</MudSelectItem>
+                            <MudSelectItem T="PeriodType" Value="@PeriodType.Installment">اقساط</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="CalculationType" @bind-Value="editing.CalculationType" Label="نوع محاسبه" Variant="Variant.Outlined">
+                            <MudSelectItem T="CalculationType" Value="@CalculationType.EqualDivision">تقسیم مساوی</MudSelectItem>
+                            <MudSelectItem T="CalculationType" Value="@CalculationType.Grouping">تعرفه پلکانی (IBT)</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    @if (editing.PeriodType == PeriodType.Installment)
+                    {
+                        <div style="display:contents">
+                            <MudItem xs="12" md="6">
+                                <MudNumericField T="decimal?" @bind-Value="editing.TotalAmount" Label="مبلغ کل" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudNumericField T="int?" @bind-Value="editing.NumberOfInstallments" Label="تعداد اقساط" Variant="Variant.Outlined" Min="1" HideSpinButtons="true" />
+                            </MudItem>
+                        </div>
+                    }
+                    <MudItem xs="12">
+                        <MudCheckBox T="bool" @bind-Value="editing.IsActive" Label="فعال" Color="Color.Primary" />
+                    </MudItem>
+                </MudGrid>
+                <MudStack Row="true" Spacing="2" Class="mt-4">
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
+                        ذخیره
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="CancelEdit">
+                        انصراف
+                    </MudButton>
+                </MudStack>
             </EditForm>
 
             @if (editing.CalculationType == CalculationType.Grouping && editing.Id != 0)
             {
-                <hr />
-                <h6 class="mt-3">تعرفه‌های پلکانی (IBT)</h6>
-                <p class="text-muted small">
-                    تعرفه‌ها به ترتیب از کمترین مصرف تعریف می‌شوند. آخرین تعرفه حد بالایی ندارد (نامحدود).
-                </p>
-                <table class="table table-bordered table-sm">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>حد بالای مصرف (واحد)</th>
-                            <th>نرخ هر واحد (ریال)</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @{ int tierRow = 0; }
-                        @foreach (var tier in editingTiers)
-                        {
-                            tierRow++;
-                            var t = tier;
-                            <tr>
-                                <td>@tierRow</td>
-                                <td>
-                                    @if (t == editingTiers.Last())
+                <div>
+                    <MudDivider Class="my-4" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2" Wrap="Wrap.Wrap">
+                        <MudText Typo="Typo.h6">تعرفه‌های پلکانی (IBT)</MudText>
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddTierRow">افزودن تعرفه</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveTiersAsync">ذخیره تعرفه‌ها</MudButton>
+                        </MudStack>
+                    </MudStack>
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">تعرفه‌ها به ترتیب از کمترین مصرف تعریف می‌شوند و فقط آخرین تعرفه می‌تواند نامحدود باشد.</MudAlert>
+                    <MudDataGrid T="TierRow" Items="@editingTiers" RowsPerPage="10" Hover="true" Dense="true">
+                        <Columns>
+                            <TemplateColumn Title="#">
+                                <CellTemplate>@(editingTiers.IndexOf(context.Item) + 1)</CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="حد بالای مصرف (واحد)">
+                                <CellTemplate>
+                                    @if (context.Item == editingTiers.LastOrDefault())
                                     {
-                                        <span class="text-muted">نامحدود</span>
+                                        <div><MudText>نامحدود</MudText></div>
                                     }
                                     else
                                     {
-                                        <input type="number" class="form-control form-control-sm" style="max-width:120px;"
-                                               value="@t.UpperLimit"
-                                               @onchange="(e) => UpdateTierUpperLimit(t, e)" />
+                                        <div><MudNumericField T="int?" @bind-Value="context.Item.UpperLimit" Variant="Variant.Outlined" HideSpinButtons="true" /></div>
                                     }
-                                </td>
-                                <td>
-                                    <input type="number" step="0.0001" class="form-control form-control-sm" style="max-width:140px;"
-                                           value="@t.RatePerUnit"
-                                           @onchange="(e) => UpdateTierRate(t, e)" />
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveTier(t)">حذف</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddTierRow">+ افزودن تعرفه</button>
-                <button type="button" class="btn btn-sm btn-success ms-2" @onclick="SaveTiers">ذخیره تعرفه‌ها</button>
-                @if (!string.IsNullOrEmpty(tierMessage))
-                {
-                    <div class="alert @(tierIsError ? "alert-danger" : "alert-success") mt-2 py-1 px-2">@tierMessage</div>
-                }
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="نرخ هر واحد (ریال)">
+                                <CellTemplate>
+                                    <MudNumericField T="decimal" @bind-Value="context.Item.RatePerUnit" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" />
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                                <CellTemplate>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => RemoveTier(context.Item))" />
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+                        <PagerContent>
+                            <MudDataGridPager T="TierRow" />
+                        </PagerContent>
+                    </MudDataGrid>
+                </div>
             }
-            else if (editing.CalculationType == CalculationType.Grouping && editing.Id == 0)
+            else if (editing.CalculationType == CalculationType.Grouping)
             {
-                <div class="alert alert-info mt-2">پس از ذخیره آیتم، می‌توانید تعرفه‌های پلکانی را تعریف کنید.</div>
+                <div><MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">پس از ذخیره آیتم، می‌توانید تعرفه‌های پلکانی را تعریف کنید.</MudAlert></div>
             }
-        </div>
+        </MudPaper>
     </div>
 }
 
-<table class="table table-striped table-bordered">
-    <thead><tr><th>عنوان</th><th>نوع دوره</th><th>نوع محاسبه</th><th>وضعیت</th><th>عملیات</th></tr></thead>
-    <tbody>
-        @foreach (var fi in items)
-        {
-            <tr>
-                <td>@fi.Title</td>
-                <td>@GetPeriodLabel(fi.PeriodType)</td>
-                <td>@GetCalcLabel(fi.CalculationType)</td>
-                <td>@(fi.IsActive ? "فعال" : "غیرفعال")</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-warning" @onclick="() => Edit(fi)">ویرایش</button>
-                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => Delete(fi.Id)">حذف</button>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
-
-@code {
-    private List<FinancialItem> items = new();
-    private FinancialItem editing = new();
-    private bool showForm;
-
-    // Tier editing state
-    private List<TierRow> editingTiers = new();
-    private string? tierMessage;
-    private bool tierIsError;
-
-    protected override async Task OnInitializedAsync() => items = await FinancialItemRepo.GetAllAsync();
-
-    private void ShowAdd() { editing = new FinancialItem { IsActive = true }; editingTiers = new(); showForm = true; }
-
-    private async Task Edit(FinancialItem fi)
-    {
-        editing = fi;
-        editingTiers = fi.Tiers
-            .OrderBy(t => t.TierOrder)
-            .Select(t => new TierRow { Id = t.Id, UpperLimit = t.UpperLimit, RatePerUnit = t.RatePerUnit })
-            .ToList();
-        tierMessage = null;
-        showForm = true;
-    }
-
-    private async Task Save()
-    {
-        if (editing.Id == 0) await FinancialItemRepo.AddAsync(editing);
-        else await FinancialItemRepo.UpdateAsync(editing);
-        items = await FinancialItemRepo.GetAllAsync();
-        // Keep form open for Grouping items so tiers can be edited
-        if (editing.CalculationType != CalculationType.Grouping)
-            showForm = false;
-        else
-        {
-            // Refresh editing reference so Id is populated for new items
-            editing = items.First(i => i.Id == editing.Id);
-            editingTiers = editing.Tiers
-                .OrderBy(t => t.TierOrder)
-                .Select(t => new TierRow { Id = t.Id, UpperLimit = t.UpperLimit, RatePerUnit = t.RatePerUnit })
-                .ToList();
-        }
-    }
-
-    private async Task Delete(int id)
-    {
-        await FinancialItemRepo.DeleteAsync(id);
-        items = await FinancialItemRepo.GetAllAsync();
-    }
-
-    private void AddTierRow()
-    {
-        editingTiers.Add(new TierRow { UpperLimit = null, RatePerUnit = 0 });
-        tierMessage = null;
-    }
-
-    private void RemoveTier(TierRow tier) { editingTiers.Remove(tier); tierMessage = null; }
-
-    private void UpdateTierUpperLimit(TierRow tier, ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out var v)) tier.UpperLimit = v;
-    }
-
-    private void UpdateTierRate(TierRow tier, ChangeEventArgs e)
-    {
-        if (decimal.TryParse(e.Value?.ToString(), out var v)) tier.RatePerUnit = v;
-    }
-
-    private async Task SaveTiers()
-    {
-        if (editing.Id == 0) { tierMessage = "ابتدا آیتم مالی را ذخیره کنید."; tierIsError = true; return; }
-
-        // Validate: only last tier may have null UpperLimit
-        for (int i = 0; i < editingTiers.Count - 1; i++)
-        {
-            if (editingTiers[i].UpperLimit == null)
-            {
-                tierMessage = "تنها آخرین تعرفه می‌تواند بدون حد بالایی باشد.";
-                tierIsError = true;
-                return;
-            }
-        }
-
-        // Validate: UpperLimit values must be strictly increasing
-        for (int i = 1; i < editingTiers.Count - 1; i++)
-        {
-            if (editingTiers[i].UpperLimit <= editingTiers[i - 1].UpperLimit)
-            {
-                tierMessage = "حد بالایی هر تعرفه باید از تعرفه قبلی بزرگ‌تر باشد.";
-                tierIsError = true;
-                return;
-            }
-        }
-
-        // Delete existing tiers from DB
-        var existing = await FinancialItemRepo.GetTiersAsync(editing.Id);
-        foreach (var t in existing)
-            await FinancialItemRepo.DeleteTierAsync(t.Id);
-
-        // Re-add in order
-        for (int i = 0; i < editingTiers.Count; i++)
-        {
-            var row = editingTiers[i];
-            await FinancialItemRepo.AddTierAsync(new FinancialItemTier
-            {
-                FinancialItemId = editing.Id,
-                TierOrder = i + 1,
-                UpperLimit = i < editingTiers.Count - 1 ? row.UpperLimit : null,
-                RatePerUnit = row.RatePerUnit
-            });
-        }
-
-        items = await FinancialItemRepo.GetAllAsync();
-        editing = items.First(i => i.Id == editing.Id);
-        editingTiers = editing.Tiers
-            .OrderBy(t => t.TierOrder)
-            .Select(t => new TierRow { Id = t.Id, UpperLimit = t.UpperLimit, RatePerUnit = t.RatePerUnit })
-            .ToList();
-        tierMessage = "تعرفه‌ها با موفقیت ذخیره شدند.";
-        tierIsError = false;
-    }
-
-    private static string GetPeriodLabel(PeriodType pt) => pt switch { PeriodType.Once => "یکبار", PeriodType.Permanent => "دائمی", PeriodType.Installment => "اقساط", _ => "" };
-    private static string GetCalcLabel(CalculationType ct) => ct switch { CalculationType.EqualDivision => "تقسیم مساوی", CalculationType.Grouping => "تعرفه پلکانی (IBT)", _ => "" };
-
-    private class TierRow
-    {
-        public int Id { get; set; }
-        public int? UpperLimit { get; set; }
-        public decimal RatePerUnit { get; set; }
-    }
-}
+<MudPaper Class="pa-4">
+    <MudDataGrid T="FinancialItem" Items="@items" Filterable="true" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
+        <Columns>
+            <PropertyColumn Property="x => x.Title" Title="عنوان" />
+            <TemplateColumn Title="نوع دوره">
+                <CellTemplate>@GetPeriodLabel(context.Item.PeriodType)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="نوع محاسبه">
+                <CellTemplate>@GetCalcLabel(context.Item.CalculationType)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="مبلغ کل">
+                <CellTemplate>@(context.Item.TotalAmount.HasValue ? context.Item.TotalAmount.Value.ToString("N0") : "-")</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="وضعیت">
+                <CellTemplate>
+                    <MudChip T="string" Color="@(context.Item.IsActive ? Color.Success : Color.Default)" Variant="Variant.Outlined">
+                        @(context.Item.IsActive ? "فعال" : "غیرفعال")
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small" OnClick="@(() => EditAsync(context.Item.Id))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteAsync(context.Item.Id))" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            <MudText>آیتم مالی ثبت نشده است.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudDataGridPager T="FinancialItem" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>

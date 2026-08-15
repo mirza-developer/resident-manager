@@ -1,87 +1,41 @@
 @page "/admin/apartments"
-@using Microsoft.AspNetCore.Authorization
-@using ResidentialComplex.Application.Interfaces
-@using ResidentialComplex.Domain.Entities
 @attribute [Authorize(Roles = "Administrator")]
-@inject IApartmentRepository ApartmentRepo
+@using ResidentialComplex.Domain.Entities
 
-<h4>مدیریت آپارتمان‌ها</h4>
-<HelpButton PageKey="apartments" />
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">مدیریت آپارتمان‌ها</MudText>
+        <HelpButton PageKey="apartments" />
+    </MudStack>
+    <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="NavigateToCreate">
+        افزودن آپارتمان جدید
+    </MudButton>
+</MudStack>
 
-<button type="button" class="btn btn-success mb-3" @onclick="ShowAdd">افزودن آپارتمان جدید</button>
-
-@if (showForm)
+@if (isLoading)
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <h5>@(editingApartment.Id == 0 ? "افزودن" : "ویرایش") آپارتمان</h5>
-            <EditForm Model="editingApartment" OnValidSubmit="SaveApartment">
-                <DataAnnotationsValidator />
-                <div class="mb-2">
-                    <label class="form-label">عنوان *</label>
-                    <InputText @bind-Value="editingApartment.Title" class="form-control" />
-                    <ValidationMessage For="() => editingApartment.Title" />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">توضیحات</label>
-                    <InputText @bind-Value="editingApartment.Description" class="form-control" />
-                </div>
-                <button type="submit" class="btn btn-primary">ذخیره</button>
-                <button type="button" class="btn btn-secondary" @onclick="Cancel">انصراف</button>
-                @if (!string.IsNullOrEmpty(message))
-                {
-                    <div class="alert alert-info mt-2">@message</div>
-                }
-            </EditForm>
-        </div>
-    </div>
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
 }
 
-<table class="table table-striped table-bordered">
-    <thead><tr><th>شناسه</th><th>عنوان</th><th>توضیحات</th><th>تعداد واحد</th><th>عملیات</th></tr></thead>
-    <tbody>
-        @foreach (var apt in apartments)
-        {
-            <tr>
-                <td>@apt.Id</td>
-                <td>@apt.Title</td>
-                <td>@apt.Description</td>
-                <td>@apt.Houses.Count</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-warning" @onclick="() => EditApartment(apt)">ویرایش</button>
-                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteApartment(apt.Id)">حذف</button>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
-
-@code {
-    private List<Apartment> apartments = new();
-    private Apartment editingApartment = new();
-    private bool showForm;
-    private string? message;
-
-    protected override async Task OnInitializedAsync() => apartments = await ApartmentRepo.GetAllAsync();
-
-    private void ShowAdd() { editingApartment = new Apartment(); showForm = true; message = null; }
-    private void EditApartment(Apartment apt) { editingApartment = apt; showForm = true; message = null; }
-    private void Cancel() { showForm = false; message = null; }
-
-    private async Task SaveApartment()
-    {
-        if (editingApartment.Id == 0)
-            await ApartmentRepo.AddAsync(editingApartment);
-        else
-            await ApartmentRepo.UpdateAsync(editingApartment);
-        apartments = await ApartmentRepo.GetAllAsync();
-        showForm = false;
-        message = "ذخیره شد.";
-    }
-
-    private async Task DeleteApartment(int id)
-    {
-        await ApartmentRepo.DeleteAsync(id);
-        apartments = await ApartmentRepo.GetAllAsync();
-    }
-}
+<MudPaper Class="pa-4">
+    <MudDataGrid T="Apartment" Items="@apartments" Filterable="true" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
+        <Columns>
+            <PropertyColumn Property="x => x.Id" Title="شناسه" />
+            <PropertyColumn Property="x => x.Title" Title="عنوان" />
+            <PropertyColumn Property="x => x.Description" Title="توضیحات" />
+            <PropertyColumn Property="x => x.Houses.Count" Title="تعداد واحد" />
+            <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small" OnClick="@(() => NavigateToEdit(context.Item.Id))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteApartmentAsync(context.Item.Id))" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            <MudText>آپارتمانی ثبت نشده است.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudDataGridPager T="Apartment" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>

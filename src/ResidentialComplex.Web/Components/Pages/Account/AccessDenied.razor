@@ -1,8 +1,12 @@
 @page "/Account/AccessDenied"
 @layout ResidentialComplex.Web.Components.Layout.MainLayout
 
-<div class="text-center mt-5">
-    <h3 class="text-danger">دسترسی غیرمجاز</h3>
-    <p>شما اجازه دسترسی به این صفحه را ندارید.</p>
-    <a href="/" class="btn btn-primary">بازگشت به صفحه اصلی</a>
-</div>
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-10">
+    <MudAlert Severity="Severity.Error" Variant="Variant.Filled">
+        <MudText Typo="Typo.h5">دسترسی غیرمجاز</MudText>
+        <MudText Class="mt-2">شما اجازه دسترسی به این صفحه را ندارید.</MudText>
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Href="/" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mt-4">
+            بازگشت به صفحه اصلی
+        </MudButton>
+    </MudAlert>
+</MudContainer>

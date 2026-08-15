@@ -1,145 +1,77 @@
 @page "/worker/usage"
-@using Microsoft.AspNetCore.Authorization
-@using ResidentialComplex.Application.Helpers
-@using ResidentialComplex.Application.Interfaces
-@using ResidentialComplex.Domain.Entities
-@using ResidentialComplex.Domain.Enums
 @attribute [Authorize(Roles = "Administrator,Worker")]
-@inject IMonthlyUsageRepository UsageRepo
-@inject IHouseRepository HouseRepo
-@inject IFinancialItemRepository FinancialItemRepo
 
-<h4>ثبت مصرف ماهانه</h4>
-<HelpButton PageKey="usage" />
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">ثبت مصرف ماهانه</MudText>
+        <HelpButton PageKey="usage" />
+    </MudStack>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">
+        بارگذاری
+    </MudButton>
+</MudStack>
 
-<div class="card mb-3">
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-3 mb-2">
-                <label class="form-label">سال</label>
-                <input type="number" @bind="year" class="form-control" />
-            </div>
-            <div class="col-md-3 mb-2">
-                <label class="form-label">ماه</label>
-                <select @bind="month" class="form-select">
-                    @for (int m = 1; m <= 12; m++)
-                    {
-                        var monthNum = m;
-                        <option value="@monthNum">@PersianCalendarHelper.GetMonthName(monthNum)</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-3 mb-2 d-flex align-items-end">
-                <button type="button" class="btn btn-primary" @onclick="Load">بارگذاری</button>
-            </div>
-        </div>
+@if (isLoading)
+{
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
+}
+
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="3">
+            <MudNumericField T="int" @bind-Value="year" Label="سال" Variant="Variant.Outlined" Min="1" HideSpinButtons="true" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudSelect T="int" @bind-Value="month" Label="ماه" Variant="Variant.Outlined">
+                @for (var currentMonth = 1; currentMonth <= 12; currentMonth++)
+                {
+                    var m = currentMonth;
+                    <span @key="m" style="display:contents"><MudSelectItem T="int" Value="@m">@GetMonthName(m)</MudSelectItem></span>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="3" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="LoadAsync">
+                نمایش اطلاعات
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (!usageItems.Any() && loaded)
+{
+    <div><MudAlert Severity="Severity.Warning">آیتم مالی گروه‌بندی فعالی وجود ندارد.</MudAlert></div>
+}
+
+@foreach (var usageItem in usageItems)
+{
+    <div>
+        <MudPaper Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-3">
+                <MudText Typo="Typo.h6">@usageItem.Title</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Save" OnClick="@(() => SaveAllForItemAsync(usageItem.FinancialItemId))">
+                    ذخیره همه
+                </MudButton>
+            </MudStack>
+
+            <MudDataGrid T="UsageRow" Items="@usageItem.Rows" RowsPerPage="10" Hover="true" Dense="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.HouseTitle" Title="واحد" />
+                    <TemplateColumn Title="مقدار مصرف">
+                        <CellTemplate>
+                            <MudNumericField T="int" @bind-Value="context.Item.UsageCount" Variant="Variant.Outlined" HideSpinButtons="true" Min="0" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                        <CellTemplate>
+                            <MudIconButton Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SaveUsageAsync(context.Item))" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="UsageRow" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
     </div>
-</div>
-
-@if (!string.IsNullOrEmpty(message))
-{
-    <div class="alert alert-success alert-dismissible">
-        @message
-        <button type="button" class="btn-close" @onclick="() => message = null"></button>
-    </div>
-}
-
-@if (groupingItems.Any() && houses.Any())
-{
-    @foreach (var fi in groupingItems)
-    {
-        <div class="card mb-3">
-            <div class="card-header">
-                <h6 class="mb-0">@fi.Title</h6>
-            </div>
-            <div class="card-body">
-                <table class="table table-bordered">
-                    <thead><tr><th>واحد</th><th>مقدار مصرف</th><th>عملیات</th></tr></thead>
-                    <tbody>
-                        @foreach (var h in houses)
-                        {
-                            var key = (h.Id, fi.Id);
-                            <tr>
-                                <td>@h.Title</td>
-                                <td>
-                                    <input type="number" value="@usageCounts.GetValueOrDefault(key, 0)"
-                                           @onchange="(e) => SetUsage(key, e)"
-                                           class="form-control" style="max-width:150px" />
-                                </td>
-                                <td><button type="button" class="btn btn-sm btn-primary" @onclick="() => SaveUsage(h.Id, fi.Id)">ذخیره</button></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-                <button type="button" class="btn btn-success btn-sm" @onclick="() => SaveAllForItem(fi.Id)">ذخیره همه</button>
-            </div>
-        </div>
-    }
-}
-else if (loaded && !groupingItems.Any())
-{
-    <div class="alert alert-warning">آیتم مالی گروه‌بندی فعالی وجود ندارد.</div>
-}
-
-@code {
-    private int year = PersianCalendarHelper.GetCurrentYear();
-    private int month = PersianCalendarHelper.GetCurrentMonth();
-    private List<House> houses = new();
-    private List<FinancialItem> groupingItems = new();
-    private Dictionary<(int HouseId, int FinancialItemId), int> usageCounts = new();
-    private string? message;
-    private bool loaded;
-
-    private async Task Load()
-    {
-        houses = await HouseRepo.GetActiveHousesAsync();
-        var allActive = await FinancialItemRepo.GetActiveAsync();
-        groupingItems = allActive.Where(fi => fi.CalculationType == CalculationType.Grouping).ToList();
-
-        usageCounts = new();
-        foreach (var fi in groupingItems)
-        {
-            var usages = await UsageRepo.GetByFinancialItemMonthYearAsync(fi.Id, year, month);
-            foreach (var h in houses)
-            {
-                var key = (h.Id, fi.Id);
-                var usage = usages.FirstOrDefault(u => u.HouseId == h.Id);
-                usageCounts[key] = usage?.UsageCount ?? 0;
-            }
-        }
-        loaded = true;
-        message = null;
-    }
-
-    private void SetUsage((int HouseId, int FinancialItemId) key, ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out var val))
-            usageCounts[key] = val;
-    }
-
-    private async Task SaveUsage(int houseId, int financialItemId)
-    {
-        var key = (houseId, financialItemId);
-        var count = usageCounts.GetValueOrDefault(key, 0);
-        var existing = await UsageRepo.GetByHouseItemMonthYearAsync(houseId, financialItemId, year, month);
-        if (existing != null)
-        {
-            existing.UsageCount = count;
-            await UsageRepo.UpdateAsync(existing);
-        }
-        else
-        {
-            await UsageRepo.AddAsync(new MonthlyUsage { HouseId = houseId, FinancialItemId = financialItemId, Year = year, Month = month, UsageCount = count });
-        }
-        message = "ذخیره شد.";
-    }
-
-    private async Task SaveAllForItem(int financialItemId)
-    {
-        foreach (var h in houses)
-        {
-            await SaveUsage(h.Id, financialItemId);
-        }
-        message = "همه مقادیر ذخیره شد.";
-    }
 }

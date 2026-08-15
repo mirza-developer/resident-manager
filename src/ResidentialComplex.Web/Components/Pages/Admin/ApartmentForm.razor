@@ -1,0 +1,49 @@
+@page "/admin/apartments/create"
+@page "/admin/apartments/edit/{Id:int}"
+@attribute [Authorize(Roles = "Administrator")]
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">@(IsEditMode ? "ویرایش آپارتمان" : "ایجاد آپارتمان")</MudText>
+        <HelpButton PageKey="apartments" />
+    </MudStack>
+    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="GoBack">
+        بازگشت
+    </MudButton>
+</MudStack>
+
+@if (isLoading)
+{
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
+}
+
+@if (notFound)
+{
+    <div><MudAlert Severity="Severity.Warning" Dense="true">آپارتمان موردنظر یافت نشد.</MudAlert></div>
+}
+else
+{
+    <div>
+        <MudPaper Class="pa-4">
+            <EditForm Model="apartment" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string" @bind-Value="apartment.Title" For="@(() => apartment.Title)" Label="عنوان *" Variant="Variant.Outlined" Required="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="apartment.Description" Label="توضیحات" Variant="Variant.Outlined" Lines="3" />
+                    </MudItem>
+                </MudGrid>
+                <MudStack Row="true" Spacing="2" Class="mt-4">
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
+                        ذخیره
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoBack">
+                        انصراف
+                    </MudButton>
+                </MudStack>
+            </EditForm>
+        </MudPaper>
+    </div>
+}

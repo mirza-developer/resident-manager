@@ -1,139 +1,75 @@
 @page "/admin/houses"
-@using Microsoft.AspNetCore.Authorization
-@using ResidentialComplex.Application.Interfaces
-@using ResidentialComplex.Domain.Entities
 @attribute [Authorize(Roles = "Administrator")]
-@inject IHouseRepository HouseRepo
-@inject IApartmentRepository ApartmentRepo
+@using ResidentialComplex.Domain.Entities
 
-<h4>مدیریت واحدها</h4>
-<HelpButton PageKey="houses" />
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">مدیریت واحدها</MudText>
+        <HelpButton PageKey="houses" />
+    </MudStack>
+    <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="NavigateToCreate">
+        افزودن واحد جدید
+    </MudButton>
+</MudStack>
 
-<div class="row mb-3 align-items-end">
-    <div class="col-md-3">
-        <label class="form-label">فیلتر آپارتمان</label>
-        <select @bind="filterApartmentId" class="form-select" @bind:after="ApplyFilter">
-            <option value="0">همه آپارتمان‌ها</option>
-            @foreach (var apt in apartments)
-            {
-                <option value="@apt.Id">@apt.Title</option>
-            }
-        </select>
-    </div>
-    <div class="col-md-3">
-        <button type="button" class="btn btn-success" @onclick="ShowAdd">افزودن واحد جدید</button>
-    </div>
-</div>
-
-@if (showForm)
+@if (isLoading)
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <h5>@(editing.Id == 0 ? "افزودن" : "ویرایش") واحد</h5>
-            <EditForm Model="editing" OnValidSubmit="Save">
-                <DataAnnotationsValidator />
-                <div class="mb-2">
-                    <label class="form-label">عنوان *</label>
-                    <InputText @bind-Value="editing.Title" class="form-control" />
-                    <ValidationMessage For="() => editing.Title" />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">آپارتمان *</label>
-                    <InputSelect @bind-Value="editing.ApartmentId" class="form-select">
-                        <option value="0">انتخاب کنید</option>
-                        @foreach (var apt in apartments)
-                        {
-                            <option value="@apt.Id">@apt.Title</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="() => editing.ApartmentId" />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">نام ساکن *</label>
-                    <InputText @bind-Value="editing.ResidentName" class="form-control" />
-                    <ValidationMessage For="() => editing.ResidentName" />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">شماره تلفن ساکن *</label>
-                    <InputText @bind-Value="editing.ResidentPhoneNumber" class="form-control" />
-                    <ValidationMessage For="() => editing.ResidentPhoneNumber" />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">تعداد ساکنین</label>
-                    <InputNumber @bind-Value="editing.NumberOfResidents" class="form-control" />
-                    <ValidationMessage For="() => editing.NumberOfResidents" />
-                </div>
-                <div class="mb-2 form-check">
-                    <InputCheckbox @bind-Value="editing.IsActive" class="form-check-input" id="isActive" />
-                    <label class="form-check-label" for="isActive">فعال</label>
-                </div>
-                <button type="submit" class="btn btn-primary">ذخیره</button>
-                <button type="button" class="btn btn-secondary" @onclick="() => showForm = false">انصراف</button>
-            </EditForm>
-        </div>
-    </div>
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
 }
 
-<table class="table table-striped table-bordered">
-    <thead><tr><th>عنوان</th><th>آپارتمان</th><th>ساکن</th><th>تلفن</th><th>ساکنین</th><th>بدهی</th><th>وضعیت</th><th>عملیات</th></tr></thead>
-    <tbody>
-        @foreach (var h in filteredHouses)
-        {
-            <tr>
-                <td>@h.Title</td>
-                <td>@h.Apartment?.Title</td>
-                <td>@h.ResidentName</td>
-                <td>@h.ResidentPhoneNumber</td>
-                <td>@h.NumberOfResidents</td>
-                <td class="@(h.CurrentDebt < 0 ? "text-success" : h.CurrentDebt > 0 ? "text-danger" : "")">@h.CurrentDebt.ToString("N0")</td>
-                <td>@(h.IsActive ? "فعال" : "غیرفعال")</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-warning" @onclick="() => Edit(h)">ویرایش</button>
-                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => Delete(h.Id)">حذف</button>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <MudSelect T="int" Label="فیلتر آپارتمان" Value="filterApartmentId" ValueChanged="OnApartmentFilterChanged" Variant="Variant.Outlined">
+                <MudSelectItem T="int" Value="0">همه آپارتمان‌ها</MudSelectItem>
+                @foreach (var apartment in apartments)
+                {
+                    <MudSelectItem T="int" Value="@apartment.Id">@apartment.Title</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="3" Class="d-flex align-center">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadDataAsync">
+                بروزرسانی
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
 
-@code {
-    private List<House> houses = new();
-    private List<House> filteredHouses = new();
-    private List<Apartment> apartments = new();
-    private House editing = new();
-    private bool showForm;
-    private int filterApartmentId;
-
-    protected override async Task OnInitializedAsync()
-    {
-        houses = await HouseRepo.GetAllAsync();
-        apartments = await ApartmentRepo.GetAllAsync();
-        ApplyFilter();
-    }
-
-    private void ApplyFilter()
-    {
-        filteredHouses = filterApartmentId == 0
-            ? houses
-            : houses.Where(h => h.ApartmentId == filterApartmentId).ToList();
-    }
-
-    private void ShowAdd() { editing = new House { IsActive = true }; showForm = true; }
-    private void Edit(House h) { editing = h; showForm = true; }
-
-    private async Task Save()
-    {
-        if (editing.Id == 0) await HouseRepo.AddAsync(editing);
-        else await HouseRepo.UpdateAsync(editing);
-        houses = await HouseRepo.GetAllAsync();
-        ApplyFilter();
-        showForm = false;
-    }
-
-    private async Task Delete(int id)
-    {
-        await HouseRepo.DeleteAsync(id);
-        houses = await HouseRepo.GetAllAsync();
-        ApplyFilter();
-    }
-}
+<MudPaper Class="pa-4">
+    <MudDataGrid T="House" Items="@filteredHouses" Filterable="true" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
+        <Columns>
+            <PropertyColumn Property="x => x.Title" Title="عنوان" />
+            <PropertyColumn Property="x => x.Apartment!.Title" Title="آپارتمان" />
+            <PropertyColumn Property="x => x.ResidentName" Title="ساکن" />
+            <PropertyColumn Property="x => x.ResidentPhoneNumber" Title="تلفن" />
+            <PropertyColumn Property="x => x.NumberOfResidents" Title="تعداد ساکنین" />
+            <TemplateColumn Title="بدهی">
+                <CellTemplate>
+                    <MudText Color="@(context.Item.CurrentDebt > 0 ? Color.Error : context.Item.CurrentDebt < 0 ? Color.Success : Color.Default)">
+                        @context.Item.CurrentDebt.ToString("N0")
+                    </MudText>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="وضعیت">
+                <CellTemplate>
+                    <MudChip T="string" Color="@(context.Item.IsActive ? Color.Success : Color.Default)" Variant="Variant.Outlined">
+                        @(context.Item.IsActive ? "فعال" : "غیرفعال")
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small" OnClick="@(() => NavigateToEdit(context.Item.Id))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteHouseAsync(context.Item.Id))" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            <MudText>واحدی برای نمایش وجود ندارد.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudDataGridPager T="House" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>

@@ -27,7 +27,6 @@ public static class PersianCalendarHelper
     /// <summary>Returns the Persian month name for a given month number (1-12).</summary>
     public static string GetMonthName(int month)
     {
-        if (month < 1 || month > 12) return month.ToString();
         return PersianMonthNames[month];
     }
 

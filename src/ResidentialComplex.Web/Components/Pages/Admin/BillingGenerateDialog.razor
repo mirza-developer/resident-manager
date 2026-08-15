@@ -1,0 +1,72 @@
+@using ResidentialComplex.Application.Helpers
+@using ResidentialComplex.Domain.Enums
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">تولید صورتحساب</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudNumericField T="int" @bind-Value="year" Label="سال" Variant="Variant.Outlined" Min="1" HideSpinButtons="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="int" @bind-Value="month" Label="ماه" Variant="Variant.Outlined">
+                    @foreach (var m in Enumerable.Range(1, 12))
+                    {
+                        <MudSelectItem T="int" Value="@m">
+                            @PersianCalendarHelper.GetMonthName(m)
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+
+        @if (FinancialAmountRows.Any())
+        {
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">مبلغ نهایی هر آیتم مالی</MudText>
+                <MudDataGrid T="Billing.FinancialItemAmountRow" Items="@FinancialAmountRows" RowsPerPage="10" Hover="true" Dense="true">
+                    <Columns>
+                        <TemplateColumn Title="#">
+                            <CellTemplate>@(FinancialAmountRows.IndexOf(context.Item) + 1)</CellTemplate>
+                        </TemplateColumn>
+                        <PropertyColumn Property="x => x.Title" Title="عنوان" />
+                        <TemplateColumn Title="نوع دوره">
+                            <CellTemplate>@GetPeriodLabel(context.Item.PeriodType)</CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="نوع محاسبه">
+                            <CellTemplate>@GetCalcLabel(context.Item.CalculationType)</CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="مبلغ (ریال)">
+                            <CellTemplate>
+                                @if (context.Item.CalculationType == CalculationType.Grouping)
+                                {
+                                    <text><MudText Color="Color.Secondary">تعرفه‌ای (محاسبه از مصرف)</MudText></text>
+                                }
+                                else
+                                {
+                                    <text><MudNumericField T="decimal" @bind-Value="context.Item.Amount" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" Immediate="false" /></text>
+                                }
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <PagerContent>
+                        <MudDataGridPager T="Billing.FinancialItemAmountRow" />
+                    </PagerContent>
+                </MudDataGrid>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="Cancel">
+            <MudIcon Icon="@Icons.Material.Filled.Cancel" Size="@Size.Medium" />
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GenerateClickedAsync">
+            <MudIcon Icon="@Icons.Material.Filled.Calculate" Size="@Size.Medium" />
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+}
