@@ -13,7 +13,7 @@ using ResidentialComplex.Persistence;
 namespace ResidentialComplex.Web.Components.Pages.Admin;
 
 [Authorize(Roles = "Administrator")]
-public partial class Billing : ComponentBase
+public partial class Billing 
 {
     [Inject] private BillingService BillingService { get; set; } = default!;
     [Inject] private IFinancialItemRepository FinancialItemRepo { get; set; } = default!;
@@ -45,6 +45,7 @@ public partial class Billing : ComponentBase
         try
         {
             activeItems = await FinancialItemRepo.GetActiveAsync();
+
             financialAmountRows = activeItems.Select(item => new FinancialItemAmountRow
             {
                 Id = item.Id,
@@ -109,6 +110,24 @@ public partial class Billing : ComponentBase
                 Snackbar.Add($"{item.Title} — {missingCount} واحد بدون مقدار مصرف", Severity.Error);
             }
         }
+    }
+
+    private async Task OpenGenerateDialogAsync()
+    {
+        var parameters = new DialogParameters
+        {
+            [nameof(BillingGenerateDialog.InitialYear)] = year,
+            [nameof(BillingGenerateDialog.InitialMonth)] = month,
+            [nameof(BillingGenerateDialog.FinancialAmountRows)] = financialAmountRows,
+            [nameof(BillingGenerateDialog.OnGenerate)] = async (int y, int m) =>
+            {
+                year = y;
+                month = m;
+                await GenerateAsync();
+            }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseButton = true };
+        await DialogService.ShowAsync<BillingGenerateDialog>(string.Empty, parameters, options);
     }
 
     private async Task GenerateAsync()
