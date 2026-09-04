@@ -15,6 +15,7 @@ public partial class HouseForm : ComponentBase
     [Inject] private IApartmentRepository ApartmentRepo { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
 
     private House house = new() { IsActive = true };
     private List<Apartment> apartments = new();
@@ -73,7 +74,6 @@ public partial class HouseForm : ComponentBase
 
     private async Task SaveAsync()
     {
-        isLoading = true;
         try
         {
             if (IsEditMode)
@@ -86,6 +86,40 @@ public partial class HouseForm : ComponentBase
                 await HouseRepo.AddAsync(house);
                 Snackbar.Add("واحد با موفقیت ایجاد شد.", Severity.Success);
             }
+
+            Navigation.NavigateTo("/admin/houses");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطا در ذخیره واحد: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RemoveAsync()
+    {
+        try
+        {
+            var confirmed = await DialogService.ShowMessageBox(
+             "تأیید حذف",
+             "آیا از حذف این واحد مطمئن هستید؟",
+             yesText: "حذف",
+             cancelText: "انصراف");
+
+            if (confirmed != true)
+            {
+                return;
+            }
+
+            isLoading = true;
+
+            await HouseRepo.DeleteAsync(Id.Value);
+
+            Snackbar.Add("واحد با موفقیت حذف شد.", Severity.Success);
 
             Navigation.NavigateTo("/admin/houses");
         }

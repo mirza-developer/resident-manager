@@ -27,7 +27,16 @@ public class HouseRepository : IHouseRepository
     public async Task<House?> GetByIdAsync(int id) => await _db.Houses.Include(h => h.Apartment).FirstOrDefaultAsync(h => h.Id == id);
     public async Task<House?> GetByUserIdAsync(string userId) => await _db.Houses.Include(h => h.Apartment).FirstOrDefaultAsync(h => h.ApplicationUserId == userId);
     public async Task<House> AddAsync(House house) { _db.Houses.Add(house); await _db.SaveChangesAsync(); return house; }
-    public async Task UpdateAsync(House house) { _db.Houses.Update(house); await _db.SaveChangesAsync(); }
+    public async Task UpdateAsync(House house)
+    {
+        var tracked = _db.ChangeTracker.Entries<House>().FirstOrDefault(e => e.Entity.Id == house.Id);
+        if (tracked != null && !ReferenceEquals(tracked.Entity, house))
+        {
+            tracked.State = EntityState.Detached;
+        }
+        _db.Houses.Update(house);
+        await _db.SaveChangesAsync();
+    }
     public async Task DeleteAsync(int id) { var e = await _db.Houses.FindAsync(id); if (e != null) { _db.Houses.Remove(e); await _db.SaveChangesAsync(); } }
 }
 

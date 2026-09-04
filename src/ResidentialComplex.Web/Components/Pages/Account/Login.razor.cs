@@ -12,6 +12,17 @@ public partial class Login
 
     private LoginModel loginModel = new();
 
+#if DEBUG
+    protected override async Task OnInitializedAsync()
+    {
+        loginModel = new()
+        {
+            UserName = "admin",
+            Password = "Admin123"
+        };
+    }
+#endif
+
     private sealed class LoginModel
     {
         public string? UserName { get; set; }

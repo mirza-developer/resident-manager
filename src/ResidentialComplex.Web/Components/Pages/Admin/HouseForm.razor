@@ -56,6 +56,12 @@ else
                     <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
                         ذخیره
                     </MudButton>
+                    @if (IsEditMode)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="RemoveAsync" StartIcon="@Icons.Material.Filled.DeleteForever">
+                            حذف
+                        </MudButton>
+                    }
                     <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoBack">
                         انصراف
                     </MudButton>
