@@ -1,5 +1,6 @@
 @page "/admin/financial-items"
 @attribute [Authorize(Roles = "Administrator")]
+@using System.Globalization
 @using ResidentialComplex.Domain.Entities
 @using ResidentialComplex.Domain.Enums
 
@@ -48,7 +49,7 @@
                     {
                         <div style="display:contents">
                             <MudItem xs="12" md="6">
-                                <MudNumericField T="decimal?" @bind-Value="editing.TotalAmount" Label="مبلغ کل" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" />
+                                <MudNumericField T="decimal?" @bind-Value="editing.TotalAmount" Label="مبلغ کل" Variant="Variant.Outlined" Format="N0" Culture="@CultureInfo.InvariantCulture" HideSpinButtons="true" />
                             </MudItem>
                             <MudItem xs="12" md="6">
                                 <MudNumericField T="int?" @bind-Value="editing.NumberOfInstallments" Label="تعداد اقساط" Variant="Variant.Outlined" Min="1" HideSpinButtons="true" />
@@ -59,6 +60,29 @@
                         <MudCheckBox T="bool" @bind-Value="editing.IsActive" Label="فعال" Color="Color.Primary" />
                     </MudItem>
                 </MudGrid>
+
+                @if (editing.CalculationType == CalculationType.Grouping)
+                {
+                    <div>
+                        @if (editing.Id != 0)
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">
+                                برای تعریف یا ویرایش تعرفه‌های مصرفی این آیتم، از دکمه زیر استفاده کنید.
+                            </MudAlert>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Tune"
+                                       OnClick="@(() => OpenTiersDialogAsync(editing.Id, editing.Title))" Class="mt-2">
+                                مدیریت تعرفه‌های مصرفی
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">
+                                پس از ذخیره آیتم، پنجره تعریف تعرفه‌های مصرفی به‌صورت خودکار باز می‌شود.
+                            </MudAlert>
+                        }
+                    </div>
+                }
+
                 <MudStack Row="true" Spacing="2" Class="mt-4">
                     <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
                         ذخیره
@@ -68,57 +92,6 @@
                     </MudButton>
                 </MudStack>
             </EditForm>
-
-            @if (editing.CalculationType == CalculationType.Grouping && editing.Id != 0)
-            {
-                <div>
-                    <MudDivider Class="my-4" />
-                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2" Wrap="Wrap.Wrap">
-                        <MudText Typo="Typo.h6">تعرفه‌های مصرفی (بر اساس کل مصرف)</MudText>
-                        <MudStack Row="true" Spacing="2">
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddTierRow">افزودن تعرفه</MudButton>
-                            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveTiersAsync">ذخیره تعرفه‌ها</MudButton>
-                        </MudStack>
-                    </MudStack>
-                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">تعرفه‌ها به ترتیب از کمترین مصرف تعریف می‌شوند و فقط آخرین تعرفه می‌تواند نامحدود باشد. توجه: کل مصرف واحد فقط در یکی از این تعرفه‌ها قرار می‌گیرد و تمام مصرف با نرخ همان تعرفه محاسبه می‌شود (بدون تقسیم بین چند تعرفه).</MudAlert>
-                    <MudDataGrid T="TierRow" Items="@editingTiers" RowsPerPage="10" Hover="true" Dense="true">
-                        <Columns>
-                            <TemplateColumn Title="#">
-                                <CellTemplate>@(editingTiers.IndexOf(context.Item) + 1)</CellTemplate>
-                            </TemplateColumn>
-                            <TemplateColumn Title="حد بالای مصرف (واحد)">
-                                <CellTemplate>
-                                    @if (context.Item == editingTiers.LastOrDefault())
-                                    {
-                                        <div><MudText>نامحدود</MudText></div>
-                                    }
-                                    else
-                                    {
-                                        <div><MudNumericField T="int?" @bind-Value="context.Item.UpperLimit" Variant="Variant.Outlined" HideSpinButtons="true" /></div>
-                                    }
-                                </CellTemplate>
-                            </TemplateColumn>
-                            <TemplateColumn Title="نرخ هر واحد (ریال)">
-                                <CellTemplate>
-                                    <MudNumericField T="decimal" @bind-Value="context.Item.RatePerUnit" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" />
-                                </CellTemplate>
-                            </TemplateColumn>
-                            <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
-                                <CellTemplate>
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => RemoveTier(context.Item))" />
-                                </CellTemplate>
-                            </TemplateColumn>
-                        </Columns>
-                        <PagerContent>
-                            <MudDataGridPager T="TierRow" />
-                        </PagerContent>
-                    </MudDataGrid>
-                </div>
-            }
-            else if (editing.CalculationType == CalculationType.Grouping)
-            {
-                <div><MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">پس از ذخیره آیتم، می‌توانید تعرفه‌های مصرفی را تعریف کنید.</MudAlert></div>
-            }
         </MudPaper>
     </div>
 }
@@ -134,7 +107,7 @@
                 <CellTemplate>@GetCalcLabel(context.Item.CalculationType)</CellTemplate>
             </TemplateColumn>
             <TemplateColumn Title="مبلغ کل">
-                <CellTemplate>@(context.Item.TotalAmount.HasValue ? context.Item.TotalAmount.Value.ToString("N0") : "-")</CellTemplate>
+                <CellTemplate>@(context.Item.TotalAmount.HasValue ? context.Item.TotalAmount.Value.ToString("N0", CultureInfo.InvariantCulture) : "-")</CellTemplate>
             </TemplateColumn>
             <TemplateColumn Title="وضعیت">
                 <CellTemplate>
@@ -145,6 +118,13 @@
             </TemplateColumn>
             <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
                 <CellTemplate>
+                    @if (context.Item.CalculationType == CalculationType.Grouping)
+                    {
+                        <MudTooltip Text="مدیریت تعرفه‌های مصرفی">
+                            <MudIconButton Icon="@Icons.Material.Filled.Tune" Color="Color.Primary" Size="Size.Small"
+                                           OnClick="@(() => OpenTiersDialogAsync(context.Item.Id, context.Item.Title))" />
+                        </MudTooltip>
+                    }
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small" OnClick="@(() => EditAsync(context.Item.Id))" />
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteAsync(context.Item.Id))" />
                 </CellTemplate>
