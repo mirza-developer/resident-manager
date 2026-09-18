@@ -41,7 +41,7 @@
                     <MudItem xs="12" md="6">
                         <MudSelect T="CalculationType" @bind-Value="editing.CalculationType" Label="نوع محاسبه" Variant="Variant.Outlined">
                             <MudSelectItem T="CalculationType" Value="@CalculationType.EqualDivision">تقسیم مساوی</MudSelectItem>
-                            <MudSelectItem T="CalculationType" Value="@CalculationType.Grouping">تعرفه پلکانی (IBT)</MudSelectItem>
+                            <MudSelectItem T="CalculationType" Value="@CalculationType.Grouping">تعرفه‌ای (بر اساس کل مصرف)</MudSelectItem>
                         </MudSelect>
                     </MudItem>
                     @if (editing.PeriodType == PeriodType.Installment)
@@ -74,13 +74,13 @@
                 <div>
                     <MudDivider Class="my-4" />
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2" Wrap="Wrap.Wrap">
-                        <MudText Typo="Typo.h6">تعرفه‌های پلکانی (IBT)</MudText>
+                        <MudText Typo="Typo.h6">تعرفه‌های مصرفی (بر اساس کل مصرف)</MudText>
                         <MudStack Row="true" Spacing="2">
                             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddTierRow">افزودن تعرفه</MudButton>
                             <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveTiersAsync">ذخیره تعرفه‌ها</MudButton>
                         </MudStack>
                     </MudStack>
-                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">تعرفه‌ها به ترتیب از کمترین مصرف تعریف می‌شوند و فقط آخرین تعرفه می‌تواند نامحدود باشد.</MudAlert>
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">تعرفه‌ها به ترتیب از کمترین مصرف تعریف می‌شوند و فقط آخرین تعرفه می‌تواند نامحدود باشد. توجه: کل مصرف واحد فقط در یکی از این تعرفه‌ها قرار می‌گیرد و تمام مصرف با نرخ همان تعرفه محاسبه می‌شود (بدون تقسیم بین چند تعرفه).</MudAlert>
                     <MudDataGrid T="TierRow" Items="@editingTiers" RowsPerPage="10" Hover="true" Dense="true">
                         <Columns>
                             <TemplateColumn Title="#">
@@ -117,7 +117,7 @@
             }
             else if (editing.CalculationType == CalculationType.Grouping)
             {
-                <div><MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">پس از ذخیره آیتم، می‌توانید تعرفه‌های پلکانی را تعریف کنید.</MudAlert></div>
+                <div><MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">پس از ذخیره آیتم، می‌توانید تعرفه‌های مصرفی را تعریف کنید.</MudAlert></div>
             }
         </MudPaper>
     </div>

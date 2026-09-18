@@ -281,7 +281,7 @@ public partial class FinancialItems : ComponentBase
     private static string GetCalcLabel(CalculationType calculationType) => calculationType switch
     {
         CalculationType.EqualDivision => "تقسیم مساوی",
-        CalculationType.Grouping => "تعرفه پلکانی (IBT)",
+        CalculationType.Grouping => "تعرفه‌ای (بر اساس کل مصرف)",
         _ => string.Empty
     };
 

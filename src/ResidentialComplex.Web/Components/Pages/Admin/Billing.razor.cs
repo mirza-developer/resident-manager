@@ -315,7 +315,7 @@ public partial class Billing
         }
 
         var usage = usageByHouseItem.GetValueOrDefault((bill.HouseId, financialItem.Id), 0);
-        return $"مصرف: {usage} واحد — {GetHouseTier(financialItem.Tiers, usage)}";
+        return $"مصرف: {usage} واحد — کل مبلغ با نرخ {GetHouseTier(financialItem.Tiers, usage)} محاسبه شده است";
     }
 
     private async Task<(string userId, string userName)> GetCurrentUserAsync()
@@ -337,6 +337,11 @@ public partial class Billing
                || item.InstallmentsBilled < item.NumberOfInstallments.Value;
     }
 
+    /// <summary>
+    /// Finds the single bracket/tier that the house's TOTAL usage falls into.
+    /// Under Whole-Consumption Bracket Pricing, this one tier's rate applies to the entire
+    /// usage (no splitting across tiers, unlike an Incremental Block Tariff / IBT).
+    /// </summary>
     private static string GetHouseTier(ICollection<FinancialItemTier> tiers, int usage)
     {
         if (usage <= 0)
@@ -352,14 +357,14 @@ public partial class Billing
             if (usage <= blockEnd)
             {
                 return tier.UpperLimit.HasValue
-                    ? $"پله {tier.TierOrder} ({previousLimit + 1} تا {tier.UpperLimit} واحد)"
-                    : $"پله {tier.TierOrder} (بالاتر از {previousLimit} واحد)";
+                    ? $"تعرفه {tier.TierOrder} ({previousLimit + 1} تا {tier.UpperLimit} واحد)"
+                    : $"تعرفه {tier.TierOrder} (بالاتر از {previousLimit} واحد)";
             }
 
             previousLimit = blockEnd;
         }
 
-        return $"پله {orderedTiers.Last().TierOrder}";
+        return $"تعرفه {orderedTiers.Last().TierOrder}";
     }
 
     private static string GetStatusLabel(BillStatus status) => status switch
@@ -381,7 +386,7 @@ public partial class Billing
     private static string GetCalcLabel(CalculationType calculationType) => calculationType switch
     {
         CalculationType.EqualDivision => "تقسیم مساوی",
-        CalculationType.Grouping => "تعرفه پلکانی (IBT)",
+        CalculationType.Grouping => "تعرفه‌ای (بر اساس کل مصرف)",
         _ => string.Empty
     };
 
