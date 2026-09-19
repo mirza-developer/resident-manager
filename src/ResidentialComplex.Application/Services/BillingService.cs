@@ -83,7 +83,7 @@ public class BillingService
                 Year = year,
                 Month = month,
                 Status = BillStatus.Draft,
-                CreatedDate = DateTime.UtcNow,
+                CreatedDate = DateTime.Now,
                 BillItems = new List<BillItem>()
             };
 
@@ -191,7 +191,7 @@ public class BillingService
         foreach (var bill in draftBills)
         {
             bill.Status = BillStatus.Approved;
-            bill.ApprovedDate = DateTime.UtcNow;
+            bill.ApprovedDate = DateTime.Now;
             await _billRepo.UpdateAsync(bill);
 
             // Update house debt
@@ -250,14 +250,14 @@ public class BillingService
         {
             BillId = billId,
             Amount = bill.TotalAmount,
-            PaymentDate = DateTime.UtcNow,
+            PaymentDate = DateTime.Now,
             Description = $"پرداخت قبض {bill.Year}/{bill.Month}"
         };
 
         await _paymentRepo.AddAsync(payment);
 
         bill.Status = BillStatus.Paid;
-        bill.PaidDate = DateTime.UtcNow;
+        bill.PaidDate = DateTime.Now;
         await _billRepo.UpdateAsync(bill);
 
         var house = await _houseRepo.GetByIdAsync(bill.HouseId);

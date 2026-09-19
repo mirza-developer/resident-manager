@@ -18,7 +18,7 @@ public class AuditService : IAuditService
         {
             UserId = userId,
             UserName = userName,
-            DateTime = DateTime.UtcNow,
+            DateTime = DateTime.Now,
             EntityName = entityName,
             EntityId = entityId,
             Action = action,
