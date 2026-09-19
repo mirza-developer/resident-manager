@@ -24,8 +24,10 @@ public interface IBillRepository
     decimal CalculateEqualDivisionAmount(decimal totalAmount, int houseCount);
 
     /// <summary>
-    /// Calculates the Increasing Block Tariff (IBT) amount for the given house, financial item, and month.
+    /// Calculates the Whole-Consumption Bracket Pricing amount for the given house, financial item, and month.
+    /// The house's total usage is matched to the single tier/bracket it falls into, and the ENTIRE usage
+    /// is billed at that bracket's rate (no splitting across brackets, unlike Incremental Block Tariff / IBT).
     /// Fetches usage data from the database.
     /// </summary>
-    Task<decimal> CalculateIbtAmountAsync(FinancialItem fi, int houseId, int year, int month);
+    Task<decimal> CalculateBracketAmountAsync(FinancialItem fi, int houseId, int year, int month);
 }

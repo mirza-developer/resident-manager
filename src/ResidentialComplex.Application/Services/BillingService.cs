@@ -101,9 +101,9 @@ public class BillingService
                 {
                     houseAmount = _billRepo.CalculateEqualDivisionAmount(finalAmount, activeHouses.Count);
                 }
-                else // Grouping — Increasing Block Tariff
+                else // Grouping — Whole-Consumption Bracket Pricing (entire usage billed at one tier's rate)
                 {
-                    houseAmount = await _billRepo.CalculateIbtAmountAsync(fi, house.Id, year, month);
+                    houseAmount = await _billRepo.CalculateBracketAmountAsync(fi, house.Id, year, month);
                 }
 
                 bill.BillItems.Add(new BillItem
@@ -138,7 +138,7 @@ public class BillingService
         foreach (var fi in applicableItems)
         {
             if (fi.CalculationType == CalculationType.Grouping)
-                continue; // IBT items are billed independently; no target total to reconcile
+                continue; // Bracket-priced items are billed independently per house; no target total to reconcile
 
             var finalAmount = finalAmounts[fi.Id];
             if (fi.PeriodType == PeriodType.Installment && fi.TotalAmount.HasValue && fi.NumberOfInstallments.HasValue && fi.NumberOfInstallments.Value > 0)
@@ -159,10 +159,14 @@ public class BillingService
             }
         }
 
-        // Recalculate totals after rounding adjustment
+        // Recalculate totals after rounding adjustment, then round each bill's final
+        // payable total UP to the nearest 10,000 Rials for payment convenience
+        // (e.g. 132,080,001 → 132,090,000). The underlying BillItem amounts are left
+        // untouched — they remain the exact calculated figures for transparency/audit —
+        // only the bill's payable TotalAmount is rounded up.
         foreach (var bill in bills)
         {
-            bill.TotalAmount = bill.BillItems.Sum(bi => bi.Amount);
+            bill.TotalAmount = RoundUpToNearestTenThousand(bill.BillItems.Sum(bi => bi.Amount));
         }
 
         await _billRepo.AddRangeAsync(bills);
@@ -273,6 +277,17 @@ public class BillingService
         if (fi.PeriodType == PeriodType.Installment && fi.NumberOfInstallments.HasValue && fi.InstallmentsBilled >= fi.NumberOfInstallments.Value)
             return false;
         return true;
+    }
+
+    /// <summary>
+    /// Rounds an amount UP to the nearest 10,000 Rials. Any amount that is not already
+    /// an exact multiple of 10,000 (i.e. has a remainder less than 10,000) is bumped up
+    /// to the next multiple. Exact multiples (including 0) are left unchanged.
+    /// </summary>
+    private static decimal RoundUpToNearestTenThousand(decimal amount)
+    {
+        const decimal roundingUnit = 10_000m;
+        return Math.Ceiling(amount / roundingUnit) * roundingUnit;
     }
 
     private sealed class NullSmsService : ISmsService

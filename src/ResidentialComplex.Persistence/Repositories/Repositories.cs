@@ -93,7 +93,7 @@ public class BillRepository : IBillRepository
         return totalAmount / houseCount;
     }
 
-    public async Task<decimal> CalculateIbtAmountAsync(FinancialItem fi, int houseId, int year, int month)
+    public async Task<decimal> CalculateBracketAmountAsync(FinancialItem fi, int houseId, int year, int month)
     {
         var tiers = fi.Tiers.OrderBy(t => t.TierOrder).ToList();
         if (tiers.Count == 0)
@@ -106,32 +106,15 @@ public class BillRepository : IBillRepository
         if (usage <= 0)
             return 0m;
 
-        decimal total = 0m;
-        int consumed = 0;
-        long previousLimit = 0;
+        // Whole-Consumption Bracket Pricing (NOT Incremental Block Tariff / IBT):
+        // consumption is never split across brackets. We find the single tier whose
+        // range contains the TOTAL usage, then bill the entire usage at that one
+        // tier's rate. Crossing into a higher bracket reprices the whole consumption,
+        // it does not just add a rate for the excess portion.
+        var matchedTier = tiers.FirstOrDefault(t => !t.UpperLimit.HasValue || usage <= t.UpperLimit.Value)
+            ?? tiers[^1];
 
-        foreach (var tier in tiers)
-        {
-            if (consumed >= usage)
-                break;
-
-            if (!tier.UpperLimit.HasValue)
-            {
-                total += (usage - consumed) * tier.RatePerUnit;
-                consumed = usage;
-                break;
-            }
-
-            long blockEnd = (long)tier.UpperLimit.Value;
-            long blockSize = blockEnd - previousLimit;
-
-            int unitsInBlock = (int)Math.Min(usage - consumed, blockSize);
-            total += unitsInBlock * tier.RatePerUnit;
-            consumed += unitsInBlock;
-            previousLimit = blockEnd;
-        }
-
-        return Math.Round(total, 0);
+        return Math.Round(usage * matchedTier.RatePerUnit, 0);
     }
 }
 
