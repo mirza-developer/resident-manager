@@ -43,6 +43,16 @@
     <div><MudAlert Severity="Severity.Warning">آیتم مالی گروه‌بندی فعالی وجود ندارد.</MudAlert></div>
 }
 
+@if (usageItems.Any())
+{
+    <div>
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+            برای هر واحد، «کنتور قبلی» به‌طور خودکار از «کنتور فعلی» ماه گذشته گرفته می‌شود و غیرقابل ویرایش است؛
+            کافیست «کنتور فعلی» این ماه را وارد کنید. مصرف این ماه به‌صورت خودکار محاسبه می‌شود.
+        </MudAlert>
+    </div>
+}
+
 @foreach (var usageItem in usageItems)
 {
     <div>
@@ -57,9 +67,25 @@
             <MudDataGrid T="UsageRow" Items="@usageItem.Rows" RowsPerPage="10" Hover="true" Dense="true">
                 <Columns>
                     <PropertyColumn Property="x => x.HouseTitle" Title="واحد" />
-                    <TemplateColumn Title="مقدار مصرف">
+                    <TemplateColumn Title="کنتور قبلی (حد پایین)">
                         <CellTemplate>
-                            <MudNumericField T="int" @bind-Value="context.Item.UsageCount" Variant="Variant.Outlined" HideSpinButtons="true" Min="0" />
+                            <MudNumericField T="int" Value="@context.Item.PreviousReading"
+                                             ValueChanged="@((int v) => OnPreviousReadingChanged(context.Item, v))"
+                                             Variant="Variant.Outlined" HideSpinButtons="true" Min="0" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="کنتور فعلی (حد بالا)">
+                        <CellTemplate>
+                            <MudNumericField T="int" Value="@context.Item.CurrentReading"
+                                             ValueChanged="@((int v) => OnCurrentReadingChanged(context.Item, v))"
+                                             Variant="Variant.Outlined" HideSpinButtons="true" Min="0" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="مصرف محاسبه‌شده">
+                        <CellTemplate>
+                            <MudText Color="@(context.Item.CurrentReading < context.Item.PreviousReading ? Color.Error : Color.Default)">
+                                @context.Item.UsageCount
+                            </MudText>
                         </CellTemplate>
                     </TemplateColumn>
                     <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">

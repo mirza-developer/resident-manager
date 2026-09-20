@@ -692,6 +692,97 @@ public class MonthlyUsageTests : TestBase
         var usages = await usageRepo.GetByMonthYearAsync(2025, 1);
         Assert.Equal(2, usages.Count);
     }
+
+    [Fact]
+    public async Task Meter_Readings_Are_Persisted_And_Usage_Is_The_Differential()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var usageRepo = GetService<IMonthlyUsageRepository>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+
+        // Month 1: meter goes from 100 to 150 → usage 50
+        var usage = await usageRepo.AddAsync(new MonthlyUsage
+        {
+            HouseId = house.Id,
+            FinancialItemId = fi.Id,
+            Year = 2025,
+            Month = 1,
+            PreviousReading = 100,
+            CurrentReading = 150,
+            UsageCount = 50
+        });
+
+        Assert.Equal(100, usage.PreviousReading);
+        Assert.Equal(150, usage.CurrentReading);
+        Assert.Equal(50, usage.UsageCount);
+    }
+
+    [Fact]
+    public async Task GetLatestBeforeAsync_ReturnsNull_WhenNoPriorRecordExists()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var usageRepo = GetService<IMonthlyUsageRepository>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+
+        var prior = await usageRepo.GetLatestBeforeAsync(house.Id, fi.Id, 2025, 1);
+
+        Assert.Null(prior);
+    }
+
+    [Fact]
+    public async Task GetLatestBeforeAsync_CarriesForward_PreviousMonthCurrentReading()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var usageRepo = GetService<IMonthlyUsageRepository>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+
+        // Month 1 (Farvardin 1404): reading ends at 150
+        await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi.Id, Year = 1404, Month = 1, PreviousReading = 100, CurrentReading = 150, UsageCount = 50 });
+
+        // Looking up "the latest record before month 2" should return month 1's record,
+        // whose CurrentReading (150) becomes month 2's PreviousReading.
+        var prior = await usageRepo.GetLatestBeforeAsync(house.Id, fi.Id, 1404, 2);
+
+        Assert.NotNull(prior);
+        Assert.Equal(150, prior!.CurrentReading);
+    }
+
+    [Fact]
+    public async Task GetLatestBeforeAsync_CrossesYearBoundary()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var usageRepo = GetService<IMonthlyUsageRepository>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+
+        // Month 12 of year 1404 ends at reading 500
+        await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi.Id, Year = 1404, Month = 12, PreviousReading = 450, CurrentReading = 500, UsageCount = 50 });
+
+        // Month 1 of year 1405 should carry forward from year 1404's month 12
+        var prior = await usageRepo.GetLatestBeforeAsync(house.Id, fi.Id, 1405, 1);
+
+        Assert.NotNull(prior);
+        Assert.Equal(500, prior!.CurrentReading);
+    }
 }
 
 public class ValidationTests : TestBase
@@ -966,7 +1057,7 @@ public class MigrationTests : IDisposable
             TotalAmount = 100_000m,
             Description = "تست",
             Status = BillStatus.Draft,
-            CreatedDate = DateTime.Now
+            CreatedDate = DateTime.UtcNow
         };
         _db.Bills.Add(bill);
         await _db.SaveChangesAsync();
