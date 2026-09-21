@@ -71,35 +71,6 @@
     </MudDataGrid>
 </MudPaper>
 
-@if (selectedBill is not null)
-{
-    <div>
-        <MudPaper Class="pa-4">
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3" Wrap="Wrap.Wrap">
-                <MudText Typo="Typo.h6">جزئیات قبض واحد @selectedBill.House?.Title</MudText>
-                <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="ClearBillDetails">بستن جزئیات</MudButton>
-            </MudStack>
-            <MudDataGrid T="BillItem" Items="@selectedBill.BillItems" RowsPerPage="10" Hover="true" Dense="true">
-                <Columns>
-                    <PropertyColumn Property="x => x.FinancialItem!.Title" Title="آیتم مالی" />
-                    <TemplateColumn Title="نوع محاسبه">
-                        <CellTemplate>@(context.Item.FinancialItem is null ? "-" : GetCalcLabel(context.Item.FinancialItem.CalculationType))</CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="جزئیات">
-                        <CellTemplate>@GetBillItemDetail(selectedBill, context.Item)</CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="مبلغ (ریال)">
-                        <CellTemplate>@context.Item.Amount.ToString("N0")</CellTemplate>
-                    </TemplateColumn>
-                </Columns>
-                <PagerContent>
-                    <MudDataGridPager T="BillItem" />
-                </PagerContent>
-            </MudDataGrid>
-            <MudText Typo="Typo.subtitle1" Class="mt-3">جمع کل: @selectedBill.BillItems.Sum(x => x.Amount).ToString("N0")</MudText>
-        </MudPaper>
-    </div>
-}
 <MudOverlay Visible="isLoading"
             DarkBackground="true">
     درحال بارگذاری

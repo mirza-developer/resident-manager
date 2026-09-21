@@ -31,7 +31,6 @@ public partial class Billing
     private List<FinancialItemAmountRow> financialAmountRows = new();
     private List<Bill> bills = new();
     private Dictionary<(int HouseId, int FinancialItemId), int> usageByHouseItem = new();
-    private Bill? selectedBill;
     private bool isLoading;
 
     protected override async Task OnInitializedAsync()
@@ -184,11 +183,6 @@ public partial class Billing
         usageByHouseItem = usages
             .GroupBy(usage => (usage.HouseId, usage.FinancialItemId))
             .ToDictionary(group => group.Key, group => group.First().UsageCount);
-
-        if (selectedBill is not null)
-        {
-            selectedBill = bills.FirstOrDefault(bill => bill.Id == selectedBill.Id);
-        }
     }
 
     private async Task ApproveBillsAsync()
@@ -296,26 +290,22 @@ public partial class Billing
         }
     }
 
-    private void ShowBillDetails(int billId)
+    private async Task ShowBillDetails(int billId)
     {
-        selectedBill = bills.FirstOrDefault(bill => bill.Id == billId);
-    }
-
-    private void ClearBillDetails()
-    {
-        selectedBill = null;
-    }
-
-    private string GetBillItemDetail(Bill bill, BillItem billItem)
-    {
-        var financialItem = billItem.FinancialItem;
-        if (financialItem?.CalculationType != CalculationType.Grouping || !financialItem.Tiers.Any())
+        var bill = bills.FirstOrDefault(b => b.Id == billId);
+        if (bill is null)
         {
-            return "-";
+            return;
         }
 
-        var usage = usageByHouseItem.GetValueOrDefault((bill.HouseId, financialItem.Id), 0);
-        return $"مصرف: {usage} واحد — کل مبلغ با نرخ {GetHouseTier(financialItem.Tiers, usage)} محاسبه شده است";
+        var parameters = new DialogParameters
+        {
+            [nameof(BillingGenerateDialog.Mode)] = BillingGenerateDialog.BillingDialogMode.Details,
+            [nameof(BillingGenerateDialog.Bill)] = bill,
+            [nameof(BillingGenerateDialog.UsageByHouseItem)] = usageByHouseItem
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseButton = true };
+        await DialogService.ShowAsync<BillingGenerateDialog>(string.Empty, parameters, options);
     }
 
     private async Task<(string userId, string userName)> GetCurrentUserAsync()
@@ -338,55 +328,14 @@ public partial class Billing
     }
 
     /// <summary>
-    /// Finds the single bracket/tier that the house's TOTAL usage falls into.
-    /// Under Whole-Consumption Bracket Pricing, this one tier's rate applies to the entire
-    /// usage (no splitting across tiers, unlike an Incremental Block Tariff / IBT).
+    /// Bill status/detail rendering (calculation labels, tier lookup) now lives entirely in
+    /// BillingGenerateDialog.razor.cs, since that dialog renders bill details directly.
     /// </summary>
-    private static string GetHouseTier(ICollection<FinancialItemTier> tiers, int usage)
-    {
-        if (usage <= 0)
-        {
-            return "بدون مصرف";
-        }
-
-        var orderedTiers = tiers.OrderBy(tier => tier.TierOrder).ToList();
-        long previousLimit = 0;
-        foreach (var tier in orderedTiers)
-        {
-            var blockEnd = tier.UpperLimit ?? int.MaxValue;
-            if (usage <= blockEnd)
-            {
-                return tier.UpperLimit.HasValue
-                    ? $"تعرفه {tier.TierOrder} ({previousLimit + 1} تا {tier.UpperLimit} واحد)"
-                    : $"تعرفه {tier.TierOrder} (بالاتر از {previousLimit} واحد)";
-            }
-
-            previousLimit = blockEnd;
-        }
-
-        return $"تعرفه {orderedTiers.Last().TierOrder}";
-    }
-
     private static string GetStatusLabel(BillStatus status) => status switch
     {
         BillStatus.Draft => "پیش‌نویس",
         BillStatus.Approved => "تایید شده",
         BillStatus.Paid => "پرداخت شده",
-        _ => string.Empty
-    };
-
-    private static string GetPeriodLabel(PeriodType periodType) => periodType switch
-    {
-        PeriodType.Once => "یکبار",
-        PeriodType.Permanent => "دائمی",
-        PeriodType.Installment => "اقساط",
-        _ => string.Empty
-    };
-
-    private static string GetCalcLabel(CalculationType calculationType) => calculationType switch
-    {
-        CalculationType.EqualDivision => "تقسیم مساوی",
-        CalculationType.Grouping => "تعرفه‌ای (بر اساس کل مصرف)",
         _ => string.Empty
     };
 
