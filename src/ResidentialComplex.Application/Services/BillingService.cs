@@ -283,6 +283,30 @@ public class BillingService
     }
 
     /// <summary>
+    /// Resends the "BillApproved" SMS for a single, already-approved bill without
+    /// re-running the approval workflow (no debt/status changes).
+    /// </summary>
+    public async Task ResendBillSmsAsync(int billId, string userId, string userName)
+    {
+        var bill = await _billRepo.GetByIdAsync(billId);
+        if (bill == null)
+            throw new InvalidOperationException("قبض یافت نشد.");
+
+        var house = await _houseRepo.GetByIdAsync(bill.HouseId);
+        if (house == null)
+            throw new InvalidOperationException("واحد مربوط به این قبض یافت نشد.");
+
+        if (string.IsNullOrWhiteSpace(house.ResidentPhoneNumber))
+            throw new InvalidOperationException("شماره موبایل ساکن ثبت نشده است.");
+
+        var smsText = await BuildBillApprovedSmsTextAsync(house, bill);
+        await _smsService.SendAsync(house.ResidentPhoneNumber, smsText);
+
+        await _audit.LogAsync(userId, userName, nameof(Bill), bill.Id.ToString(), "SmsResent", null,
+            $"TotalAmount={bill.TotalAmount}");
+    }
+
+    /// <summary>
     /// Loads the admin-configurable "BillApproved" SMS template and renders it with this
     /// house/bill's actual data. Falls back to <see cref="DefaultBillApprovedTemplateText"/>
     /// if no template row exists yet (e.g. migration not yet applied).

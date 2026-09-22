@@ -231,6 +231,26 @@ public partial class Billing
         }
     }
 
+    private async Task ResendSms(int billId)
+    {
+        isLoading = true;
+        try
+        {
+            var (userId, userName) = await GetCurrentUserAsync();
+            await BillingService.ResendBillSmsAsync(billId, userId, userName);
+            Snackbar.Add("پیامک با موفقیت ارسال شد.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطا در ارسال پیامک: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     private async Task PayAsync(int billId)
     {
         var confirmed = await DialogService.ShowMessageBox(
