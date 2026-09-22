@@ -49,7 +49,7 @@
                     {
                         <div style="display:contents">
                             <MudItem xs="12" md="6">
-                                <MudNumericField T="decimal?" @bind-Value="editing.TotalAmount" Label="مبلغ کل" Variant="Variant.Outlined" Format="N0" Culture="@CultureInfo.InvariantCulture" HideSpinButtons="true" />
+                                <MudNumericField T="decimal?" @bind-Value="editing.TotalAmount" Label="مبلغ کل(ریال)" Variant="Variant.Outlined" Format="N0" Culture="@CultureInfo.InvariantCulture" HideSpinButtons="true" />
                             </MudItem>
                             <MudItem xs="12" md="6">
                                 <MudNumericField T="int?" @bind-Value="editing.NumberOfInstallments" Label="تعداد اقساط" Variant="Variant.Outlined" Min="1" HideSpinButtons="true" />
@@ -106,7 +106,7 @@
             <TemplateColumn Title="نوع محاسبه">
                 <CellTemplate>@GetCalcLabel(context.Item.CalculationType)</CellTemplate>
             </TemplateColumn>
-            <TemplateColumn Title="مبلغ کل">
+            <TemplateColumn Title="مبلغ کل(ریال)">
                 <CellTemplate>@(context.Item.TotalAmount.HasValue ? context.Item.TotalAmount.Value.ToString("N0", CultureInfo.InvariantCulture) : "-")</CellTemplate>
             </TemplateColumn>
             <TemplateColumn Title="وضعیت">

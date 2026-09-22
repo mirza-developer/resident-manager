@@ -37,7 +37,7 @@
     <MudDataGrid T="Bill" Items="@bills" Filterable="true" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
         <Columns>
             <PropertyColumn Property="x => x.House!.Title" Title="واحد" />
-            <TemplateColumn Title="مبلغ کل">
+            <TemplateColumn Title="مبلغ کل(ریال)">
                 <CellTemplate>
                     @if (context.Item.Status == BillStatus.Draft)
                     {
