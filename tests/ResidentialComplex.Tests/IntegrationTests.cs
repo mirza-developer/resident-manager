@@ -1057,7 +1057,7 @@ public class MigrationTests : IDisposable
             TotalAmount = 100_000m,
             Description = "تست",
             Status = BillStatus.Draft,
-            CreatedDate = DateTime.UtcNow
+            CreatedDate = DateTime.Now
         };
         _db.Bills.Add(bill);
         await _db.SaveChangesAsync();

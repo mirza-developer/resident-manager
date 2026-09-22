@@ -120,3 +120,16 @@ public class FinancialItemTierConfiguration : IEntityTypeConfiguration<Financial
         builder.HasOne(t => t.FinancialItem).WithMany(f => f.Tiers).HasForeignKey(t => t.FinancialItemId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+public class SmsTemplateConfiguration : IEntityTypeConfiguration<SmsTemplate>
+{
+    public void Configure(EntityTypeBuilder<SmsTemplate> builder)
+    {
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Key).IsRequired().HasMaxLength(100);
+        builder.Property(s => s.Title).IsRequired().HasMaxLength(200);
+        builder.Property(s => s.Text).IsRequired().HasMaxLength(2000);
+        builder.Property(s => s.RowVersion).IsConcurrencyToken();
+        builder.HasIndex(s => s.Key).IsUnique();
+    }
+}

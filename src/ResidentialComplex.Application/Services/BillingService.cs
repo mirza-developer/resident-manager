@@ -2,6 +2,7 @@ using ResidentialComplex.Domain.Entities;
 using ResidentialComplex.Domain.Enums;
 using ResidentialComplex.Application.Interfaces;
 using ResidentialComplex.Application.Helpers;
+using ResidentialComplex.Application.Constants;
 
 namespace ResidentialComplex.Application.Services;
 
@@ -16,6 +17,15 @@ public class BillingService
     private readonly IPaymentRepository _paymentRepo;
     private readonly IAuditService _audit;
     private readonly ISmsService _smsService;
+    private readonly ISmsTemplateRepository _smsTemplateRepo;
+
+    /// <summary>
+    /// Fallback text used only if no "BillApproved" SmsTemplate row exists in the database
+    /// yet (e.g. the AddSmsTemplates migration hasn't run). Identical to the wording that
+    /// used to be hardcoded here before templates became admin-configurable.
+    /// </summary>
+    private const string DefaultBillApprovedTemplateText =
+        "مالک محترم\nقبض شارژ {PeriodTitle}\nصادر شد.\nمبلغ قابل پرداخت {TotalAmount} تومان\nلطفا در اسرع وقت اقدام به پرداخت نمایید";
 
     public BillingService(
         IBillRepository billRepo,
@@ -23,7 +33,8 @@ public class BillingService
         IFinancialItemRepository financialItemRepo,
         IPaymentRepository paymentRepo,
         IAuditService audit,
-        ISmsService? smsService = null)
+        ISmsService? smsService = null,
+        ISmsTemplateRepository? smsTemplateRepo = null)
     {
         _billRepo = billRepo;
         _houseRepo = houseRepo;
@@ -31,6 +42,7 @@ public class BillingService
         _paymentRepo = paymentRepo;
         _audit = audit;
         _smsService = smsService ?? NullSmsService.Instance;
+        _smsTemplateRepo = smsTemplateRepo ?? NullSmsTemplateRepository.Instance;
     }
 
     /// <summary>
@@ -204,8 +216,7 @@ public class BillingService
                 // Send SMS notification to household owner (only on Draft→Approved transition)
                 if (!string.IsNullOrWhiteSpace(house.ResidentPhoneNumber))
                 {
-                    var periodTitle = PersianCalendarHelper.FormatYearMonth(bill.Year, bill.Month);
-                    var smsText = $"مالک محترم\nقبض شارژ {periodTitle}\nصادر شد.\nمبلغ قابل پرداخت {bill.TotalAmount:N0} تومان\nلطفا در اسرع وقت اقدام به پرداخت نمایید";
+                    var smsText = await BuildBillApprovedSmsTextAsync(house, bill);
                     await _smsService.SendAsync(house.ResidentPhoneNumber, smsText);
                 }
             }
@@ -271,6 +282,29 @@ public class BillingService
             $"BillId={billId}, Amount={bill.TotalAmount}");
     }
 
+    /// <summary>
+    /// Loads the admin-configurable "BillApproved" SMS template and renders it with this
+    /// house/bill's actual data. Falls back to <see cref="DefaultBillApprovedTemplateText"/>
+    /// if no template row exists yet (e.g. migration not yet applied).
+    /// </summary>
+    private async Task<string> BuildBillApprovedSmsTextAsync(House house, Bill bill)
+    {
+        var template = await _smsTemplateRepo.GetByKeyAsync(SmsTemplateKeys.BillApproved);
+        var templateText = string.IsNullOrWhiteSpace(template?.Text) ? DefaultBillApprovedTemplateText : template.Text;
+
+        var tokens = new Dictionary<string, string>
+        {
+            ["ResidentName"] = house.ResidentName,
+            ["HouseTitle"] = house.Title,
+            ["ApartmentTitle"] = house.Apartment?.Title ?? string.Empty,
+            ["PeriodTitle"] = PersianCalendarHelper.FormatYearMonth(bill.Year, bill.Month),
+            ["TotalAmount"] = bill.TotalAmount.ToString("N0"),
+            ["CurrentDebt"] = house.CurrentDebt.ToString("N0")
+        };
+
+        return SmsTemplateRenderer.Render(templateText, tokens);
+    }
+
     private static bool IsApplicable(FinancialItem fi)
     {
         if (!fi.IsActive) return false;
@@ -295,5 +329,16 @@ public class BillingService
         public static NullSmsService Instance { get; } = new();
 
         public Task SendAsync(string toPhone, string text) => Task.CompletedTask;
+    }
+
+    private sealed class NullSmsTemplateRepository : ISmsTemplateRepository
+    {
+        public static NullSmsTemplateRepository Instance { get; } = new();
+
+        public Task<List<SmsTemplate>> GetAllAsync() => Task.FromResult(new List<SmsTemplate>());
+        public Task<SmsTemplate?> GetByIdAsync(int id) => Task.FromResult<SmsTemplate?>(null);
+        public Task<SmsTemplate?> GetByKeyAsync(string key) => Task.FromResult<SmsTemplate?>(null);
+        public Task<SmsTemplate> AddAsync(SmsTemplate template) => Task.FromResult(template);
+        public Task UpdateAsync(SmsTemplate template) => Task.CompletedTask;
     }
 }

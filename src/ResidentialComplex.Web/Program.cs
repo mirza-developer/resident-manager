@@ -53,6 +53,7 @@ builder.Services.AddScoped<IBillRepository, BillRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IMonthlyUsageRepository, MonthlyUsageRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+builder.Services.AddScoped<ISmsTemplateRepository, SmsTemplateRepository>();
 
 // Services
 builder.Services.AddScoped<IAuditService, AuditService>();

@@ -1,0 +1,50 @@
+@page "/admin/sms-templates"
+@attribute [Authorize(Roles = "Administrator")]
+@using ResidentialComplex.Domain.Entities
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">قالب‌های پیامک</MudText>
+        <HelpButton PageKey="smsTemplates" />
+    </MudStack>
+</MudStack>
+
+@if (isLoading)
+{
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
+}
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+    متن پیامک‌های سیستم از این صفحه قابل تنظیم است. برای هر قالب، می‌توانید از متغیرهایی مانند نام مالک یا مبلغ قبض
+    استفاده کنید؛ این متغیرها هنگام ارسال با اطلاعات واقعی همان واحد جایگزین می‌شوند.
+</MudAlert>
+
+<MudPaper Class="pa-4">
+    <MudDataGrid T="SmsTemplate" Items="@templates" RowsPerPage="10" Hover="true" Dense="true">
+        <Columns>
+            <PropertyColumn Property="x => x.Title" Title="عنوان قالب" />
+            <TemplateColumn Title="پیش‌نمایش متن">
+                <CellTemplate>
+                    <MudText Typo="Typo.body2" Style="white-space: pre-line;">@Truncate(context.Item.Text, 80)</MudText>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="آخرین بروزرسانی">
+                <CellTemplate>@(context.Item.UpdatedAtUtc.HasValue ? context.Item.UpdatedAtUtc.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm") : "—")</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudTooltip Text="ویرایش قالب">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small"
+                                       OnClick="@(() => OpenEditDialogAsync(context.Item.Id))" />
+                    </MudTooltip>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            <MudText>قالب پیامکی ثبت نشده است.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudDataGridPager T="SmsTemplate" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>

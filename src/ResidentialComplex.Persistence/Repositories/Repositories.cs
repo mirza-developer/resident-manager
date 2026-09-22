@@ -156,3 +156,24 @@ public class AuditLogRepository : IAuditLogRepository
     public async Task<AuditLog> AddAsync(AuditLog log) { _db.AuditLogs.Add(log); await _db.SaveChangesAsync(); return log; }
     public async Task<List<AuditLog>> GetAllAsync() => await _db.AuditLogs.OrderByDescending(a => a.DateTime).ToListAsync();
 }
+
+public class SmsTemplateRepository : ISmsTemplateRepository
+{
+    private readonly ApplicationDbContext _db;
+    public SmsTemplateRepository(ApplicationDbContext db) => _db = db;
+
+    public async Task<List<SmsTemplate>> GetAllAsync() => await _db.SmsTemplates.OrderBy(t => t.Title).ToListAsync();
+    public async Task<SmsTemplate?> GetByIdAsync(int id) => await _db.SmsTemplates.FindAsync(id);
+    public async Task<SmsTemplate?> GetByKeyAsync(string key) => await _db.SmsTemplates.FirstOrDefaultAsync(t => t.Key == key);
+    public async Task<SmsTemplate> AddAsync(SmsTemplate template) { _db.SmsTemplates.Add(template); await _db.SaveChangesAsync(); return template; }
+    public async Task UpdateAsync(SmsTemplate template)
+    {
+        var tracked = _db.ChangeTracker.Entries<SmsTemplate>().FirstOrDefault(e => e.Entity.Id == template.Id);
+        if (tracked != null && !ReferenceEquals(tracked.Entity, template))
+        {
+            tracked.State = EntityState.Detached;
+        }
+        _db.SmsTemplates.Update(template);
+        await _db.SaveChangesAsync();
+    }
+}
