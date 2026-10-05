@@ -7,10 +7,10 @@
     <MudDialogProvider />
     <MudSnackbarProvider />
 
-    <MudLayout>
+    <MudLayout Class="app-layout">
         <MudAppBar Elevation="1">
             <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
-            <MudText Typo="Typo.h6">مدیریت مجتمع مسکونی @Configuration["ComplexName"]</MudText>
+            <MudText Typo="Typo.h6">نرم افزار مدیریت مالی مجتمع های مسکونی @Configuration["ComplexName"]</MudText>
             <MudSpacer />
             <AuthorizeView>
                 <Authorized>
@@ -40,7 +40,7 @@
             </MudNavMenu>
         </MudDrawer>
 
-        <MudMainContent>
+        <MudMainContent Class="app-main-content">
             <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
                 <GlobalErrorBoundary @ref="errorBoundary">
                     <ChildContent>
@@ -59,6 +59,11 @@
 
                 <MudDivider Class="my-4" />
             </MudContainer>
+           
         </MudMainContent>
     </MudLayout>
 </MudRTLProvider>
+<footer class="app-footer">
+    <MudText Typo="Typo.body2">© @DateTime.Now.Year @Configuration["ComplexName"] - تمامی حقوق محفوظ است.</MudText>
+    <a class="app-footer__enamad" referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=8048121&Code=ynMWOo87oJUfJv1ZqTFccXM1TUgr57Sv'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=8048121&Code=ynMWOo87oJUfJv1ZqTFccXM1TUgr57Sv' alt='نماد اعتماد الکترونیکی' code='ynMWOo87oJUfJv1ZqTFccXM1TUgr57Sv'></a>
+</footer>

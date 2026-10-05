@@ -87,6 +87,63 @@ footer {
     background-color: #edf2f7 !important;
 }
 
+.app-layout {
+    min-height: 100vh;
+}
+
+.app-main-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.app-main-content > .mud-container {
+    flex: 1 0 auto;
+}
+
+.app-footer {
+    position: relative;
+    margin-top: auto;
+    min-height: 6rem;
+    padding: 1rem 7rem;
+    text-align: center;
+    color: #5f6b7a;
+}
+
+.app-footer__enamad {
+    position: absolute;
+    inset-inline-end: 1rem;
+    top: 50%;
+    display: block;
+    width: 5rem;
+    height: 5rem;
+    transform: translateY(-50%);
+}
+
+.app-footer__enamad img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+@media (max-width: 600px) {
+    .app-footer {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+
+    .app-footer__enamad {
+        position: static;
+        align-self: flex-start;
+        transform: none;
+    }
+}
+
 /* Help drawer */
 .help-drawer {
     position: fixed;
