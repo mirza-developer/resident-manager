@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/docs/">
+    <File Path="Docs/Zibal-docs.json" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/ResidentialComplex.Domain/ResidentialComplex.Domain.csproj" />
     <Project Path="src/ResidentialComplex.Application/ResidentialComplex.Application.csproj" />
