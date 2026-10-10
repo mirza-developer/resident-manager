@@ -68,7 +68,7 @@ public class SmsService : ISmsService
         }
     }
 
-    public async Task SendOtpAsync(string toPhone)
+    public async Task<string?> SendOtpAsync(string toPhone)
     {
         var client = _httpClientFactory.CreateClient(nameof(SmsService));
 
@@ -90,7 +90,7 @@ public class SmsService : ISmsService
                 var body = await httpResponse.Content.ReadAsStringAsync();
                 _logger.LogWarning("SMS provider returned non-success status {StatusCode} for recipient {ToPhone}. Body: {Body}",
                     (int)httpResponse.StatusCode, toPhone, body);
-                return;
+                return null;
             }
 
             response = await httpResponse.Content.ReadFromJsonAsync<OtpResponse>();
@@ -98,15 +98,18 @@ public class SmsService : ISmsService
             if (response is null)
             {
                 _logger.LogWarning("SMS provider returned an empty or unparseable response for recipient {ToPhone}", toPhone);
-                return;
+                return null;
             }
 
             _logger.LogInformation("SMS provider response for recipient {ToPhone}: code={Code}, status={Status}",
                 toPhone, response.Code, response.Status);
+
+            return response.Code;    
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while sending SMS to recipient {ToPhone}", toPhone);
+            return null;
         }
     }
 
