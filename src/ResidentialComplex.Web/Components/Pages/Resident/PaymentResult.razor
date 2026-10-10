@@ -41,6 +41,7 @@ else
                     <tr><td>مبلغ</td><td>@PaymentDisplay.Money(attempt.Amount)</td></tr>
                     <tr><td>کد پیگیری</td><td>@(attempt.TrackId?.ToString() ?? "—")</td></tr>
                     <tr><td>شماره مرجع بانکی</td><td>@(attempt.RefNumber?.ToString() ?? "—")</td></tr>
+                    <tr><td>شماره کارت</td><td dir="ltr" style="text-align:right">@(attempt.CardNumber ?? "—")</td></tr>
                     <tr><td>زمان پرداخت</td><td>@PaymentDisplay.Date(attempt.PaidAt)</td></tr>
                 </tbody>
             </MudSimpleTable>
@@ -50,7 +51,7 @@ else
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Dashboard" Href="@HomeUrl">
                 @(isAdmin ? "فهرست پرداخت‌ها" : "بازگشت به پنل ساکن")
             </MudButton>
-            @if (PaymentService.IsOpen(attempt.Status))
+            @if (IsOpenStatus(attempt.Status))
             {
                 <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.Refresh"
                            OnClick="RefreshAsync" Disabled="@isRefreshing">

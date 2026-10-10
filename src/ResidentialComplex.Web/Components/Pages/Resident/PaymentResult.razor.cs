@@ -33,6 +33,11 @@ public partial class PaymentResult : ComponentBase
     private bool isLoading = true;
     private bool isRefreshing;
 
+    // The injected property is also called PaymentService, so static members are reached through the
+    // fully qualified type name (accessing them via the property is compile error CS0176).
+    private static bool IsOpenStatus(PaymentAttemptStatus status) =>
+        global::ResidentialComplex.Application.Services.PaymentService.IsOpen(status);
+
     private string HomeUrl => isAdmin ? "/admin/payments" : "/resident/dashboard";
 
     private bool CanRetry => attempt is not null && !isAdmin
@@ -67,8 +72,8 @@ public partial class PaymentResult : ComponentBase
             isAdmin = user.IsInRole("Administrator");
 
             attempt = PublicId.HasValue ? await PaymentService.GetForUserAsync(PublicId.Value, userId, isAdmin) : null;
-            message = attempt is null ? null : PaymentService.DescribeFinal(attempt);
-            if (attempt is not null && PaymentService.IsOpen(attempt.Status))
+            message = attempt is null ? null : global::ResidentialComplex.Application.Services.PaymentService.DescribeFinal(attempt);
+            if (attempt is not null && IsOpenStatus(attempt.Status))
                 message = "پرداخت هنوز نهایی نشده است. اگر مبلغ از حساب شما کسر شده، دکمه «استعلام وضعیت» را بزنید.";
         }
         catch (Exception ex)

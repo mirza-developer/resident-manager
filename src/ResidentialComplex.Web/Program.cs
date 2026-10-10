@@ -164,7 +164,7 @@ app.MapPost("/Account/LoginPost", async (
     if (result.Succeeded)
     {
         // Only local URLs: a forged returnUrl must never send a freshly logged-in user to another site.
-        return Results.Redirect(ReturnUrlHelper.GetSafeLocalUrl(returnUrl, httpContext.Request.Host.Value));
+        return Results.Redirect(ReturnUrlHelper.GetSafeLocalUrl(returnUrl, httpContext.Request.Host.Value ?? string.Empty));
     }
 
     var errorRedirect = string.IsNullOrEmpty(returnUrl)

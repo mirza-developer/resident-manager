@@ -3,69 +3,56 @@
 @using ResidentialComplex.Application.Helpers
 @using ResidentialComplex.Domain.Entities
 
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-        <MudText Typo="Typo.h4">تاریخچه پرداخت‌های آنلاین</MudText>
-        <HelpButton PageKey="residentPayments" />
-    </MudStack>
-    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Dashboard" Href="/resident/dashboard">
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+    <MudText Typo="Typo.h4">تاریخچه پرداخت‌های آنلاین</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/resident/dashboard">
         بازگشت به پنل ساکن
     </MudButton>
 </MudStack>
 
 @if (isLoading)
 {
-    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
-}
-
-@if (!isLoading && !hasHouse)
-{
-    <div><MudAlert Severity="Severity.Warning">واحدی برای حساب کاربری شما تعریف نشده است.</MudAlert></div>
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
 }
 else
 {
-    <div>
-        <MudPaper Class="pa-4">
-            <MudDataGrid T="PaymentAttempt" Items="@attempts" RowsPerPage="10" Hover="true" Dense="true">
-                <Columns>
-                    <TemplateColumn Title="تاریخ">
-                        <CellTemplate>@PaymentDisplay.Date(context.Item.CreatedAt)</CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="دوره قبض">
-                        <CellTemplate>@(context.Item.Bill is null ? "—" : PersianCalendarHelper.FormatYearMonth(context.Item.Bill.Year, context.Item.Bill.Month))</CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="مبلغ (ریال)">
-                        <CellTemplate>@context.Item.Amount.ToString("N0")</CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="وضعیت">
-                        <CellTemplate>
-                            <MudChip T="string" Color="@PaymentDisplay.StatusColor(context.Item.Status)" Variant="Variant.Outlined" Size="Size.Small">
-                                @PaymentDisplay.StatusLabel(context.Item.Status)
-                            </MudChip>
-                        </CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="کد پیگیری">
-                        <CellTemplate>@(context.Item.TrackId?.ToString() ?? "—")</CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="شماره مرجع">
-                        <CellTemplate>@(context.Item.RefNumber?.ToString() ?? "—")</CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
-                        <CellTemplate>
-                            <MudTooltip Text="مشاهده جزئیات">
-                                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Primary" Size="Size.Small"
-                                               OnClick="@(() => ShowDetailsAsync(context.Item.PublicId))" />
-                            </MudTooltip>
-                        </CellTemplate>
-                    </TemplateColumn>
-                </Columns>
-                <NoRecordsContent>
-                    <MudText>هنوز پرداخت آنلاینی ثبت نشده است.</MudText>
-                </NoRecordsContent>
-                <PagerContent>
-                    <MudDataGridPager T="PaymentAttempt" />
-                </PagerContent>
-            </MudDataGrid>
-        </MudPaper>
-    </div>
+    <MudPaper Class="pa-4">
+        <MudDataGrid T="PaymentAttempt" Items="@attempts" RowsPerPage="15" Hover="true" Dense="true">
+            <Columns>
+                <TemplateColumn Title="تاریخ">
+                    <CellTemplate>@PaymentDisplay.Date(context.Item.CreatedAt)</CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="دوره قبض">
+                    <CellTemplate>@(context.Item.Bill is null ? "—" : PersianCalendarHelper.FormatYearMonth(context.Item.Bill.Year, context.Item.Bill.Month))</CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="مبلغ (ریال)">
+                    <CellTemplate>@PaymentDisplay.Money(context.Item.Amount)</CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="وضعیت">
+                    <CellTemplate>
+                        <MudChip T="string" Color="@PaymentDisplay.StatusColor(context.Item.Status)" Variant="Variant.Outlined" Size="Size.Small">
+                            @PaymentDisplay.StatusLabel(context.Item.Status)
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="کد پیگیری">
+                    <CellTemplate>@(context.Item.TrackId?.ToString() ?? "—")</CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="جزئیات" Sortable="false" Filterable="false">
+                    <CellTemplate>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="@GetResultUrl(context.Item.PublicId)">
+                            مشاهده
+                        </MudButton>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <NoRecordsContent>
+                <MudText>پرداخت آنلاینی برای نمایش وجود ندارد.</MudText>
+            </NoRecordsContent>
+            <PagerContent>
+                <MudDataGridPager T="PaymentAttempt" />
+            </PagerContent>
+        </MudDataGrid>
+    </MudPaper>
 }

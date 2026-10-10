@@ -28,10 +28,13 @@ public partial class Payments : ComponentBase
     private string searchText = string.Empty;
     private int? reconcilingId;
 
+    private static bool IsOpenStatus(PaymentAttemptStatus status) =>
+        global::ResidentialComplex.Application.Services.PaymentService.IsOpen(status);
+
     private int succeededCount => attempts.Count(a => a.Status == PaymentAttemptStatus.Succeeded);
     private decimal succeededTotal => attempts.Where(a => a.Status == PaymentAttemptStatus.Succeeded).Sum(a => a.Amount);
     private int needsReviewCount => attempts.Count(a => a.Status == PaymentAttemptStatus.NeedsReview);
-    private int openCount => attempts.Count(a => PaymentService.IsOpen(a.Status));
+    private int openCount => attempts.Count(a => IsOpenStatus(a.Status));
 
     private IEnumerable<PaymentAttempt> Filtered
     {

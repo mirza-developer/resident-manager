@@ -98,7 +98,7 @@
                         <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Primary" Size="Size.Small"
                                        OnClick="@(() => ShowDetailsAsync(context.Item.PublicId))" />
                     </MudTooltip>
-                    @if (PaymentService.IsOpen(context.Item.Status) || context.Item.Status == PaymentAttemptStatus.Initiated)
+                    @if (IsOpenStatus(context.Item.Status) || context.Item.Status == PaymentAttemptStatus.Initiated)
                     {
                         <MudTooltip Text="استعلام وضعیت از زیبال">
                             <MudIconButton Icon="@Icons.Material.Filled.Sync" Color="Color.Info" Size="Size.Small"
