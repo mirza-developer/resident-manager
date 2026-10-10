@@ -38,6 +38,13 @@ public class TestBase : IDisposable
         services.AddScoped<BillingService>();
         services.AddScoped<ReportService>();
 
+        // Online payment (Zibal) — real EF repositories + a fake gateway shared by the test
+        services.AddScoped<IPaymentAttemptRepository, PaymentAttemptRepository>();
+        services.AddScoped<ITransactionRunner, EfTransactionRunner>();
+        services.AddSingleton<FakePaymentGateway>();
+        services.AddSingleton<IPaymentGateway>(sp => sp.GetRequiredService<FakePaymentGateway>());
+        services.AddScoped<PaymentService>();
+
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {
             options.Password.RequireDigit = true;

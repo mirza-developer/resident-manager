@@ -1,10 +1,15 @@
 @page "/resident/dashboard"
 @attribute [Authorize(Roles = "Administrator,Resident")]
 @using ResidentialComplex.Domain.Entities
+@using ResidentialComplex.Domain.Enums
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
     <MudText Typo="Typo.h4">پنل ساکن</MudText>
     <HelpButton PageKey="residentDashboard" />
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.History" Href="/resident/payments">
+        تاریخچه پرداخت‌های آنلاین
+    </MudButton>
 </MudStack>
 
 @if (isLoading)
@@ -42,6 +47,19 @@ else
                     </TemplateColumn>
                     <TemplateColumn Title="وضعیت">
                         <CellTemplate>@GetStatusLabel(context.Item.Status)</CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="پرداخت" Sortable="false" Filterable="false">
+                        <CellTemplate>
+                            @if (context.Item.Status == BillStatus.Approved && CanPayOnline)
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Payment"
+                                           Disabled="@(payingBillId.HasValue)"
+                                           OnClick="@(() => PayOnlineAsync(context.Item))">
+                                    @(payingBillId == context.Item.Id ? "در حال اتصال..." : "پرداخت آنلاین")
+                                </MudButton>
+                            }
+                        </CellTemplate>
                     </TemplateColumn>
                 </Columns>
                 <NoRecordsContent>

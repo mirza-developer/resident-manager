@@ -1,0 +1,68 @@
+@page "/payments/result"
+@page "/payments/result/{PublicId:guid}"
+@attribute [Authorize(Roles = "Administrator,Resident")]
+@using ResidentialComplex.Application.Helpers
+@using ResidentialComplex.Domain.Enums
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+    <MudText Typo="Typo.h4">نتیجه پرداخت آنلاین</MudText>
+</MudStack>
+
+@if (isLoading)
+{
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
+}
+else if (attempt is null)
+{
+    <div>
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            اطلاعات پرداخت یافت نشد یا اطلاعات بازگشت از درگاه نامعتبر است.
+        </MudAlert>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="@HomeUrl">بازگشت</MudButton>
+    </div>
+}
+else
+{
+    <div>
+        <MudPaper Class="pa-6 mb-4">
+            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@ResultIcon" Color="@PaymentDisplay.StatusColor(attempt.Status)" Style="font-size: 4rem;" />
+                <MudText Typo="Typo.h5">@ResultTitle</MudText>
+                <MudText Align="Align.Center">@message</MudText>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4 mb-4">
+            <MudSimpleTable Dense="true" Hover="true">
+                <tbody>
+                    <tr><td>وضعیت</td><td><MudChip T="string" Color="@PaymentDisplay.StatusColor(attempt.Status)" Variant="Variant.Outlined" Size="Size.Small">@PaymentDisplay.StatusLabel(attempt.Status)</MudChip></td></tr>
+                    <tr><td>واحد</td><td>@attempt.Bill?.House?.Title</td></tr>
+                    <tr><td>دوره قبض</td><td>@(attempt.Bill is null ? "—" : PersianCalendarHelper.FormatYearMonth(attempt.Bill.Year, attempt.Bill.Month))</td></tr>
+                    <tr><td>مبلغ</td><td>@PaymentDisplay.Money(attempt.Amount)</td></tr>
+                    <tr><td>کد پیگیری</td><td>@(attempt.TrackId?.ToString() ?? "—")</td></tr>
+                    <tr><td>شماره مرجع بانکی</td><td>@(attempt.RefNumber?.ToString() ?? "—")</td></tr>
+                    <tr><td>زمان پرداخت</td><td>@PaymentDisplay.Date(attempt.PaidAt)</td></tr>
+                </tbody>
+            </MudSimpleTable>
+        </MudPaper>
+
+        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Dashboard" Href="@HomeUrl">
+                @(isAdmin ? "فهرست پرداخت‌ها" : "بازگشت به پنل ساکن")
+            </MudButton>
+            @if (PaymentService.IsOpen(attempt.Status))
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="RefreshAsync" Disabled="@isRefreshing">
+                    استعلام وضعیت
+                </MudButton>
+            }
+            @if (CanRetry)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.Payment" Href="/resident/dashboard">
+                    تلاش مجدد برای پرداخت
+                </MudButton>
+            }
+        </MudStack>
+    </div>
+}

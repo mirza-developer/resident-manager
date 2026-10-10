@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+using ResidentialComplex.Application.DTOs;
 using ResidentialComplex.Application.Interfaces;
 using ResidentialComplex.Application.Services;
 using ResidentialComplex.Infrastructure.Services;
@@ -8,6 +9,7 @@ using ResidentialComplex.Infrastructure.Settings;
 using ResidentialComplex.Persistence;
 using ResidentialComplex.Persistence.Repositories;
 using ResidentialComplex.Web.Components;
+using ResidentialComplex.Web.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +44,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.Cookie.HttpOnly = true;
+    // IMPORTANT (online payment): the browser returns from the bank/Zibal with a cross-site top-level GET.
+    // SameSite=Lax cookies are sent on such navigations (Strict ones are not), which is what lets the
+    // resident come back to the result page without logging in again. Never change this to Strict.
+    options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromDays(7);
 });
 
@@ -54,11 +60,19 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IMonthlyUsageRepository, MonthlyUsageRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<ISmsTemplateRepository, SmsTemplateRepository>();
+builder.Services.AddScoped<IPaymentAttemptRepository, PaymentAttemptRepository>();
+builder.Services.AddScoped<ITransactionRunner, EfTransactionRunner>();
 
 // Services
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<BillingService>();
 builder.Services.AddScoped<ReportService>();
+builder.Services.AddScoped<PaymentService>();
+
+// Online payment gateway (Zibal)
+builder.Services.Configure<ZibalOptions>(builder.Configuration.GetSection(ZibalOptions.SectionName));
+builder.Services.AddHttpClient(nameof(ZibalGateway));
+builder.Services.AddScoped<IPaymentGateway, ZibalGateway>();
 
 // SMS Service
 builder.Services.Configure<SmsOptions>(builder.Configuration.GetSection(SmsOptions.SectionName));
@@ -88,6 +102,13 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await db.Database.MigrateAsync();
+
+    var zibalOptions = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ZibalOptions>>().Value;
+    var startupLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+    if (string.IsNullOrWhiteSpace(zibalOptions.Merchant))
+        startupLogger.LogWarning("Zibal:Merchant is not configured — online payment is disabled.");
+    else if (!app.Environment.IsDevelopment() && zibalOptions.Merchant.Equals("zibal", StringComparison.OrdinalIgnoreCase))
+        startupLogger.LogWarning("Zibal:Merchant is the TEST merchant 'zibal' outside Development — payments are simulated and bills would be marked paid without real money!");
 
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
@@ -142,8 +163,8 @@ app.MapPost("/Account/LoginPost", async (
 
     if (result.Succeeded)
     {
-        var redirect = !string.IsNullOrEmpty(returnUrl) ? returnUrl : "/";
-        return Results.Redirect(redirect);
+        // Only local URLs: a forged returnUrl must never send a freshly logged-in user to another site.
+        return Results.Redirect(ReturnUrlHelper.GetSafeLocalUrl(returnUrl, httpContext.Request.Host.Value));
     }
 
     var errorRedirect = string.IsNullOrEmpty(returnUrl)
@@ -151,6 +172,29 @@ app.MapPost("/Account/LoginPost", async (
         : $"/Account/Login?returnUrl={Uri.EscapeDataString(returnUrl)}&error=%D9%86%D8%A7%D9%85+%DA%A9%D8%A7%D8%B1%D8%A8%D8%B1%DB%8C+%DB%8C%D8%A7+%D8%B1%D9%85%D8%B2+%D8%B9%D8%A8%D9%88%D8%B1+%D9%86%D8%A7%D8%AF%D8%B1%D8%B3%D8%AA+%D8%A7%D8%B3%D8%AA.";
     return Results.Redirect(errorRedirect);
 });
+
+// Zibal sends the user back here after the bank page (GET ?trackId&success&status&orderId).
+// Anonymous on purpose: the payment must be verified/credited even if the session cookie is gone.
+// All parameters are untrusted — PaymentService confirms everything with Zibal server-to-server.
+app.MapGet("/payment/callback", async (HttpContext httpContext, PaymentService payments) =>
+{
+    httpContext.Response.Headers.CacheControl = "no-store";
+    httpContext.Response.Headers["Referrer-Policy"] = "no-referrer";
+
+    var query = httpContext.Request.Query;
+    if (!long.TryParse(query["trackId"].ToString(), out var trackId))
+        return Results.Redirect("/payments/result");
+
+    // CancellationToken.None on purpose: if the user closes the tab we still finish verifying/settling.
+    var result = await payments.HandleCallbackAsync(new PaymentCallback(
+        trackId,
+        query["success"].ToString(),
+        query["status"].ToString(),
+        query["orderId"].ToString(),
+        httpContext.Request.QueryString.Value));
+
+    return Results.Redirect(result.AttemptPublicId is { } publicId ? $"/payments/result/{publicId}" : "/payments/result");
+}).AllowAnonymous();
 
 app.MapGet("/Account/LogoutPost", async (
     HttpContext httpContext,

@@ -1,0 +1,119 @@
+@page "/admin/payments"
+@attribute [Authorize(Roles = "Administrator")]
+@using ResidentialComplex.Application.Helpers
+@using ResidentialComplex.Application.Services
+@using ResidentialComplex.Domain.Entities
+@using ResidentialComplex.Domain.Enums
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">پرداخت‌های آنلاین</MudText>
+        <HelpButton PageKey="adminPayments" />
+    </MudStack>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">
+        بروزرسانی
+    </MudButton>
+</MudStack>
+
+@if (isLoading)
+{
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
+}
+
+@if (needsReviewCount > 0)
+{
+    <div>
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            @needsReviewCount پرداخت نیازمند بررسی شماست: مبلغ از پرداخت‌کننده دریافت شده اما به‌صورت خودکار روی قبض ثبت نشده است
+            (مغایرت مبلغ/سفارش یا پرداخت مجدد قبض پرداخت‌شده). برای استرداد وجه از پنل زیبال با «کد پیگیری» اقدام کنید.
+        </MudAlert>
+    </div>
+}
+
+<MudGrid Class="mb-2">
+    <MudItem xs="6" md="3">
+        <MudPaper Class="pa-3"><MudText Typo="Typo.caption">کل تلاش‌ها</MudText><MudText Typo="Typo.h6">@attempts.Count.ToString("N0")</MudText></MudPaper>
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <MudPaper Class="pa-3"><MudText Typo="Typo.caption">موفق</MudText><MudText Typo="Typo.h6" Color="Color.Success">@succeededCount.ToString("N0")</MudText></MudPaper>
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <MudPaper Class="pa-3"><MudText Typo="Typo.caption">جمع مبلغ موفق (ریال)</MudText><MudText Typo="Typo.h6">@succeededTotal.ToString("N0")</MudText></MudPaper>
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <MudPaper Class="pa-3"><MudText Typo="Typo.caption">در حال انجام / نیازمند بررسی</MudText><MudText Typo="Typo.h6">@openCount.ToString("N0") / @needsReviewCount.ToString("N0")</MudText></MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <MudSelect T="int" @bind-Value="statusFilter" Label="وضعیت" Variant="Variant.Outlined">
+                <MudSelectItem T="int" Value="-1">همه</MudSelectItem>
+                @foreach (var status in Enum.GetValues<PaymentAttemptStatus>())
+                {
+                    var value = (int)status;
+                    <span @key="value" style="display:contents"><MudSelectItem T="int" Value="@value">@PaymentDisplay.StatusLabel(status)</MudSelectItem></span>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="8">
+            <MudTextField T="string" @bind-Value="searchText" Label="جستجو (کد پیگیری، شماره مرجع، شناسه سفارش، واحد، آپارتمان)"
+                          Variant="Variant.Outlined" Immediate="true" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudPaper Class="pa-4">
+    <MudDataGrid T="PaymentAttempt" Items="@Filtered" RowsPerPage="15" Hover="true" Dense="true" SortMode="SortMode.Multiple">
+        <Columns>
+            <TemplateColumn Title="تاریخ" SortBy="@(x => x.CreatedAt)">
+                <CellTemplate>@PaymentDisplay.Date(context.Item.CreatedAt)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="واحد">
+                <CellTemplate>@context.Item.Bill?.House?.Title <MudText Typo="Typo.caption" Inline="true">(@context.Item.Bill?.House?.Apartment?.Title)</MudText></CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="دوره قبض">
+                <CellTemplate>@(context.Item.Bill is null ? "—" : PersianCalendarHelper.FormatYearMonth(context.Item.Bill.Year, context.Item.Bill.Month))</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="مبلغ (ریال)" SortBy="@(x => x.Amount)">
+                <CellTemplate>@context.Item.Amount.ToString("N0")</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="وضعیت">
+                <CellTemplate>
+                    <MudChip T="string" Color="@PaymentDisplay.StatusColor(context.Item.Status)" Variant="Variant.Outlined" Size="Size.Small">
+                        @PaymentDisplay.StatusLabel(context.Item.Status)
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="کد پیگیری">
+                <CellTemplate>@(context.Item.TrackId?.ToString() ?? "—")</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="شماره مرجع">
+                <CellTemplate>@(context.Item.RefNumber?.ToString() ?? "—")</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudTooltip Text="جزئیات و گزارش مراحل">
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Primary" Size="Size.Small"
+                                       OnClick="@(() => ShowDetailsAsync(context.Item.PublicId))" />
+                    </MudTooltip>
+                    @if (PaymentService.IsOpen(context.Item.Status) || context.Item.Status == PaymentAttemptStatus.Initiated)
+                    {
+                        <MudTooltip Text="استعلام وضعیت از زیبال">
+                            <MudIconButton Icon="@Icons.Material.Filled.Sync" Color="Color.Info" Size="Size.Small"
+                                           Disabled="@(reconcilingId == context.Item.Id)"
+                                           OnClick="@(() => ReconcileAsync(context.Item.Id))" />
+                        </MudTooltip>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            <MudText>پرداخت آنلاینی ثبت نشده است.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudDataGridPager T="PaymentAttempt" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>
