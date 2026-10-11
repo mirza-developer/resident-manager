@@ -60,7 +60,7 @@ public class FakeHouses : IHouseRepository
     readonly FakeStore s; public bool ThrowOnUpdate; public FakeHouses(FakeStore s) => this.s = s;
     public Task<House?> GetByIdAsync(int id) { lock (s.Gate) return Task.FromResult(s.Houses.FirstOrDefault(h => h.Id == id)); }
     public Task UpdateAsync(House house) { if (ThrowOnUpdate) throw new InvalidOperationException("db down"); return Task.CompletedTask; }
-    public Task<List<House>> GetAllAsync() => throw new NotImplementedException();
+    public Task<List<House>> GetAllAsync() { lock (s.Gate) return Task.FromResult(s.Houses.ToList()); }
     public Task<List<House>> GetByApartmentIdAsync(int apartmentId) => throw new NotImplementedException();
     public Task<List<House>> GetActiveHousesAsync() => throw new NotImplementedException();
     public Task<House?> GetByUserIdAsync(string userId) => throw new NotImplementedException();

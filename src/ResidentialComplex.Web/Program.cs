@@ -69,6 +69,10 @@ builder.Services.AddScoped<BillingService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<PaymentService>();
 
+// Resident self sign-up / password reset by SMS code (OTP state is kept in memory)
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ResidentRegistrationService>();
+
 // Online payment gateway (Zibal)
 builder.Services.Configure<ZibalOptions>(builder.Configuration.GetSection(ZibalOptions.SectionName));
 builder.Services.AddHttpClient(nameof(ZibalGateway));
