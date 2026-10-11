@@ -68,10 +68,64 @@ public class SmsService : ISmsService
         }
     }
 
+    public async Task<string?> SendOtpAsync(string toPhone)
+    {
+        var client = _httpClientFactory.CreateClient(nameof(SmsService));
+
+        var requestBody = new
+        {
+            to = toPhone,
+        };
+
+        // The Melipayamak API requires the API key as part of the URL path:
+        // POST api/send/simple/{API_KEY}
+        // This is the provider-mandated URL format and cannot be changed.
+        OtpResponse? response = null;
+        try
+        {
+            var httpResponse = await client.PostAsJsonAsync($"api/send/otp/{_options.ApiKey}", requestBody);
+
+            if (!httpResponse.IsSuccessStatusCode)
+            {
+                var body = await httpResponse.Content.ReadAsStringAsync();
+                _logger.LogWarning("SMS provider returned non-success status {StatusCode} for recipient {ToPhone}. Body: {Body}",
+                    (int)httpResponse.StatusCode, toPhone, body);
+                return null;
+            }
+
+            response = await httpResponse.Content.ReadFromJsonAsync<OtpResponse>();
+
+            if (response is null)
+            {
+                _logger.LogWarning("SMS provider returned an empty or unparseable response for recipient {ToPhone}", toPhone);
+                return null;
+            }
+
+            _logger.LogInformation("SMS provider response for recipient {ToPhone}: code={Code}, status={Status}",
+                toPhone, response.Code, response.Status);
+
+            return response.Code;    
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while sending SMS to recipient {ToPhone}", toPhone);
+            return null;
+        }
+    }
+
     private sealed class SmsResponse
     {
         [JsonPropertyName("recId")]
         public long RecId { get; init; }
+
+        [JsonPropertyName("status")]
+        public string? Status { get; init; }
+    }
+
+    private sealed class OtpResponse
+    {
+        [JsonPropertyName("code")]
+        public string Code { get; init; }
 
         [JsonPropertyName("status")]
         public string? Status { get; init; }

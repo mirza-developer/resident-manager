@@ -33,6 +33,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SmsTemplate> SmsTemplates => Set<SmsTemplate>();
+    public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
+    public DbSet<PaymentAttemptEvent> PaymentAttemptEvents => Set<PaymentAttemptEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

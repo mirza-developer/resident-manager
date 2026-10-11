@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ResidentialComplex.Application.Interfaces;
 using ResidentialComplex.Domain.Entities;
+using ResidentialComplex.Domain.Enums;
 
 namespace ResidentialComplex.Persistence.Repositories;
 
@@ -73,6 +74,17 @@ public class BillRepository : IBillRepository
     public async Task<Bill> AddAsync(Bill bill) { _db.Bills.Add(bill); await _db.SaveChangesAsync(); return bill; }
     public async Task AddRangeAsync(IEnumerable<Bill> bills) { _db.Bills.AddRange(bills); await _db.SaveChangesAsync(); }
     public async Task UpdateAsync(Bill bill) { _db.Bills.Update(bill); await _db.SaveChangesAsync(); }
+
+    public async Task<bool> TryMarkPaidAsync(int billId, DateTime paidDate)
+    {
+        // One conditional UPDATE: only an Approved bill can become Paid, and only once.
+        var rows = await _db.Bills
+            .Where(b => b.Id == billId && b.Status == BillStatus.Approved)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(b => b.Status, BillStatus.Paid)
+                .SetProperty(b => b.PaidDate, (DateTime?)paidDate));
+        return rows == 1;
+    }
     public async Task DeleteAsync(int id) { var e = await _db.Bills.Include(b => b.BillItems).FirstOrDefaultAsync(b => b.Id == id); if (e != null) { _db.Bills.Remove(e); await _db.SaveChangesAsync(); } }
     public async Task<List<Bill>> GetForReportAsync(int? year, int? month, int? houseId)
     {

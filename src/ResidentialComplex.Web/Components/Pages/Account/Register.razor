@@ -1,0 +1,83 @@
+@page "/Account/Register"
+@layout ResidentialComplex.Web.Components.Layout.MainLayout
+@attribute [AllowAnonymous]
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-10">
+    <MudPaper Class="pa-6">
+        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-2">ثبت‌نام / تعیین رمز عبور جدید</MudText>
+        <MudText Align="Align.Center" Class="mb-4">
+            با شماره موبایلی که مدیر ساختمان برای واحد شما ثبت کرده است، حساب کاربری بسازید یا رمز عبور خود را تغییر دهید.
+        </MudText>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@errorMessage</MudAlert>
+        }
+        @if (!string.IsNullOrEmpty(infoMessage))
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">@infoMessage</MudAlert>
+        }
+
+        @if (stage == RegisterStage.Phone)
+        {
+            <MudStack Spacing="3">
+                <MudTextField T="string" @bind-Value="phone" Label="شماره موبایل" Placeholder="09123456789" Variant="Variant.Outlined"
+                              InputType="InputType.Telephone" Required="true" Immediate="true"
+                              OnKeyDown="@(e => OnEnterAsync(e, RequestOtpAsync))" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Filled.Sms"
+                           Disabled="@isBusy" OnClick="RequestOtpAsync">
+                    ارسال کد تایید
+                </MudButton>
+            </MudStack>
+        }
+        else if (stage == RegisterStage.Otp)
+        {
+            <MudStack Spacing="3">
+                <MudTextField T="string" Value="@phone" Label="شماره موبایل" Variant="Variant.Outlined" Disabled="true" />
+                <MudTextField T="string" @bind-Value="otpCode" Label="کد تایید پیامک‌شده" Variant="Variant.Outlined"
+                              InputType="InputType.Text" Required="true" Immediate="true"
+                              OnKeyDown="@(e => OnEnterAsync(e, VerifyOtpAsync))" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Filled.VerifiedUser"
+                           Disabled="@isBusy" OnClick="VerifyOtpAsync">
+                    تایید کد
+                </MudButton>
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudButton Variant="Variant.Text" Color="Color.Default" Disabled="@isBusy" OnClick="RequestOtpAsync">ارسال مجدد کد</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" Disabled="@isBusy" OnClick="ChangePhone">تغییر شماره</MudButton>
+                </MudStack>
+            </MudStack>
+        }
+        else if (stage == RegisterStage.Password)
+        {
+            <MudStack Spacing="3">
+                <MudAlert Severity="Severity.Info" Dense="true">@PasswordHint</MudAlert>
+                <MudTextField T="string" @bind-Value="password" Label="رمز عبور جدید" Variant="Variant.Outlined"
+                              InputType="InputType.Password" Required="true" Immediate="true" />
+                <MudTextField T="string" @bind-Value="confirmPassword" Label="تکرار رمز عبور" Variant="Variant.Outlined"
+                              InputType="InputType.Password" Required="true" Immediate="true"
+                              OnKeyDown="@(e => OnEnterAsync(e, SetPasswordAsync))" />
+                <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true" StartIcon="@Icons.Material.Filled.Save"
+                           Disabled="@isBusy" OnClick="SetPasswordAsync">
+                    ثبت رمز عبور
+                </MudButton>
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <MudAlert Severity="Severity.Success">@successMessage</MudAlert>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Filled.Login" Href="/Account/Login">
+                    ورود به سیستم
+                </MudButton>
+            </MudStack>
+        }
+
+        @if (stage != RegisterStage.Done)
+        {
+            <MudDivider Class="my-4" />
+            <MudButton Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" Href="/Account/Login">
+                بازگشت به صفحه ورود
+            </MudButton>
+        }
+    </MudPaper>
+</MudContainer>
