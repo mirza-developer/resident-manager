@@ -1,0 +1,43 @@
+@namespace ResidentialComplex.Web.Captcha
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="bc-captcha @(IsPersian ? "bc-rtl" : "bc-ltr") @(_verified ? "bc-ok" : null) @Class"
+     dir="@(IsPersian ? "rtl" : "ltr")"
+     lang="@(IsPersian ? "fa" : "en")"
+     role="group"
+     aria-labelledby="@_titleId"
+     style="@Style">
+
+    @if (_verified)
+    {
+        <div class="bc-success" role="status">@T("success")</div>
+    }
+    else if (_challenge is not null)
+    {
+        <div class="bc-image-row">
+            <img class="bc-image" src="@_challenge.ImageDataUri" alt="@T("image_alt")" draggable="false" />
+            <button type="button" class="bc-btn bc-refresh" @onclick="Refresh" disabled="@(!CanRefresh)"
+                    title="@T("refresh")" aria-label="@T("refresh")">↻</button>
+        </div>
+
+        <div class="bc-input-row">
+            <input class="bc-input"
+                   type="text"
+                   inputmode="@(Mode == CaptchaMode.Math || IsPersian ? "numeric" : "text")"
+                   autocomplete="off" autocapitalize="off" spellcheck="false"
+                   maxlength="@(Mode == CaptchaMode.Math ? 4 : Length + 2)"
+                   dir="ltr"
+                   placeholder="@T("placeholder")"
+                   aria-label="@T("placeholder")"
+                   aria-describedby="@_msgId"
+                   @bind="_answer" @bind:event="oninput"
+                   @onkeydown="OnKeyDown" />
+            <button type="button" class="bc-btn bc-verify" @onclick="Verify">@T("verify")</button>
+        </div>
+
+        <div class="bc-meta">
+            <span class="bc-message" id="@_msgId" role="alert" aria-live="polite">@_message</span>
+            <span class="bc-attempts">@T("attempts_left"): @FormatNumber(AttemptsLeft)</span>
+        </div>
+    }
+</div>

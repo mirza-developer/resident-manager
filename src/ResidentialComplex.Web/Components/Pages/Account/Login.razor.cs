@@ -11,6 +11,7 @@ public partial class Login
     public string? ErrorMessage { get; set; }
 
     private LoginModel loginModel = new();
+    private bool isCaptchaValid = false;
 
 #if DEBUG
     protected override async Task OnInitializedAsync()
