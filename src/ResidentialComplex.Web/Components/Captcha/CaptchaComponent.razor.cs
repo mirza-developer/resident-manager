@@ -42,7 +42,7 @@ public partial class CaptchaComponent
                                   ? CaptchaLanguage.Persian : CaptchaLanguage.English)) == CaptchaLanguage.Persian;
     private CaptchaLanguage Lang => IsPersian ? CaptchaLanguage.Persian : CaptchaLanguage.English;
     private int AttemptsLeft => Math.Max(0, Math.Max(1, MaxAttempts) - _attempts);
-    private bool CanRefresh => (DateTimeOffset.UtcNow - _lastRefresh).TotalSeconds >= RefreshCooldownSeconds;
+    private bool CanRefresh => (DateTimeOffset.Now - _lastRefresh).TotalSeconds >= RefreshCooldownSeconds;
     private string T(string key) => CaptchaLocalizer.T(Lang, key);
     private string FormatNumber(int n) => IsPersian ? CaptchaLocalizer.ToPersianDigits(n.ToString()) : n.ToString();
 

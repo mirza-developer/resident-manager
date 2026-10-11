@@ -27,7 +27,7 @@ internal sealed class CaptchaChallenge
     private readonly byte[] _key = RandomNumberGenerator.GetBytes(32);
     private readonly byte[] _answerMac;
 
-    public DateTimeOffset CreatedAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; } = DateTimeOffset.Now;
     public string ImageDataUri { get; }
     public CaptchaMode Mode { get; }
 
@@ -63,7 +63,7 @@ internal sealed class CaptchaChallenge
     }
 
     public bool IsExpired(int expirySeconds) =>
-        DateTimeOffset.UtcNow - CreatedAt > TimeSpan.FromSeconds(expirySeconds);
+        DateTimeOffset.Now - CreatedAt > TimeSpan.FromSeconds(expirySeconds);
 
     public bool Check(string? userInput)
     {
