@@ -269,6 +269,7 @@ public sealed class ResidentRegistrationService
             if (string.IsNullOrEmpty(house.ApplicationUserId) || await _users.FindByIdAsync(house.ApplicationUserId) is null)
             {
                 house.ApplicationUserId = user.Id;
+                house.IsActive = true;
                 await _houses.UpdateAsync(house);
             }
         }
