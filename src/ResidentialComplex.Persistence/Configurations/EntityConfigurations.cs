@@ -133,3 +133,39 @@ public class SmsTemplateConfiguration : IEntityTypeConfiguration<SmsTemplate>
         builder.HasIndex(s => s.Key).IsUnique();
     }
 }
+
+public class PaymentAttemptConfiguration : IEntityTypeConfiguration<PaymentAttempt>
+{
+    public void Configure(EntityTypeBuilder<PaymentAttempt> builder)
+    {
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Amount).HasColumnType("decimal(18,2)");
+        builder.Property(a => a.PaidAmount).HasColumnType("decimal(18,2)");
+        builder.Property(a => a.Gateway).IsRequired().HasMaxLength(50);
+        builder.Property(a => a.OrderId).IsRequired().HasMaxLength(100);
+        builder.Property(a => a.CardNumber).HasMaxLength(30);
+        builder.Property(a => a.Note).HasMaxLength(1000);
+        builder.Property(a => a.InitiatedByUserId).HasMaxLength(450);
+
+        builder.HasIndex(a => a.PublicId).IsUnique();
+        builder.HasIndex(a => a.OrderId).IsUnique();
+        // A gateway session belongs to exactly one attempt (nullable: unique among non-null values).
+        builder.HasIndex(a => a.TrackId).IsUnique();
+        builder.HasIndex(a => a.BillId);
+        builder.HasIndex(a => a.Status);
+
+        builder.HasOne(a => a.Bill).WithMany().HasForeignKey(a => a.BillId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(a => a.Payment).WithMany().HasForeignKey(a => a.PaymentId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(a => a.Events).WithOne(e => e.PaymentAttempt).HasForeignKey(e => e.PaymentAttemptId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class PaymentAttemptEventConfiguration : IEntityTypeConfiguration<PaymentAttemptEvent>
+{
+    public void Configure(EntityTypeBuilder<PaymentAttemptEvent> builder)
+    {
+        builder.HasKey(e => e.Id);
+        builder.Property(e => e.Message).HasMaxLength(1000);
+        builder.HasIndex(e => e.PaymentAttemptId);
+    }
+}

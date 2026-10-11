@@ -1,0 +1,85 @@
+@using ResidentialComplex.Application.Helpers
+@using ResidentialComplex.Domain.Entities
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">جزئیات پرداخت آنلاین</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (attempt is null)
+        {
+            <MudAlert Severity="Severity.Warning">پرداخت مورد نظر یافت نشد.</MudAlert>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Hover="true" Class="mb-4">
+                <tbody>
+                    <tr><td>وضعیت</td><td><MudChip T="string" Color="@PaymentDisplay.StatusColor(attempt.Status)" Variant="Variant.Outlined" Size="Size.Small">@PaymentDisplay.StatusLabel(attempt.Status)</MudChip></td></tr>
+                    @if (!string.IsNullOrWhiteSpace(attempt.Note))
+                    {
+                        <tr><td>توضیح</td><td>@attempt.Note</td></tr>
+                    }
+                    <tr><td>واحد</td><td>@attempt.Bill?.House?.Title @(attempt.Bill?.House?.Apartment is null ? "" : $"({attempt.Bill.House.Apartment.Title})")</td></tr>
+                    <tr><td>دوره قبض</td><td>@(attempt.Bill is null ? "—" : PersianCalendarHelper.FormatYearMonth(attempt.Bill.Year, attempt.Bill.Month))</td></tr>
+                    <tr><td>مبلغ</td><td>@PaymentDisplay.Money(attempt.Amount)</td></tr>
+                    <tr><td>کد پیگیری درگاه</td><td>@(attempt.TrackId?.ToString() ?? "—")</td></tr>
+                    <tr><td>شماره مرجع بانکی</td><td>@(attempt.RefNumber?.ToString() ?? "—")</td></tr>
+                    <tr><td>شماره کارت</td><td dir="ltr" style="text-align:right">@(attempt.CardNumber ?? "—")</td></tr>
+                    <tr><td>زمان شروع</td><td>@PaymentDisplay.Date(attempt.CreatedAt)</td></tr>
+                    <tr><td>زمان پرداخت</td><td>@PaymentDisplay.Date(attempt.PaidAt)</td></tr>
+                    @if (showTechnical)
+                    {
+                        <tr><td>شناسه سفارش</td><td dir="ltr" style="text-align:right">@attempt.OrderId</td></tr>
+                        <tr><td>درگاه</td><td>@attempt.Gateway</td></tr>
+                        <tr><td>وضعیت در زیبال</td><td>@(attempt.ZibalStatus.HasValue ? $"{attempt.ZibalStatus} — {ZibalStatusCodes.DescribeStatus(attempt.ZibalStatus)}" : "—")</td></tr>
+                        <tr><td>کد نتیجه درخواست</td><td>@(attempt.RequestResultCode?.ToString() ?? "—")</td></tr>
+                        <tr><td>Callback (success / status)</td><td dir="ltr" style="text-align:right">@(attempt.CallbackSuccess?.ToString() ?? "-") / @(attempt.CallbackStatus?.ToString() ?? "-")</td></tr>
+                        <tr><td>مبلغ تاییدشده</td><td>@PaymentDisplay.Money(attempt.PaidAmount)</td></tr>
+                        <tr><td>زمان تایید</td><td>@PaymentDisplay.Date(attempt.VerifiedAt)</td></tr>
+                        <tr><td>شناسه پرداخت ثبت‌شده</td><td>@(attempt.PaymentId?.ToString() ?? "—")</td></tr>
+                        <tr><td>شناسه کاربر آغازکننده</td><td dir="ltr" style="text-align:right">@(attempt.InitiatedByUserId ?? "—")</td></tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+
+            @if (showTechnical)
+            {
+                <MudText Typo="Typo.subtitle1" Class="mb-2">گزارش مراحل (ارتباط با درگاه)</MudText>
+                <MudSimpleTable Dense="true" Hover="true" Style="max-height: 320px; overflow: auto;">
+                    <thead>
+                        <tr><th>زمان</th><th>نوع</th><th>کد نتیجه</th><th>وضعیت</th><th>شرح</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in attempt.Events)
+                        {
+                            <tr>
+                                <td>@PaymentDisplay.Date(item.CreatedAt)</td>
+                                <td>@PaymentDisplay.EventLabel(item.EventType)</td>
+                                <td>@(item.ResultCode?.ToString() ?? "—")</td>
+                                <td>@(item.ZibalStatus?.ToString() ?? "—")</td>
+                                <td>@item.Message</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+
+                <MudExpansionPanels Class="mt-3">
+                    <MudExpansionPanel Text="داده‌های خام ثبت‌شده (JSON)">
+                        @foreach (var item in attempt.Events.Where(e => !string.IsNullOrWhiteSpace(e.Data)))
+                        {
+                            <MudText Typo="Typo.caption">@PaymentDisplay.Date(item.CreatedAt) — @PaymentDisplay.EventLabel(item.EventType)</MudText>
+                            <pre dir="ltr" style="white-space: pre-wrap; word-break: break-all; font-size: 12px;">@item.Data</pre>
+                        }
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="Close">بستن</MudButton>
+    </DialogActions>
+</MudDialog>

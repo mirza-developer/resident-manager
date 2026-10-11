@@ -353,6 +353,7 @@ public class BillingService
         public static NullSmsService Instance { get; } = new();
 
         public Task SendAsync(string toPhone, string text) => Task.CompletedTask;
+        public Task<string?> SendOtpAsync(string toPhone) => Task.FromResult<string?>(null);
     }
 
     private sealed class NullSmsTemplateRepository : ISmsTemplateRepository

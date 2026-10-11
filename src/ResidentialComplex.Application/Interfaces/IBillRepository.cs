@@ -19,6 +19,13 @@ public interface IBillRepository
     Task<List<Bill>> GetForReportAsync(int? year, int? month, int? houseId);
 
     /// <summary>
+    /// Atomically marks an Approved bill as Paid (single conditional UPDATE). Returns false —
+    /// and changes nothing — when the bill is not Approved any more (already paid / not approved).
+    /// This is the guard that makes double payment of a bill impossible.
+    /// </summary>
+    Task<bool> TryMarkPaidAsync(int billId, DateTime paidDate);
+
+    /// <summary>
     /// Calculates the per-house amount for an EqualDivision financial item.
     /// </summary>
     decimal CalculateEqualDivisionAmount(decimal totalAmount, int houseCount);

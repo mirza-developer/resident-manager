@@ -7,6 +7,7 @@ using ResidentialComplex.Domain.Entities;
 using ResidentialComplex.Domain.Enums;
 using ResidentialComplex.Infrastructure.Services;
 using ResidentialComplex.Persistence;
+using ResidentialComplex.Web.Security;
 using ResidentialComplex.Persistence.Repositories;
 using Xunit;
 
@@ -37,6 +38,24 @@ public class TestBase : IDisposable
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<BillingService>();
         services.AddScoped<ReportService>();
+
+        // Online payment (Zibal) — real EF repositories + a fake gateway shared by the test
+        services.AddScoped<IPaymentAttemptRepository, PaymentAttemptRepository>();
+        services.AddScoped<ITransactionRunner, EfTransactionRunner>();
+        services.AddSingleton<FakePaymentGateway>();
+        services.AddSingleton<IPaymentGateway>(sp => sp.GetRequiredService<FakePaymentGateway>());
+        services.AddScoped<PaymentService>();
+
+        // Resident self sign-up by SMS code — real EF + Identity, fake SMS provider
+        // (ISmsService is deliberately NOT registered globally so the billing tests keep running without SMS)
+        services.AddMemoryCache();
+        services.AddSingleton<FakeSmsService>();
+        services.AddScoped(sp => new ResidentRegistrationService(
+            sp.GetRequiredService<IHouseRepository>(),
+            sp.GetRequiredService<FakeSmsService>(),
+            sp.GetRequiredService<UserManager<ApplicationUser>>(),
+            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
+            sp.GetRequiredService<IAuditService>()));
 
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {
