@@ -5,6 +5,30 @@ using ResidentialComplex.Domain.Enums;
 
 namespace ResidentialComplex.Persistence.Repositories;
 
+internal static class RepositoryUpdateExtensions
+{
+    public static async Task UpdateEntityAsync<TEntity>(this ApplicationDbContext db, DbSet<TEntity> set, int id, TEntity entity)
+        where TEntity : class
+    {
+        // FindAsync reuses the canonical tracked instance when one exists. Copy only mapped
+        // scalar/FK values so Update() does not traverse a detached graph and attach duplicate
+        // instances of related entities (for example FinancialItem instances on BillItems).
+        var tracked = await set.FindAsync(id);
+        if (tracked is null)
+        {
+            // Match Update() semantics for a detached entity whose row is not currently in the
+            // database, while still tracking only the root entity rather than its graph.
+            db.Entry(entity).State = EntityState.Modified;
+        }
+        else
+        {
+            db.Entry(tracked).CurrentValues.SetValues(entity);
+        }
+
+        await db.SaveChangesAsync();
+    }
+}
+
 public class ApartmentRepository : IApartmentRepository
 {
     private readonly ApplicationDbContext _db;
@@ -13,7 +37,7 @@ public class ApartmentRepository : IApartmentRepository
     public async Task<List<Apartment>> GetAllAsync() => await _db.Apartments.Include(a => a.Houses).ToListAsync();
     public async Task<Apartment?> GetByIdAsync(int id) => await _db.Apartments.Include(a => a.Houses).FirstOrDefaultAsync(a => a.Id == id);
     public async Task<Apartment> AddAsync(Apartment apartment) { _db.Apartments.Add(apartment); await _db.SaveChangesAsync(); return apartment; }
-    public async Task UpdateAsync(Apartment apartment) { _db.Apartments.Update(apartment); await _db.SaveChangesAsync(); }
+    public Task UpdateAsync(Apartment apartment) => _db.UpdateEntityAsync(_db.Apartments, apartment.Id, apartment);
     public async Task DeleteAsync(int id) { var e = await _db.Apartments.FindAsync(id); if (e != null) { _db.Apartments.Remove(e); await _db.SaveChangesAsync(); } }
 }
 
@@ -30,13 +54,7 @@ public class HouseRepository : IHouseRepository
     public async Task<House> AddAsync(House house) { _db.Houses.Add(house); await _db.SaveChangesAsync(); return house; }
     public async Task UpdateAsync(House house)
     {
-        var tracked = _db.ChangeTracker.Entries<House>().FirstOrDefault(e => e.Entity.Id == house.Id);
-        if (tracked != null && !ReferenceEquals(tracked.Entity, house))
-        {
-            tracked.State = EntityState.Detached;
-        }
-        _db.Houses.Update(house);
-        await _db.SaveChangesAsync();
+        await _db.UpdateEntityAsync(_db.Houses, house.Id, house);
     }
     public async Task DeleteAsync(int id) { var e = await _db.Houses.FindAsync(id); if (e != null) { _db.Houses.Remove(e); await _db.SaveChangesAsync(); } }
 }
@@ -50,7 +68,7 @@ public class FinancialItemRepository : IFinancialItemRepository
     public async Task<List<FinancialItem>> GetActiveAsync() => await _db.FinancialItems.Include(f => f.Tiers).Where(f => f.IsActive).ToListAsync();
     public async Task<FinancialItem?> GetByIdAsync(int id) => await _db.FinancialItems.Include(f => f.Tiers).FirstOrDefaultAsync(f => f.Id == id);
     public async Task<FinancialItem> AddAsync(FinancialItem item) { _db.FinancialItems.Add(item); await _db.SaveChangesAsync(); return item; }
-    public async Task UpdateAsync(FinancialItem item) { _db.FinancialItems.Update(item); await _db.SaveChangesAsync(); }
+    public Task UpdateAsync(FinancialItem item) => _db.UpdateEntityAsync(_db.FinancialItems, item.Id, item);
     public async Task DeleteAsync(int id) { var e = await _db.FinancialItems.FindAsync(id); if (e != null) { _db.FinancialItems.Remove(e); await _db.SaveChangesAsync(); } }
 
     public async Task<List<FinancialItemTier>> GetTiersAsync(int financialItemId) =>
@@ -73,7 +91,7 @@ public class BillRepository : IBillRepository
     public async Task<Bill?> GetByHouseMonthYearAsync(int houseId, int year, int month) => await _db.Bills.FirstOrDefaultAsync(b => b.HouseId == houseId && b.Year == year && b.Month == month);
     public async Task<Bill> AddAsync(Bill bill) { _db.Bills.Add(bill); await _db.SaveChangesAsync(); return bill; }
     public async Task AddRangeAsync(IEnumerable<Bill> bills) { _db.Bills.AddRange(bills); await _db.SaveChangesAsync(); }
-    public async Task UpdateAsync(Bill bill) { _db.Bills.Update(bill); await _db.SaveChangesAsync(); }
+    public Task UpdateAsync(Bill bill) => _db.UpdateEntityAsync(_db.Bills, bill.Id, bill);
 
     public async Task<bool> TryMarkPaidAsync(int billId, DateTime paidDate)
     {
@@ -157,7 +175,7 @@ public class MonthlyUsageRepository : IMonthlyUsageRepository
             .ThenByDescending(m => m.Month)
             .FirstOrDefaultAsync();
     public async Task<MonthlyUsage> AddAsync(MonthlyUsage usage) { _db.MonthlyUsages.Add(usage); await _db.SaveChangesAsync(); return usage; }
-    public async Task UpdateAsync(MonthlyUsage usage) { _db.MonthlyUsages.Update(usage); await _db.SaveChangesAsync(); }
+    public Task UpdateAsync(MonthlyUsage usage) => _db.UpdateEntityAsync(_db.MonthlyUsages, usage.Id, usage);
 }
 
 public class AuditLogRepository : IAuditLogRepository
@@ -180,12 +198,6 @@ public class SmsTemplateRepository : ISmsTemplateRepository
     public async Task<SmsTemplate> AddAsync(SmsTemplate template) { _db.SmsTemplates.Add(template); await _db.SaveChangesAsync(); return template; }
     public async Task UpdateAsync(SmsTemplate template)
     {
-        var tracked = _db.ChangeTracker.Entries<SmsTemplate>().FirstOrDefault(e => e.Entity.Id == template.Id);
-        if (tracked != null && !ReferenceEquals(tracked.Entity, template))
-        {
-            tracked.State = EntityState.Detached;
-        }
-        _db.SmsTemplates.Update(template);
-        await _db.SaveChangesAsync();
+        await _db.UpdateEntityAsync(_db.SmsTemplates, template.Id, template);
     }
 }

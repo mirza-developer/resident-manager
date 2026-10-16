@@ -206,6 +206,44 @@ public class FinancialItemCrudTests : TestBase
         Assert.Equal(12_000_000m, loaded!.TotalAmount);
         Assert.Equal(6, loaded.NumberOfInstallments);
     }
+
+    [Fact]
+    public async Task Updating_Detached_Financial_Item_Uses_Tracked_Instance_And_Preserves_Tiers()
+    {
+        var repo = GetService<IFinancialItemRepository>();
+        var created = await repo.AddAsync(new FinancialItem
+        {
+            Title = "تعرفه آب",
+            PeriodType = PeriodType.Permanent,
+            CalculationType = CalculationType.Grouping,
+            IsActive = true,
+            Tiers = new List<FinancialItemTier>
+            {
+                new() { TierOrder = 1, UpperLimit = null, RatePerUnit = 125m }
+            }
+        });
+
+        // Simulate the edit form, which loads/tracks the entity but saves a detached scalar copy.
+        var tracked = await repo.GetByIdAsync(created.Id);
+        Assert.NotNull(tracked);
+        var edited = new FinancialItem
+        {
+            Id = created.Id,
+            Title = "تعرفه آب بروزرسانی شده",
+            PeriodType = tracked.PeriodType,
+            CalculationType = tracked.CalculationType,
+            IsActive = tracked.IsActive,
+            RowVersion = tracked.RowVersion
+        };
+
+        await repo.UpdateAsync(edited);
+
+        var saved = await repo.GetByIdAsync(created.Id);
+        Assert.NotNull(saved);
+        Assert.Equal("تعرفه آب بروزرسانی شده", saved.Title);
+        Assert.Single(saved.Tiers);
+        Assert.Equal(125m, saved.Tiers.Single().RatePerUnit);
+    }
 }
 
 public class EqualDivisionBillingTests : TestBase
