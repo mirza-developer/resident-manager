@@ -74,8 +74,20 @@ public sealed class PaymentService
     /// <summary>
     /// Creates a payment attempt for an approved bill of the given user and opens a gateway session.
     /// </summary>
-    public async Task<StartPaymentResult> StartPaymentAsync(
+    public Task<StartPaymentResult> StartPaymentAsync(
         int billId, string userId, string userName, string callbackUrl, CancellationToken ct = default)
+        => StartPaymentCoreAsync(billId, userId, userName, callbackUrl, allowAdministrator: false, ct);
+
+    /// <summary>
+    /// Creates a payment attempt from an administrator-authorized workflow, without requiring
+    /// the administrator to own the bill's house.
+    /// </summary>
+    public Task<StartPaymentResult> StartPaymentAsAdministratorAsync(
+        int billId, string userId, string userName, string callbackUrl, CancellationToken ct = default)
+        => StartPaymentCoreAsync(billId, userId, userName, callbackUrl, allowAdministrator: true, ct);
+
+    private async Task<StartPaymentResult> StartPaymentCoreAsync(
+        int billId, string userId, string userName, string callbackUrl, bool allowAdministrator, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(userId))
             return StartPaymentResult.Fail("کاربر شناسایی نشد.");
@@ -88,8 +100,10 @@ public sealed class PaymentService
         if (bill is null)
             return StartPaymentResult.Fail("قبض یافت نشد.");
 
-        // Ownership: only the resident linked to the house may pay its bills.
-        if (bill.House is null || string.IsNullOrEmpty(bill.House.ApplicationUserId) || bill.House.ApplicationUserId != userId)
+        // Residents may pay only bills for their own house. Administrator callers are allowed
+        // through the separately named administrator workflow.
+        if (bill.House is null || (!allowAdministrator &&
+            (string.IsNullOrEmpty(bill.House.ApplicationUserId) || bill.House.ApplicationUserId != userId)))
         {
             await SafeAuditAsync(userId, userName, nameof(PaymentAttempt), "-", "PaymentStartDenied", null, $"BillId={billId}");
             return StartPaymentResult.Fail("شما مجاز به پرداخت این قبض نیستید.");

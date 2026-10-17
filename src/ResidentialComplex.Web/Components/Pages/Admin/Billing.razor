@@ -59,6 +59,10 @@
                     {
                         <text><MudIconButton Icon="@Icons.Material.Filled.Sms" Color="Color.Primary" Size="Size.Small" OnClick="@(() => ResendSms(context.Item.Id))" /></text>
                         <text><MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" OnClick="@(() => PayAsync(context.Item.Id))" /></text>
+                        @if (CanPayOnline)
+                        {
+                            <text><MudIconButton Icon="@Icons.Material.Filled.Payment" Color="Color.Success" Size="Size.Small" Disabled="@(payingBillId.HasValue)" title="پرداخت آنلاین" OnClick="@(() => PayOnlineAsync(context.Item))" /></text>
+                        }
                     }
                 </CellTemplate>
             </TemplateColumn>

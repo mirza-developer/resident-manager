@@ -2,13 +2,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using MudBlazor;
 using ResidentialComplex.Application.Helpers;
 using ResidentialComplex.Application.Interfaces;
 using ResidentialComplex.Application.Services;
 using ResidentialComplex.Domain.Entities;
 using ResidentialComplex.Domain.Enums;
+using ResidentialComplex.Infrastructure.Settings;
 using ResidentialComplex.Persistence;
+using ResidentialComplex.Web.Security;
 
 namespace ResidentialComplex.Web.Components.Pages.Admin;
 
@@ -16,12 +19,15 @@ namespace ResidentialComplex.Web.Components.Pages.Admin;
 public partial class Billing 
 {
     [Inject] private BillingService BillingService { get; set; } = default!;
+    [Inject] private PaymentService PaymentService { get; set; } = default!;
     [Inject] private IFinancialItemRepository FinancialItemRepo { get; set; } = default!;
     [Inject] private IBillRepository BillRepo { get; set; } = default!;
     [Inject] private IHouseRepository HouseRepo { get; set; } = default!;
     [Inject] private IMonthlyUsageRepository UsageRepo { get; set; } = default!;
     [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
     [Inject] private AuthenticationStateProvider AuthState { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IOptions<ZibalOptions> ZibalConfig { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
@@ -32,6 +38,8 @@ public partial class Billing
     private List<Bill> bills = new();
     private Dictionary<(int HouseId, int FinancialItemId), int> usageByHouseItem = new();
     private bool isLoading;
+    private int? payingBillId;
+    private bool CanPayOnline => PaymentService.IsGatewayConfigured;
 
     protected override async Task OnInitializedAsync()
     {
@@ -255,7 +263,7 @@ public partial class Billing
     {
         var confirmed = await DialogService.ShowMessageBox(
             "ثبت پرداخت",
-            "آیا از ثبت پرداخت این قبض مطمئن هستید؟",
+            "آیا از ثبت نقدی پرداخت این قبض مطمئن هستید؟",
             yesText: "پرداخت",
             cancelText: "انصراف");
         if (confirmed != true)
@@ -326,6 +334,45 @@ public partial class Billing
         };
         var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseButton = true };
         await DialogService.ShowAsync<BillingGenerateDialog>(string.Empty, parameters, options);
+    }
+
+    private async Task PayOnlineAsync(Bill bill)
+    {
+        if (payingBillId.HasValue)
+        {
+            return;
+        }
+
+        payingBillId = bill.Id;
+        try
+        {
+            var (userId, userName) = await GetCurrentUserAsync();
+            var callbackUrl = PaymentCallbackUrl.Build(ZibalConfig.Value.CallbackBaseUrl, Navigation.BaseUri);
+            var result = await PaymentService.StartPaymentAsAdministratorAsync(bill.Id, userId, userName, callbackUrl);
+
+            if (result.Success && !string.IsNullOrEmpty(result.RedirectUrl))
+            {
+                Navigation.NavigateTo(result.RedirectUrl, forceLoad: true);
+                return;
+            }
+
+            if (result.AlreadyPaid && result.AttemptPublicId is { } attemptId)
+            {
+                Navigation.NavigateTo($"/payments/result/{attemptId}");
+                return;
+            }
+
+            Snackbar.Add(result.ErrorMessage ?? "امکان شروع پرداخت وجود ندارد.", result.AlreadyPaid ? Severity.Info : Severity.Warning);
+            await LoadBillsCoreAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطا در شروع پرداخت: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            payingBillId = null;
+        }
     }
 
     private async Task<(string userId, string userName)> GetCurrentUserAsync()

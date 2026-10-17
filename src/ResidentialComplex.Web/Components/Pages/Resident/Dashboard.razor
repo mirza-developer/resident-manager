@@ -50,6 +50,7 @@ else
                     </TemplateColumn>
                     <TemplateColumn Title="پرداخت" Sortable="false" Filterable="false">
                         <CellTemplate>
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowBillDetails(context.Item.Id))" />
                             @if (context.Item.Status == BillStatus.Approved && CanPayOnline)
                             {
                                 <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"

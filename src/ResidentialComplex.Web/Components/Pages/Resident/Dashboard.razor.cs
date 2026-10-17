@@ -11,6 +11,7 @@ using ResidentialComplex.Domain.Entities;
 using ResidentialComplex.Domain.Enums;
 using ResidentialComplex.Infrastructure.Settings;
 using ResidentialComplex.Persistence;
+using ResidentialComplex.Web.Components.Pages.Admin;
 using ResidentialComplex.Web.Security;
 
 namespace ResidentialComplex.Web.Components.Pages.Resident;
@@ -20,12 +21,14 @@ public partial class Dashboard : ComponentBase
 {
     [Inject] private IHouseRepository HouseRepo { get; set; } = default!;
     [Inject] private IBillRepository BillRepo { get; set; } = default!;
+    [Inject] private IMonthlyUsageRepository UsageRepo { get; set; } = default!;
     [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
     [Inject] private AuthenticationStateProvider AuthState { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private PaymentService PaymentService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private IOptions<ZibalOptions> ZibalConfig { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
 
     private House? house;
     private List<Bill> bills = new();
@@ -65,6 +68,30 @@ public partial class Dashboard : ComponentBase
             isLoading = false;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task ShowBillDetails(int billId)
+    {
+        var bill = bills.FirstOrDefault(b => b.Id == billId);
+        if (bill is null)
+        {
+            return;
+        }
+
+        var usages = await UsageRepo.GetByMonthYearAsync(bill.Year, bill.Month);
+        var usageByHouseItem = usages
+            .Where(usage => usage.HouseId == bill.HouseId)
+            .GroupBy(usage => (usage.HouseId, usage.FinancialItemId))
+            .ToDictionary(group => group.Key, group => group.First().UsageCount);
+
+        var parameters = new DialogParameters
+        {
+            [nameof(BillingGenerateDialog.Mode)] = BillingGenerateDialog.BillingDialogMode.Details,
+            [nameof(BillingGenerateDialog.Bill)] = bill,
+            [nameof(BillingGenerateDialog.UsageByHouseItem)] = usageByHouseItem
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseButton = true };
+        await DialogService.ShowAsync<BillingGenerateDialog>(string.Empty, parameters, options);
     }
 
     /// <summary>

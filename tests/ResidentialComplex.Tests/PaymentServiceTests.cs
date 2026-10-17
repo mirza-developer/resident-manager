@@ -319,6 +319,18 @@ public class PaymentServiceTests
     }
 
     [Fact]
+    public async Task AdministratorCanStartPayment_AndIsRecordedAsInitiator()
+    {
+        var e = new PaymentEnv();
+
+        var result = await e.Service.StartPaymentAsAdministratorAsync(10, "admin1", "admin1", PaymentEnv.CallbackUrl);
+
+        Assert.True(result.Success);
+        Assert.Equal("admin1", e.AttemptOf(result).InitiatedByUserId);
+        Assert.Equal(500_000, e.Gateway.LastRequest!.AmountRial);
+    }
+
+    [Fact]
     public async Task HouseWithoutLinkedUser_CannotBePaidByAnyone()
     {
         var e = new PaymentEnv();
