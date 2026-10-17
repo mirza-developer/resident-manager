@@ -1,0 +1,76 @@
+@page "/Account/Profile"
+@attribute [Authorize(Roles = "Administrator,Worker,Resident")]
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+    <MudText Typo="Typo.h4">حساب کاربری من</MudText>
+    <HelpButton PageKey="accountProfile" />
+</MudStack>
+
+@if (isLoading)
+{
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
+}
+
+@if (!isLoading && !profileFound)
+{
+    <div><MudAlert Severity="Severity.Error">حساب کاربری شما یافت نشد. لطفاً دوباره وارد شوید.</MudAlert></div>
+}
+else
+{
+    <div>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">اطلاعات حساب</MudText>
+                    <MudStack Spacing="3">
+                        <MudTextField T="string" Value="@userName" Label="نام کاربری" Variant="Variant.Outlined" Disabled="true"
+                                      HelperText="نام کاربری قابل تغییر نیست." />
+                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.body2">نقش:</MudText>
+                            @foreach (var role in roles)
+                            {
+                                <span @key="role" style="display:contents">
+                                    <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small">@GetRoleLabel(role)</MudChip>
+                                </span>
+                            }
+                        </MudStack>
+                        <MudTextField T="string" @bind-Value="fullName" Label="نام کامل *" Variant="Variant.Outlined" Immediate="true"
+                                      OnKeyDown="@(e => OnEnterAsync(e, SaveProfileAsync))" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
+                                   Disabled="@isSavingProfile" OnClick="SaveProfileAsync">
+                            ذخیره اطلاعات
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">تغییر رمز عبور</MudText>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Info" Dense="true">@PasswordHint</MudAlert>
+                        @if (!string.IsNullOrEmpty(passwordError))
+                        {
+                            <MudAlert Severity="Severity.Error" Dense="true">@passwordError</MudAlert>
+                        }
+                        @if (passwordChanged)
+                        {
+                            <MudAlert Severity="Severity.Success" Dense="true">رمز عبور شما تغییر کرد. برای امنیت، از حساب خارج می‌شوید؛ لطفاً با رمز جدید دوباره وارد شوید.</MudAlert>
+                        }
+                        <MudTextField T="string" @bind-Value="currentPassword" Label="رمز عبور فعلی" Variant="Variant.Outlined"
+                                      InputType="InputType.Password" Immediate="true" />
+                        <MudTextField T="string" @bind-Value="newPassword" Label="رمز عبور جدید" Variant="Variant.Outlined"
+                                      InputType="InputType.Password" Immediate="true" />
+                        <MudTextField T="string" @bind-Value="confirmPassword" Label="تکرار رمز عبور جدید" Variant="Variant.Outlined"
+                                      InputType="InputType.Password" Immediate="true"
+                                      OnKeyDown="@(e => OnEnterAsync(e, ChangePasswordAsync))" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Lock"
+                                   Disabled="@(isChangingPassword || passwordChanged)" OnClick="ChangePasswordAsync">
+                            تغییر رمز عبور
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </div>
+}

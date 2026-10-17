@@ -34,7 +34,8 @@ public class FakeSmsService : ISmsService
 
 /// <summary>Minimal in-memory ASP.NET Identity store so a REAL UserManager (hashing, password policy, tokens) runs without a database.</summary>
 public class InMemoryUserStore :
-    IUserStore<ApplicationUser>, IUserPasswordStore<ApplicationUser>, IUserRoleStore<ApplicationUser>, IUserSecurityStampStore<ApplicationUser>
+    IUserStore<ApplicationUser>, IUserPasswordStore<ApplicationUser>, IUserRoleStore<ApplicationUser>, IUserSecurityStampStore<ApplicationUser>,
+    IUserLockoutStore<ApplicationUser>
 {
     private readonly Dictionary<string, HashSet<string>> _roles = new();
 
@@ -61,6 +62,15 @@ public class InMemoryUserStore :
 
     public Task SetSecurityStampAsync(ApplicationUser user, string stamp, CancellationToken ct) { user.SecurityStamp = stamp; return Task.CompletedTask; }
     public Task<string?> GetSecurityStampAsync(ApplicationUser user, CancellationToken ct) => Task.FromResult(user.SecurityStamp);
+
+    // lockout (used by the account-settings tests: wrong current password attempts are counted)
+    public Task<DateTimeOffset?> GetLockoutEndDateAsync(ApplicationUser user, CancellationToken ct) => Task.FromResult(user.LockoutEnd);
+    public Task SetLockoutEndDateAsync(ApplicationUser user, DateTimeOffset? lockoutEnd, CancellationToken ct) { user.LockoutEnd = lockoutEnd; return Task.CompletedTask; }
+    public Task<int> IncrementAccessFailedCountAsync(ApplicationUser user, CancellationToken ct) => Task.FromResult(++user.AccessFailedCount);
+    public Task ResetAccessFailedCountAsync(ApplicationUser user, CancellationToken ct) { user.AccessFailedCount = 0; return Task.CompletedTask; }
+    public Task<int> GetAccessFailedCountAsync(ApplicationUser user, CancellationToken ct) => Task.FromResult(user.AccessFailedCount);
+    public Task<bool> GetLockoutEnabledAsync(ApplicationUser user, CancellationToken ct) => Task.FromResult(user.LockoutEnabled);
+    public Task SetLockoutEnabledAsync(ApplicationUser user, bool enabled, CancellationToken ct) { user.LockoutEnabled = enabled; return Task.CompletedTask; }
 
     // role names arrive normalized (upper case) from UserManager
     public Task AddToRoleAsync(ApplicationUser user, string roleName, CancellationToken ct)

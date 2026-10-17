@@ -56,6 +56,9 @@ public class TestBase : IDisposable
             sp.GetRequiredService<UserManager<ApplicationUser>>(),
             sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
             sp.GetRequiredService<IAuditService>()));
+        services.AddScoped(sp => new AccountSettingsService(
+            sp.GetRequiredService<UserManager<ApplicationUser>>(),
+            sp.GetRequiredService<IAuditService>()));
 
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {

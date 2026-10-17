@@ -351,7 +351,7 @@ public sealed class ResidentRegistrationService
     private static RegistrationResult Fail(RegistrationStatus status, string message) => new(status, message);
 
     /// <summary>Persian wording for the Identity password-policy errors (falls back to Identity's own text).</summary>
-    private static string DescribePasswordErrors(IdentityResult result) =>
+    public static string DescribePasswordErrors(IdentityResult result) =>
         string.Join("، ", result.Errors.Select(e => e.Code switch
         {
             nameof(IdentityErrorDescriber.PasswordTooShort) => "رمز عبور کوتاه است",

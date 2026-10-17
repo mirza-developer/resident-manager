@@ -14,7 +14,7 @@
             <MudSpacer />
             <AuthorizeView>
                 <Authorized>
-                    <MudText Class="ms-2">@context.User.Identity?.Name</MudText>
+                    <MudButton Variant="Variant.Text" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.AccountCircle" Href="/Account/Profile" Class="ms-2">@context.User.Identity?.Name</MudButton>
                     <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Href="/Account/Logout" />
                 </Authorized>
             </AuthorizeView>
@@ -38,6 +38,10 @@
                 <AuthorizeView Roles="Resident">
                     <MudNavLink Href="/resident/dashboard" Icon="@Icons.Material.Filled.Dashboard">پنل ساکن</MudNavLink>
                     <MudNavLink Href="/resident/payments" Icon="@Icons.Material.Filled.History">پرداخت‌های آنلاین من</MudNavLink>
+                </AuthorizeView>
+                <AuthorizeView Roles="Administrator,Worker,Resident">
+                    <MudDivider Class="my-2" />
+                    <MudNavLink Href="/Account/Profile" Icon="@Icons.Material.Filled.AccountCircle">حساب کاربری من</MudNavLink>
                 </AuthorizeView>
             </MudNavMenu>
         </MudDrawer>

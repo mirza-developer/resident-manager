@@ -29,19 +29,7 @@ public partial class Register : ComponentBase
     private string? successMessage;
     private bool isBusy;
 
-    private string PasswordHint
-    {
-        get
-        {
-            var rules = IdentityConfig.Value.Password;
-            var parts = new List<string> { $"حداقل {rules.RequiredLength} کاراکتر" };
-            if (rules.RequireDigit) parts.Add("حداقل یک عدد");
-            if (rules.RequireLowercase) parts.Add("حداقل یک حرف کوچک انگلیسی");
-            if (rules.RequireUppercase) parts.Add("حداقل یک حرف بزرگ انگلیسی");
-            if (rules.RequireNonAlphanumeric) parts.Add("حداقل یک نماد (مثل @ یا #)");
-            return $"یک رمز عبور مناسب انتخاب کنید: {string.Join("، ", parts)}.";
-        }
-    }
+    private string PasswordHint => PasswordPolicyHint.Describe(IdentityConfig.Value.Password);
 
     private async Task OnEnterAsync(KeyboardEventArgs e, Func<Task> action)
     {
