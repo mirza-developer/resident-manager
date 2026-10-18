@@ -21,6 +21,11 @@ public partial class Usage : ComponentBase
     private List<UsageItemViewModel> usageItems = new();
     private bool loaded;
     private bool isLoading;
+    private string? searchText;
+
+    // The grid scrolls inside this height (header stays visible), so the page itself never grows with the number of houses.
+    private const string GridHeight = "max(320px, calc(100vh - 460px))";
+    private static readonly int[] pageSizeOptions = { 10, 25, 50, 100 };
 
     protected override async Task OnInitializedAsync()
     {
@@ -40,9 +45,12 @@ public partial class Usage : ComponentBase
             foreach (var item in groupingItems)
             {
                 var rows = new List<UsageRow>();
+                var existingByHouse = (await UsageRepo.GetByFinancialItemMonthYearAsync(item.Id, year, month))
+                    .GroupBy(usage => usage.HouseId)
+                    .ToDictionary(group => group.Key, group => group.First());
                 foreach (var house in houses)
                 {
-                    rows.Add(await BuildRowAsync(house.Id, house.Title, item.Id));
+                    rows.Add(await BuildRowAsync(house.Id, house.Title, item.Id, existingByHouse.GetValueOrDefault(house.Id)));
                 }
 
                 usageItems.Add(new UsageItemViewModel
@@ -74,9 +82,8 @@ public partial class Usage : ComponentBase
     /// PreviousReading and locked; only if no prior record exists at all is PreviousReading
     /// left editable, for the very first reading ever taken.
     /// </summary>
-    private async Task<UsageRow> BuildRowAsync(int houseId, string houseTitle, int financialItemId)
+    private async Task<UsageRow> BuildRowAsync(int houseId, string houseTitle, int financialItemId, MonthlyUsage? existing)
     {
-        var existing = await UsageRepo.GetByHouseItemMonthYearAsync(houseId, financialItemId, year, month);
         if (existing is not null)
         {
             return new UsageRow
@@ -233,6 +240,18 @@ public partial class Usage : ComponentBase
         }
 
         row.IsPreviousReadingLocked = true;
+    }
+
+    private bool MatchesSearch(UsageRow row) =>
+        string.IsNullOrWhiteSpace(searchText) || row.HouseTitle.Contains(searchText.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private static int GetSavedCount(UsageItemViewModel item) => item.Rows.Count(row => row.ExistingUsageId.HasValue);
+
+    /// <summary>Number shown on a tab: how many houses still have no saved reading (nothing when all are saved).</summary>
+    private static object? GetPendingBadge(UsageItemViewModel item)
+    {
+        var pending = item.Rows.Count(row => !row.ExistingUsageId.HasValue);
+        return pending > 0 ? pending : null;
     }
 
     private static string GetMonthName(int currentMonth) => PersianCalendarHelper.GetMonthName(currentMonth);
