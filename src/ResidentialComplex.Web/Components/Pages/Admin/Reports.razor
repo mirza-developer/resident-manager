@@ -2,22 +2,26 @@
 @attribute [Authorize(Roles = "Administrator")]
 @using ResidentialComplex.Application.DTOs
 
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-        <MudText Typo="Typo.h4">گزارشات مالی</MudText>
-        <HelpButton PageKey="reports" />
-    </MudStack>
-    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="LoadReportAsync">
-        نمایش گزارش
-    </MudButton>
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+    <MudText Typo="Typo.h4">گزارشات مالی</MudText>
+    <HelpButton PageKey="reports" />
 </MudStack>
-<MudPaper Class="pa-4 mb-4">
-    <MudGrid>
-        <MudItem xs="12" md="3">
-            <MudNumericField T="int" @bind-Value="filterYear" Label="سال" Variant="Variant.Outlined" Min="0" />
+
+@* fixed-height slot so the page does not jump when the loading bar appears *@
+<div style="height: 4px" class="mb-2">
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+</div>
+
+<MudPaper Class="pa-3 mb-3">
+    <MudGrid Spacing="2" Class="align-center">
+        <MudItem xs="6" md="2">
+            <MudNumericField T="int" @bind-Value="filterYear" Label="سال" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" HideSpinButtons="true" />
         </MudItem>
-        <MudItem xs="12" md="3">
-            <MudSelect T="int" @bind-Value="filterMonth" Label="ماه (اختیاری)" Variant="Variant.Outlined">
+        <MudItem xs="6" md="3">
+            <MudSelect T="int" @bind-Value="filterMonth" Label="ماه (اختیاری)" Variant="Variant.Outlined" Margin="Margin.Dense">
                 @for (var currentMonth = 0; currentMonth <= 12; currentMonth++)
                 {
                     var m = currentMonth;
@@ -25,8 +29,8 @@
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="12" md="3">
-            <MudSelect T="int" @bind-Value="filterHouseId" Label="واحد (اختیاری)" Variant="Variant.Outlined">
+        <MudItem xs="12" md="4">
+            <MudSelect T="int" @bind-Value="filterHouseId" Label="واحد (اختیاری)" Variant="Variant.Outlined" Margin="Margin.Dense">
                 @{
                     var allHouses = new List<(int Id, string Title)> { (0, "همه") }
                         .Concat(houses.Select(h => (h.Id, h.Title))).ToList();
@@ -39,83 +43,160 @@
             </MudSelect>
         </MudItem>
         <MudItem xs="12" md="3" Class="d-flex align-center">
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadFiltersAsync">
-                بروزرسانی فهرست
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="LoadReportAsync" Class="me-2">
+                نمایش گزارش
             </MudButton>
+            <MudTooltip Text="بروزرسانی فهرست واحدها">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Secondary" OnClick="LoadFiltersAsync" />
+            </MudTooltip>
         </MudItem>
     </MudGrid>
 </MudPaper>
 
+@if (report is null && !isLoading)
+{
+    <div><MudAlert Severity="Severity.Info">گزارشی برای نمایش وجود ندارد. فیلترها را تنظیم و «نمایش گزارش» را بزنید.</MudAlert></div>
+}
+
 @if (report is not null)
 {
     <div>
-        <MudGrid Class="mb-4">
-            <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4 mud-theme-primary"><MudText Typo="Typo.subtitle2">کل صورتحساب</MudText><MudText Typo="Typo.h5">@report.TotalBilled.ToString("N0")</MudText></MudPaper></MudItem>
-            <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">کل پرداخت</MudText><MudText Typo="Typo.h5" Color="Color.Success">@report.TotalPaid.ToString("N0")</MudText></MudPaper></MudItem>
-            <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">بدهی معوق</MudText><MudText Typo="Typo.h5" Color="Color.Error">@report.OutstandingDebt.ToString("N0")</MudText></MudPaper></MudItem>
-            <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">نرخ وصول</MudText><MudText Typo="Typo.h5">@report.CollectionRate.ToString("N1")%</MudText></MudPaper></MudItem>
-        </MudGrid>
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3">
 
-        <MudPaper Class="pa-4 mb-4">
-            <MudText Typo="Typo.h6" Class="mb-2">بدهی هر آپارتمان</MudText>
-            <MudDataGrid T="ApartmentDebtDto" Items="@report.DebtPerApartment" RowsPerPage="10" Hover="true" Dense="true">
-                <Columns>
-                    <PropertyColumn Property="x => x.ApartmentTitle" Title="آپارتمان" />
-                    <TemplateColumn Title="بدهی کل">
-                        <CellTemplate>@context.Item.TotalDebt.ToString("N0")</CellTemplate>
-                    </TemplateColumn>
-                </Columns>
-                <PagerContent>
-                    <MudDataGridPager T="ApartmentDebtDto" />
-                </PagerContent>
-            </MudDataGrid>
-        </MudPaper>
+            @* ============ first view: KPIs + charts ============ *@
+            <MudTabPanel Text="نمای کلی" Icon="@Icons.Material.Filled.Dashboard">
+                <MudGrid Class="mb-2">
+                    <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4 mud-theme-primary"><MudText Typo="Typo.subtitle2">کل صورتحساب (ریال)</MudText><MudText Typo="Typo.h5">@report.TotalBilled.ToString("N0")</MudText></MudPaper></MudItem>
+                    <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">کل پرداخت (ریال)</MudText><MudText Typo="Typo.h5" Color="Color.Success">@report.TotalPaid.ToString("N0")</MudText></MudPaper></MudItem>
+                    <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">بدهی معوق (ریال)</MudText><MudText Typo="Typo.h5" Color="Color.Error">@report.OutstandingDebt.ToString("N0")</MudText></MudPaper></MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Class="pa-4">
+                            <MudText Typo="Typo.subtitle2">نرخ وصول</MudText>
+                            <MudText Typo="Typo.h5">@report.CollectionRate.ToString("N1")%</MudText>
+                            <MudProgressLinear Color="Color.Success" Value="@((double)Math.Min(100m, Math.Max(0m, report.CollectionRate)))" Class="mt-2" />
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
 
-        <MudPaper Class="pa-4 mb-4">
-            <MudText Typo="Typo.h6" Class="mb-2">بدهی هر واحد</MudText>
-            <MudDataGrid T="HouseDebtDto" Items="@report.DebtPerHouse" RowsPerPage="10" Hover="true" Dense="true">
-                <Columns>
-                    <PropertyColumn Property="x => x.HouseTitle" Title="واحد" />
-                    <TemplateColumn Title="بدهی">
-                        <CellTemplate>
-                            <MudText Color="@(context.Item.CurrentDebt > 0 ? Color.Error : context.Item.CurrentDebt < 0 ? Color.Success : Color.Default)">
-                                @context.Item.CurrentDebt.ToString("N0")
-                            </MudText>
-                        </CellTemplate>
-                    </TemplateColumn>
-                </Columns>
-                <PagerContent>
-                    <MudDataGridPager T="HouseDebtDto" />
-                </PagerContent>
-            </MudDataGrid>
-        </MudPaper>
+                <MudGrid>
+                    <MudItem xs="12" md="8">
+                        <MudPaper Class="pa-3" Outlined="true">
+                            <MudText Typo="Typo.subtitle1">صورتحساب و پرداخت ماهانه</MudText>
+                            <MudText Typo="Typo.caption" Class="mb-2">مبالغ به @charts.Unit.Label (حداکثر ۱۲ ماه اخیر)</MudText>
+                            @if (charts.HasMonthly)
+                            {
+                                <MudChart ChartType="ChartType.Bar" ChartSeries="@monthlySeries" XAxisLabels="@charts.MonthLabels"
+                                          Width="100%" Height="300px" LegendPosition="Position.Bottom" />
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Class="pa-4">برای فیلتر انتخابی صورتحسابی ثبت نشده است.</MudText>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudPaper Class="pa-3" Outlined="true">
+                            <MudText Typo="Typo.subtitle1">وضعیت وصول مطالبات</MudText>
+                            <MudText Typo="Typo.caption" Class="mb-2">سهم پرداخت‌شده و پرداخت‌نشده از کل صورتحساب (@charts.Unit.Label)</MudText>
+                            @if (charts.HasStatus)
+                            {
+                                <MudChart ChartType="ChartType.Donut" InputData="@charts.StatusValues" InputLabels="@charts.StatusLabels"
+                                          Width="100%" Height="260px" LegendPosition="Position.Bottom" />
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Class="pa-4">هنوز صورتحساب تاییدشده‌ای وجود ندارد.</MudText>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-3" Outlined="true">
+                            <MudText Typo="Typo.subtitle1">بیشترین بدهی آپارتمان‌ها</MudText>
+                            <MudText Typo="Typo.caption" Class="mb-2">۱۰ آپارتمان برتر — @charts.Unit.Label</MudText>
+                            @if (charts.HasApartmentDebts)
+                            {
+                                <MudChart ChartType="ChartType.Bar" ChartSeries="@apartmentSeries" XAxisLabels="@charts.TopApartmentLabels"
+                                          Width="100%" Height="280px" />
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Class="pa-4">هیچ آپارتمانی بدهی ندارد.</MudText>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-3" Outlined="true">
+                            <MudText Typo="Typo.subtitle1">بدهکارترین واحدها</MudText>
+                            <MudText Typo="Typo.caption" Class="mb-2">۱۰ واحد برتر — @charts.Unit.Label</MudText>
+                            @if (charts.HasHouseDebts)
+                            {
+                                <MudChart ChartType="ChartType.Bar" ChartSeries="@houseSeries" XAxisLabels="@charts.TopHouseLabels"
+                                          Width="100%" Height="280px" />
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Class="pa-4">هیچ واحدی بدهی ندارد.</MudText>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
 
-        <MudPaper Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-2">جزئیات ماهانه</MudText>
-            <MudDataGrid T="MonthlyBreakdownDto" Items="@report.MonthlyBreakdown" RowsPerPage="10" Hover="true" Dense="true">
-                <Columns>
-                    <PropertyColumn Property="x => x.Year" Title="سال" />
-                    <TemplateColumn Title="ماه">
-                        <CellTemplate>@GetMonthName(context.Item.Month)</CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="صورتحساب">
-                        <CellTemplate>@context.Item.Billed.ToString("N0")</CellTemplate>
-                    </TemplateColumn>
-                    <TemplateColumn Title="پرداخت شده">
-                        <CellTemplate>@context.Item.Paid.ToString("N0")</CellTemplate>
-                    </TemplateColumn>
-                </Columns>
-                <PagerContent>
-                    <MudDataGridPager T="MonthlyBreakdownDto" />
-                </PagerContent>
-            </MudDataGrid>
-        </MudPaper>
+            @* ============ detail tabs: fixed-height grids (rows scroll inside, page never grows) ============ *@
+            <MudTabPanel Text="بدهی آپارتمان‌ها" Icon="@Icons.Material.Filled.Apartment">
+                <MudDataGrid T="ApartmentDebtDto" Items="@report.DebtPerApartment" Height="@GridHeight" FixedHeader="true"
+                             RowsPerPage="25" Hover="true" Dense="true">
+                    <Columns>
+                        <PropertyColumn Property="x => x.ApartmentTitle" Title="آپارتمان" />
+                        <TemplateColumn Title="بدهی کل (ریال)">
+                            <CellTemplate>@context.Item.TotalDebt.ToString("N0")</CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <PagerContent>
+                        <MudDataGridPager T="ApartmentDebtDto" PageSizeOptions="@pageSizeOptions" />
+                    </PagerContent>
+                </MudDataGrid>
+            </MudTabPanel>
+
+            <MudTabPanel Text="بدهی واحدها" Icon="@Icons.Material.Filled.Home">
+                <MudDataGrid T="HouseDebtDto" Items="@report.DebtPerHouse" Height="@GridHeight" FixedHeader="true"
+                             RowsPerPage="25" Hover="true" Dense="true">
+                    <Columns>
+                        <PropertyColumn Property="x => x.HouseTitle" Title="واحد" />
+                        <TemplateColumn Title="بدهی (ریال)">
+                            <CellTemplate>
+                                <MudText Color="@(context.Item.CurrentDebt > 0 ? Color.Error : context.Item.CurrentDebt < 0 ? Color.Success : Color.Default)">
+                                    @context.Item.CurrentDebt.ToString("N0")
+                                </MudText>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <PagerContent>
+                        <MudDataGridPager T="HouseDebtDto" PageSizeOptions="@pageSizeOptions" />
+                    </PagerContent>
+                </MudDataGrid>
+            </MudTabPanel>
+
+            <MudTabPanel Text="جزئیات ماهانه" Icon="@Icons.Material.Filled.CalendarMonth">
+                <MudDataGrid T="MonthlyBreakdownDto" Items="@report.MonthlyBreakdown" Height="@GridHeight" FixedHeader="true"
+                             RowsPerPage="25" Hover="true" Dense="true">
+                    <Columns>
+                        <PropertyColumn Property="x => x.Year" Title="سال" />
+                        <TemplateColumn Title="ماه">
+                            <CellTemplate>@GetMonthName(context.Item.Month)</CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="صورتحساب (ریال)">
+                            <CellTemplate>@context.Item.Billed.ToString("N0")</CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="پرداخت شده (ریال)">
+                            <CellTemplate>@context.Item.Paid.ToString("N0")</CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <PagerContent>
+                        <MudDataGridPager T="MonthlyBreakdownDto" PageSizeOptions="@pageSizeOptions" />
+                    </PagerContent>
+                </MudDataGrid>
+            </MudTabPanel>
+        </MudTabs>
     </div>
 }
-<MudOverlay Visible="isLoading"
-            DarkBackground="true">
-    درحال بارگذاری
-    <MudProgressCircular Color="Color.Primary"
-                         Size="Size.Large"
-                         Indeterminate="true" />
-</MudOverlay>
