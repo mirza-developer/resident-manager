@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ResidentialComplex.Application.Interfaces;
 using ResidentialComplex.Domain.Entities;
@@ -44,7 +45,69 @@ public class ApartmentRepository : IApartmentRepository
 public class HouseRepository : IHouseRepository
 {
     private readonly ApplicationDbContext _db;
-    public HouseRepository(ApplicationDbContext db) => _db = db;
+    private readonly UserManager<ApplicationUser> _userManager;
+    public HouseRepository(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+    {
+        _db = db;
+        _userManager = userManager;
+    }
+
+    public async Task<ResidentAccountsResult> CreateResidentAccountsAsync(string defaultPassword, string role)
+    {
+        var houses = await _db.Houses.Where(h => h.ApplicationUserId == null).ToListAsync();
+        if (houses.Count == 0)
+            return new ResidentAccountsResult(0, 0, 0);
+
+        var linkedUserIds = (await _db.Houses.Where(h => h.ApplicationUserId != null)
+            .Select(h => h.ApplicationUserId!).ToListAsync()).ToHashSet();
+        int created = 0, linked = 0, skipped = 0;
+
+        foreach (var house in houses)
+        {
+            var userName = NormalizePhone(house.ResidentPhoneNumber);
+            if (userName.Length == 0)
+            {
+                skipped++;
+                continue;
+            }
+
+            var user = await _userManager.FindByNameAsync(userName);
+            if (user == null)
+            {
+                user = new ApplicationUser { UserName = userName, PhoneNumber = userName, FullName = house.ResidentName };
+                var result = await _userManager.CreateAsync(user, defaultPassword);
+                if (!result.Succeeded)
+                {
+                    skipped++;
+                    continue;
+                }
+                await _userManager.AddToRoleAsync(user, role);
+                created++;
+            }
+
+            // A user maps to a single house (GetByUserIdAsync), so a shared phone is linked once.
+            if (linkedUserIds.Add(user.Id))
+            {
+                house.ApplicationUserId = user.Id;
+                linked++;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        return new ResidentAccountsResult(created, linked, skipped);
+    }
+
+    private static string NormalizePhone(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone)) return string.Empty;
+        var chars = phone.Trim().Select(c => c switch
+        {
+            >= '\u06F0' and <= '\u06F9' => (char)('0' + (c - '\u06F0')),
+            >= '\u0660' and <= '\u0669' => (char)('0' + (c - '\u0660')),
+            _ => c
+        }).Where(char.IsDigit);
+        return new string(chars.ToArray());
+    }
 
     public async Task<List<House>> GetAllAsync() => await _db.Houses.Include(h => h.Apartment).ToListAsync();
     public async Task<List<House>> GetByApartmentIdAsync(int apartmentId) => await _db.Houses.Where(h => h.ApartmentId == apartmentId).ToListAsync();

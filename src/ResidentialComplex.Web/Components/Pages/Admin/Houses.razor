@@ -7,9 +7,14 @@
         <MudText Typo="Typo.h4">مدیریت واحدها</MudText>
         <HelpButton PageKey="houses" />
     </MudStack>
-    <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="NavigateToCreate">
-        افزودن واحد جدید
-    </MudButton>
+    <MudStack Row="true" Spacing="2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ManageAccounts" OnClick="CreateResidentAccountsAsync" Disabled="isLoading">
+            ایجاد حساب کاربری ساکنین
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="NavigateToCreate">
+            افزودن واحد جدید
+        </MudButton>
+    </MudStack>
 </MudStack>
 
 @if (isLoading)
