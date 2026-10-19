@@ -16,6 +16,8 @@ public partial class Login
 #if DEBUG
     protected override async Task OnInitializedAsync()
     {
+        isCaptchaValid = true;
+
         loginModel = new()
         {
             UserName = "admin",
