@@ -89,6 +89,7 @@ public class HouseRepository : IHouseRepository
             if (linkedUserIds.Add(user.Id))
             {
                 house.ApplicationUserId = user.Id;
+                house.IsActive = true;
                 linked++;
             }
         }
