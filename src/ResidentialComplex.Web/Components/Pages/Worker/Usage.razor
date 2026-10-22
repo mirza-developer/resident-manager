@@ -57,7 +57,7 @@
             @foreach (var usageItem in usageItems)
             {
                 var item = usageItem;
-                <MudTabPanel @key="item.FinancialItemId" Text="@item.Title" BadgeData="@GetPendingBadge(item)" BadgeColor="Color.Warning">
+                <MudTabPanel @key="item.FinancialItemId" Text="@item.Title">
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-2">
                         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
                             <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Small">

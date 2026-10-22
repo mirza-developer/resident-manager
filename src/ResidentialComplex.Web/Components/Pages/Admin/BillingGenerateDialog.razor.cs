@@ -56,12 +56,22 @@ public partial class BillingGenerateDialog
     {
         CalculationType.EqualDivision => "تقسیم مساوی",
         CalculationType.Grouping => "تعرفه‌ای (بر اساس کل مصرف)",
+        CalculationType.WaterParent => "آیتم والد آب (قبض مرجع)",
+        CalculationType.SharedConsumption => "مصرف مشترک آب",
         _ => string.Empty
     };
+
+    private static bool IsWaterLine(FinancialItem item) =>
+        item.CalculationType == CalculationType.SharedConsumption ||
+        (item.CalculationType == CalculationType.Grouping && item.ParentId.HasValue);
 
     private string GetBillItemDetail(Bill bill, BillItem billItem)
     {
         var financialItem = billItem.FinancialItem;
+        if (financialItem != null && IsWaterLine(financialItem))
+        {
+            return string.IsNullOrWhiteSpace(billItem.Description) ? "-" : billItem.Description;
+        }
         if (financialItem?.CalculationType != CalculationType.Grouping || !financialItem.Tiers.Any())
         {
             return "-";

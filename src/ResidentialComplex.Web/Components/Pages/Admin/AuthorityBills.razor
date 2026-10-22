@@ -1,0 +1,227 @@
+@page "/admin/authority-bills"
+@attribute [Authorize(Roles = "Administrator")]
+@using System.Globalization
+@using ResidentialComplex.Application.Interfaces
+@using ResidentialComplex.Domain.Entities
+@using ResidentialComplex.Domain.Enums
+@using ResidentialComplex.Application.Helpers
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudText Typo="Typo.h4">قبض‌های مرجع (آب)</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="ShowAdd">
+        ثبت قبض مرجع جدید
+    </MudButton>
+</MudStack>
+
+@if (isLoading)
+{
+    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
+}
+
+@if (showForm)
+{
+    <div>
+        <MudPaper Class="pa-4 mb-4">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    @if (!authorityItems.Any())
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true">
+                            آیتم والد آب وجود ندارد. ابتدا از صفحه آیتم‌های مالی یک آیتم «آیتم والد آب (قبض مرجع)» بسازید و سپس آیتم‌های آب گرم و آب سرد را به‌عنوان فرزند آن تعریف کنید.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudSelect T="int" @bind-Value="editing.FinancialItemId" Label="آیتم مالی *" Variant="Variant.Outlined" Disabled="@(editing.Id != 0)">
+                            @foreach (var item in authorityItems)
+                            {
+                                <MudSelectItem T="int" Value="@item.Id">@item.Title</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudNumericField T="int" @bind-Value="editing.Year" Label="سال *" Variant="Variant.Outlined" Min="1" HideSpinButtons="true" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudSelect T="int" @bind-Value="editing.Month" Label="ماه *" Variant="Variant.Outlined">
+                        @foreach (var m in Enumerable.Range(1, 12))
+                        {
+                            <MudSelectItem T="int" Value="@m">
+                                @PersianCalendarHelper.GetMonthName(m)
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudNumericField T="int" @bind-Value="editing.PeriodDays" Label="تعداد روز دوره *" Min="1" Variant="Variant.Outlined" HideSpinButtons="true" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudNumericField T="decimal" @bind-Value="editing.TotalUse" Label="مصرف کل قبض *" Variant="Variant.Outlined" Culture="@CultureInfo.InvariantCulture" HideSpinButtons="true" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudNumericField T="decimal" @bind-Value="editing.TotalPrice" Label="مبلغ کل قبض (ریال) *" Variant="Variant.Outlined" Format="N0" Culture="@CultureInfo.InvariantCulture" HideSpinButtons="true" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudNumericField T="decimal" @bind-Value="editing.Tax" Label="مالیات قبض (صرفاً ثبت)" Variant="Variant.Outlined" Format="N0" Culture="@CultureInfo.InvariantCulture" HideSpinButtons="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="editing.Notes" Label="توضیحات" Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+            <MudStack Row="true" Spacing="2" Class="mt-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAsync">ذخیره</MudButton>
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="CancelEdit">انصراف</MudButton>
+            </MudStack>
+        </MudPaper>
+    </div>
+}
+
+<MudPaper Class="pa-4">
+    <MudDataGrid T="AuthorityBill" Items="@bills" RowsPerPage="10" Hover="true" Dense="true">
+        <Columns>
+            <PropertyColumn Property="x => x.FinancialItem.Title" Title="آیتم مالی" />
+            <TemplateColumn Title="دوره">
+                <CellTemplate>@context.Item.Year/@context.Item.Month.ToString("00")</CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.PeriodDays" Title="روز" />
+            <TemplateColumn Title="مصرف کل">
+                <CellTemplate>@context.Item.TotalUse.ToString("N0")</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="مبلغ کل (ریال)">
+                <CellTemplate>@context.Item.TotalPrice.ToString("N0")</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" Size="Size.Small" OnClick="@(() => Edit(context.Item))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteAsync(context.Item))" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="AuthorityBill" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    [Inject] private IAuthorityBillRepository AuthorityBillRepo { get; set; } = default!;
+    [Inject] private IFinancialItemRepository FinancialItemRepo { get; set; } = default!;
+    [Inject] private IBillRepository BillRepo { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<AuthorityBill> bills = new();
+    private List<FinancialItem> authorityItems = new();
+    private AuthorityBill editing = new();
+    private bool showForm;
+    private bool isLoading;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        try
+        {
+            bills = await AuthorityBillRepo.GetAllAsync();
+            authorityItems = (await FinancialItemRepo.GetAllAsync())
+                .Where(i => i.CalculationType == CalculationType.WaterParent).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطا در بارگذاری اطلاعات: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ShowAdd()
+    {
+        await LoadAsync();
+        editing = new AuthorityBill
+        {
+            PeriodDays = 30,
+            Year = PersianCalendarHelper.GetCurrentYear(),
+            Month = PersianCalendarHelper.GetCurrentMonth(),
+            FinancialItemId = authorityItems.FirstOrDefault()?.Id ?? 0
+        };
+        showForm = true;
+    }
+
+    private void Edit(AuthorityBill bill)
+    {
+        editing = new AuthorityBill
+        {
+            Id = bill.Id, FinancialItemId = bill.FinancialItemId, Year = bill.Year, Month = bill.Month,
+            PeriodDays = bill.PeriodDays, TotalUse = bill.TotalUse, TotalPrice = bill.TotalPrice,
+            Tax = bill.Tax, Notes = bill.Notes
+        };
+        showForm = true;
+    }
+
+    private void CancelEdit() => showForm = false;
+
+    private async Task<bool> IsLockedAsync(int year, int month)
+    {
+        var existing = await BillRepo.GetByMonthYearAsync(year, month);
+        return existing.Any(b => b.Status != BillStatus.Draft);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (editing.FinancialItemId == 0 || editing.Year <= 0 || editing.Month is < 1 or > 12
+            || editing.PeriodDays <= 0 || editing.TotalUse <= 0 || editing.TotalPrice <= 0)
+        {
+            Snackbar.Add("همه فیلدهای الزامی را با مقدار معتبر پر کنید.", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            if (await IsLockedAsync(editing.Year, editing.Month))
+            {
+                Snackbar.Add("برای این ماه قبض تایید/پرداخت‌شده وجود دارد و قبض مرجع قابل تغییر نیست.", Severity.Warning);
+                return;
+            }
+
+            var duplicate = await AuthorityBillRepo.GetByItemMonthYearAsync(editing.FinancialItemId, editing.Year, editing.Month);
+            if (duplicate != null && duplicate.Id != editing.Id)
+            {
+                Snackbar.Add("برای این آیتم و ماه قبلاً قبض مرجع ثبت شده است.", Severity.Warning);
+                return;
+            }
+
+            if (editing.Id == 0) await AuthorityBillRepo.AddAsync(editing);
+            else await AuthorityBillRepo.UpdateAsync(editing);
+
+            Snackbar.Add("قبض مرجع ذخیره شد.", Severity.Success);
+            showForm = false;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطا در ذخیره: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteAsync(AuthorityBill bill)
+    {
+        try
+        {
+            if (await IsLockedAsync(bill.Year, bill.Month))
+            {
+                Snackbar.Add("برای این ماه قبض تایید/پرداخت‌شده وجود دارد و قبض مرجع قابل حذف نیست.", Severity.Warning);
+                return;
+            }
+
+            await AuthorityBillRepo.DeleteAsync(bill.Id);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطا در حذف: {ex.Message}", Severity.Error);
+        }
+    }
+}

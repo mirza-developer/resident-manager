@@ -211,6 +211,19 @@ public class BillRepository : IBillRepository
     }
 }
 
+public class AuthorityBillRepository : IAuthorityBillRepository
+{
+    private readonly ApplicationDbContext _db;
+    public AuthorityBillRepository(ApplicationDbContext db) => _db = db;
+
+    public async Task<List<AuthorityBill>> GetAllAsync() => await _db.AuthorityBills.Include(a => a.FinancialItem).OrderByDescending(a => a.Year).ThenByDescending(a => a.Month).ToListAsync();
+    public async Task<AuthorityBill?> GetByIdAsync(int id) => await _db.AuthorityBills.Include(a => a.FinancialItem).FirstOrDefaultAsync(a => a.Id == id);
+    public async Task<AuthorityBill?> GetByItemMonthYearAsync(int financialItemId, int year, int month) => await _db.AuthorityBills.FirstOrDefaultAsync(a => a.FinancialItemId == financialItemId && a.Year == year && a.Month == month);
+    public async Task<AuthorityBill> AddAsync(AuthorityBill bill) { _db.AuthorityBills.Add(bill); await _db.SaveChangesAsync(); return bill; }
+    public Task UpdateAsync(AuthorityBill bill) => _db.UpdateEntityAsync(_db.AuthorityBills, bill.Id, bill);
+    public async Task DeleteAsync(int id) { var e = await _db.AuthorityBills.FindAsync(id); if (e != null) { _db.AuthorityBills.Remove(e); await _db.SaveChangesAsync(); } }
+}
+
 public class PaymentRepository : IPaymentRepository
 {
     private readonly ApplicationDbContext _db;

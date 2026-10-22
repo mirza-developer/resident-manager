@@ -424,6 +424,71 @@ public class BillRoundingTests : TestBase
     }
 
     [Fact]
+    public async Task GenerateBills_HouseWithPreviousDebt_AddsDebtToNewBill_AndApprovalDoesNotDoubleCount()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var billingService = GetService<BillingService>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true, CurrentDebt = 50_000m });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "شارژ", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.EqualDivision, IsActive = true });
+
+        var bills = await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 100_000m }, "test", "test");
+
+        Assert.Equal(150_000m, bills[0].TotalAmount);
+        Assert.Equal(50_000m, bills[0].PreviousDebt);
+
+        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+
+        var updated = await houseRepo.GetByIdAsync(house.Id);
+        Assert.Equal(150_000m, updated!.CurrentDebt);
+    }
+
+    [Fact]
+    public async Task GenerateBills_PaymentBetweenGenerationAndApproval_DoesNotBreakDebt()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var billingService = GetService<BillingService>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true, CurrentDebt = 50_000m });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "شارژ", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.EqualDivision, IsActive = true });
+
+        await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 100_000m }, "test", "test");
+
+        var h = await houseRepo.GetByIdAsync(house.Id);
+        h!.CurrentDebt = 20_000m;
+        await houseRepo.UpdateAsync(h);
+
+        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+
+        var updated = await houseRepo.GetByIdAsync(house.Id);
+        Assert.Equal(120_000m, updated!.CurrentDebt);
+    }
+
+    [Fact]
+    public async Task GenerateBills_HouseWithNoDebtOrCredit_HasZeroPreviousDebt()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var billingService = GetService<BillingService>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true, CurrentDebt = -30_000m });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "شارژ", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.EqualDivision, IsActive = true });
+
+        var bills = await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 100_000m }, "test", "test");
+
+        Assert.Equal(0m, bills[0].PreviousDebt);
+        Assert.Equal(100_000m, bills[0].TotalAmount);
+    }
+
+    [Fact]
     public async Task EqualDivision_AmountAlreadyMultipleOfTenThousand_IsUnchanged()
     {
         var aptRepo = GetService<IApartmentRepository>();

@@ -43,8 +43,32 @@
                         <MudSelect T="CalculationType" @bind-Value="editing.CalculationType" Label="نوع محاسبه" Variant="Variant.Outlined">
                             <MudSelectItem T="CalculationType" Value="@CalculationType.EqualDivision">تقسیم مساوی</MudSelectItem>
                             <MudSelectItem T="CalculationType" Value="@CalculationType.Grouping">تعرفه‌ای (بر اساس کل مصرف)</MudSelectItem>
+                            <MudSelectItem T="CalculationType" Value="@CalculationType.WaterParent">آیتم والد آب (قبض مرجع)</MudSelectItem>
+                            <MudSelectItem T="CalculationType" Value="@CalculationType.SharedConsumption">مصرف مشترک آب (فرزند آیتم والد)</MudSelectItem>
                         </MudSelect>
                     </MudItem>
+                    @if (editing.CalculationType == CalculationType.Grouping || editing.CalculationType == CalculationType.SharedConsumption)
+                    {
+                        <div style="display:contents">
+                            <MudItem xs="12" md="6">
+                                <MudSelect T="int?" @bind-Value="editing.ParentId" Label="آیتم والد (آب)" Variant="Variant.Outlined" Clearable="true">
+                                    @foreach (var p in WaterParents)
+                                    {
+                                        <MudSelectItem T="int?" Value="@((int?)p.Id)">@p.Title</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                            @if (editing.ParentId.HasValue)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudSelect T="WaterKind" @bind-Value="editing.WaterKind" Label="نوع کنتور" Variant="Variant.Outlined">
+                                        <MudSelectItem T="WaterKind" Value="@WaterKind.Hot">آب گرم</MudSelectItem>
+                                        <MudSelectItem T="WaterKind" Value="@WaterKind.Cold">آب سرد</MudSelectItem>
+                                    </MudSelect>
+                                </MudItem>
+                            }
+                        </div>
+                    }
                     @if (editing.PeriodType == PeriodType.Installment)
                     {
                         <div style="display:contents">
@@ -105,6 +129,9 @@
             </TemplateColumn>
             <TemplateColumn Title="نوع محاسبه">
                 <CellTemplate>@GetCalcLabel(context.Item.CalculationType)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="والد / نوع کنتور">
+                <CellTemplate>@GetParentLabel(context.Item)</CellTemplate>
             </TemplateColumn>
             <TemplateColumn Title="مبلغ کل(ریال)">
                 <CellTemplate>@(context.Item.TotalAmount.HasValue ? context.Item.TotalAmount.Value.ToString("N0", CultureInfo.InvariantCulture) : "-")</CellTemplate>

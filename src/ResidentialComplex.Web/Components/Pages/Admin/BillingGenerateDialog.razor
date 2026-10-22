@@ -50,9 +50,9 @@
                             </TemplateColumn>
                             <TemplateColumn Title="مبلغ (ریال)">
                                 <CellTemplate>
-                                    @if (context.Item.CalculationType == CalculationType.Grouping)
+                                    @if (context.Item.CalculationType == CalculationType.Grouping || context.Item.CalculationType == CalculationType.WaterParent || context.Item.CalculationType == CalculationType.SharedConsumption)
                                     {
-                                        <text><MudText Color="Color.Secondary">تعرفه‌ای (محاسبه از مصرف)</MudText></text>
+                                        <text><MudText Color="Color.Secondary">@(context.Item.CalculationType == CalculationType.Grouping ? "تعرفه‌ای (محاسبه از مصرف)" : "محاسبه از قبض مرجع")</MudText></text>
                                     }
                                     else
                                     {
@@ -88,6 +88,11 @@
                 </PagerContent>
             </MudDataGrid>
             <MudText Typo="Typo.subtitle1" Class="mt-3">جمع کل: @Bill.BillItems.Sum(x => x.Amount).ToString("N0")</MudText>
+            @if (Bill.PreviousDebt > 0)
+            {
+                <MudText Typo="Typo.subtitle1">بدهی قبلی: @Bill.PreviousDebt.ToString("N0") ریال</MudText>
+            }
+            <MudText Typo="Typo.subtitle1">مبلغ قابل پرداخت: @Bill.TotalAmount.ToString("N0") ریال</MudText>
         }
     </DialogContent>
     <DialogActions>

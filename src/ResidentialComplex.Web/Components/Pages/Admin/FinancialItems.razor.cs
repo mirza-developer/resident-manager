@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using ResidentialComplex.Application.Interfaces;
@@ -18,6 +18,8 @@ public partial class FinancialItems : ComponentBase
     private FinancialItem editing = new() { IsActive = true };
     private bool showForm;
     private bool isLoading;
+
+    private IEnumerable<FinancialItem> WaterParents => items.Where(i => i.CalculationType == CalculationType.WaterParent);
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,6 +79,8 @@ public partial class FinancialItems : ComponentBase
                 TotalAmount = item.TotalAmount,
                 NumberOfInstallments = item.NumberOfInstallments,
                 InstallmentsBilled = item.InstallmentsBilled,
+                ParentId = item.ParentId,
+                WaterKind = item.WaterKind,
                 RowVersion = item.RowVersion
             };
             showForm = true;
@@ -99,6 +103,14 @@ public partial class FinancialItems : ComponentBase
         var savedItemTitle = editing.Title;
         var wasGrouping = editing.CalculationType == CalculationType.Grouping;
 
+        var validationError = ValidateWaterRules();
+        if (validationError != null)
+        {
+            Snackbar.Add(validationError, Severity.Warning);
+            isLoading = false;
+            return;
+        }
+
         try
         {
             if (editing.Id == 0)
@@ -110,6 +122,11 @@ public partial class FinancialItems : ComponentBase
             {
                 await FinancialItemRepo.UpdateAsync(editing);
                 Snackbar.Add("آیتم مالی با موفقیت بروزرسانی شد.", Severity.Success);
+            }
+
+            if (editing.CalculationType == CalculationType.WaterParent)
+            {
+                await EnsureSharedChildAsync(editing);
             }
 
             items = await FinancialItemRepo.GetAllAsync();
@@ -139,8 +156,64 @@ public partial class FinancialItems : ComponentBase
         }
     }
 
+    private string? ValidateWaterRules()
+    {
+        if (editing.CalculationType == CalculationType.WaterParent)
+        {
+            editing.ParentId = null;
+            editing.WaterKind = WaterKind.None;
+            return null;
+        }
+
+        if (editing.CalculationType == CalculationType.SharedConsumption)
+        {
+            editing.WaterKind = WaterKind.None;
+            if (!editing.ParentId.HasValue)
+                return "آیتم مصرف مشترک باید زیرمجموعه یک آیتم والد آب باشد.";
+            return null;
+        }
+
+        if (editing.CalculationType == CalculationType.Grouping && editing.ParentId.HasValue)
+        {
+            if (editing.WaterKind == WaterKind.None)
+                return "نوع کنتور (آب گرم یا آب سرد) را انتخاب کنید.";
+            var duplicate = items.Any(i => i.Id != editing.Id && i.ParentId == editing.ParentId && i.WaterKind == editing.WaterKind);
+            if (duplicate)
+                return "برای این آیتم والد، آیتم فرزند از همین نوع کنتور قبلاً تعریف شده است.";
+            return null;
+        }
+
+        editing.ParentId = null;
+        editing.WaterKind = WaterKind.None;
+        return null;
+    }
+
+    private async Task EnsureSharedChildAsync(FinancialItem parent)
+    {
+        var all = await FinancialItemRepo.GetAllAsync();
+        var parentId = all.FirstOrDefault(i => i.Id == parent.Id)?.Id ?? all.OrderByDescending(i => i.Id).First().Id;
+        if (all.Any(i => i.ParentId == parentId && i.CalculationType == CalculationType.SharedConsumption))
+            return;
+
+        await FinancialItemRepo.AddAsync(new FinancialItem
+        {
+            Title = $"{parent.Title} - مصرف مشترک",
+            PeriodType = parent.PeriodType,
+            CalculationType = CalculationType.SharedConsumption,
+            IsActive = parent.IsActive,
+            ParentId = parentId
+        });
+        Snackbar.Add("آیتم مصرف مشترک به‌صورت خودکار ایجاد شد.", Severity.Info);
+    }
+
     private async Task DeleteAsync(int id)
     {
+        if (items.Any(i => i.ParentId == id))
+        {
+            Snackbar.Add("ابتدا آیتم‌های فرزند این آیتم را حذف کنید.", Severity.Warning);
+            return;
+        }
+
         var confirmed = await DialogService.ShowMessageBox(
             "تأیید حذف",
             "آیا از حذف این آیتم مالی مطمئن هستید؟",
@@ -181,6 +254,21 @@ public partial class FinancialItems : ComponentBase
         await LoadItemsAsync();
     }
 
+    private string GetParentLabel(FinancialItem item)
+    {
+        if (!item.ParentId.HasValue)
+            return "-";
+
+        var parentTitle = items.FirstOrDefault(p => p.Id == item.ParentId)?.Title ?? "-";
+        var kind = item.WaterKind switch
+        {
+            WaterKind.Hot => " (\u0622\u0628 \u06AF\u0631\u0645)",
+            WaterKind.Cold => " (\u0622\u0628 \u0633\u0631\u062F)",
+            _ => string.Empty
+        };
+        return parentTitle + kind;
+    }
+
     private static string GetPeriodLabel(PeriodType periodType) => periodType switch
     {
         PeriodType.Once => "یکبار",
@@ -193,6 +281,8 @@ public partial class FinancialItems : ComponentBase
     {
         CalculationType.EqualDivision => "تقسیم مساوی",
         CalculationType.Grouping => "تعرفه‌ای (بر اساس کل مصرف)",
+        CalculationType.WaterParent => "آیتم والد آب (قبض مرجع)",
+        CalculationType.SharedConsumption => "مصرف مشترک آب",
         _ => string.Empty
     };
 }

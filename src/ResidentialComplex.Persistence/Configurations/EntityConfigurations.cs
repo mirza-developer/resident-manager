@@ -38,10 +38,11 @@ public class FinancialItemConfiguration : IEntityTypeConfiguration<FinancialItem
         builder.Property(f => f.Description).HasMaxLength(500);
         builder.Property(f => f.TotalAmount).HasColumnType("decimal(18,2)");
         builder.Property(f => f.RowVersion).IsConcurrencyToken();
+        builder.HasOne(f => f.Parent).WithMany(f => f.Children).HasForeignKey(f => f.ParentId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
-public class FinancialItemGroupPointConfiguration : IEntityTypeConfiguration<FinancialItemGroupPoint>
+public class FinancialItemGroupPointConfiguration
 {
     public void Configure(EntityTypeBuilder<FinancialItemGroupPoint> builder)
     {
@@ -69,6 +70,7 @@ public class BillConfiguration : IEntityTypeConfiguration<Bill>
         builder.HasKey(b => b.Id);
         builder.HasIndex(b => new { b.HouseId, b.Year, b.Month }).IsUnique();
         builder.Property(b => b.TotalAmount).HasColumnType("decimal(18,2)");
+        builder.Property(b => b.PreviousDebt).HasColumnType("decimal(18,2)");
         builder.Property(b => b.Description).HasMaxLength(500);
         builder.Property(b => b.RowVersion).IsConcurrencyToken();
         builder.HasOne(b => b.House).WithMany(h => h.Bills).HasForeignKey(b => b.HouseId).OnDelete(DeleteBehavior.Restrict);
@@ -118,6 +120,20 @@ public class FinancialItemTierConfiguration : IEntityTypeConfiguration<Financial
         builder.HasKey(t => t.Id);
         builder.Property(t => t.RatePerUnit).HasColumnType("decimal(18,4)");
         builder.HasOne(t => t.FinancialItem).WithMany(f => f.Tiers).HasForeignKey(t => t.FinancialItemId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class AuthorityBillConfiguration : IEntityTypeConfiguration<AuthorityBill>
+{
+    public void Configure(EntityTypeBuilder<AuthorityBill> builder)
+    {
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.TotalUse).HasColumnType("decimal(18,2)");
+        builder.Property(a => a.TotalPrice).HasColumnType("decimal(18,2)");
+        builder.Property(a => a.Tax).HasColumnType("decimal(18,2)");
+        builder.Property(a => a.Notes).HasMaxLength(500);
+        builder.HasIndex(a => new { a.FinancialItemId, a.Year, a.Month }).IsUnique();
+        builder.HasOne(a => a.FinancialItem).WithMany().HasForeignKey(a => a.FinancialItemId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
