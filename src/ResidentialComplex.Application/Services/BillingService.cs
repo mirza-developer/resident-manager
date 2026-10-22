@@ -68,7 +68,7 @@ public class BillingService
 
         var activeItems = await _financialItemRepo.GetActiveAsync();
         var waterParentIds = activeItems
-            .Where(fi => fi.CalculationType == CalculationType.WaterParent)
+            .Where(fi => fi.CalculationType == CalculationType.ParentChildTiering && !fi.ParentId.HasValue)
             .Select(fi => fi.Id)
             .ToHashSet();
 
@@ -81,8 +81,11 @@ public class BillingService
             .ToList();
 
         // Validate that Grouping items have tiers configured
-        var groupingItemsWithoutTiers = applicableItems
-            .Where(fi => fi.CalculationType == CalculationType.Grouping && !fi.Tiers.Any())
+        var groupingItemsWithoutTiers = activeItems
+            .Where(fi => fi.CalculationType == CalculationType.ParentChildTiering
+                && fi.ParentId.HasValue && waterParentIds.Contains(fi.ParentId.Value)
+                && (fi.WaterKind == WaterKind.Hot || fi.WaterKind == WaterKind.Cold)
+                && !fi.Tiers.Any())
             .ToList();
         if (groupingItemsWithoutTiers.Any())
         {
@@ -95,7 +98,7 @@ public class BillingService
         // Old PITS formula: needs all houses at once (Increaser + shared share), so compute up front.
         var authorityResults = new Dictionary<int, AuthorityBillResult>();
         var waterChildren = new Dictionary<int, WaterChildren>();
-        foreach (var fi in applicableItems.Where(fi => fi.CalculationType == CalculationType.WaterParent))
+        foreach (var fi in applicableItems.Where(fi => fi.CalculationType == CalculationType.ParentChildTiering && !fi.ParentId.HasValue))
         {
             var children = ResolveWaterChildren(fi, activeItems);
             waterChildren[fi.Id] = children;
@@ -138,7 +141,7 @@ public class BillingService
                 {
                     houseAmount = _billRepo.CalculateEqualDivisionAmount(finalAmount, activeHouses.Count);
                 }
-                else if (fi.CalculationType == CalculationType.WaterParent)
+                else if (fi.CalculationType == CalculationType.ParentChildTiering && !fi.ParentId.HasValue)
                 {
                     var result = authorityResults[fi.Id];
                     var children = waterChildren[fi.Id];
@@ -163,9 +166,9 @@ public class BillingService
                     });
                     continue;
                 }
-                else // Grouping — Whole-Consumption Bracket Pricing (entire usage billed at one tier's rate)
+                else
                 {
-                    houseAmount = await _billRepo.CalculateBracketAmountAsync(fi, house.Id, year, month);
+                    throw new InvalidOperationException($"آیتم «{fi.Title}» فرزند است و باید از طریق آیتم والد محاسبه شود.");
                 }
 
                 bill.BillItems.Add(new BillItem
@@ -199,7 +202,7 @@ public class BillingService
         // Apply rounding adjustments per financial item across all bills (EqualDivision only)
         foreach (var fi in applicableItems)
         {
-            if (fi.CalculationType == CalculationType.Grouping || fi.CalculationType == CalculationType.WaterParent)
+            if (fi.CalculationType == CalculationType.ParentChildTiering)
                 continue;
 
             var finalAmount = finalAmounts[fi.Id];
@@ -385,11 +388,11 @@ public class BillingService
     private static WaterChildren ResolveWaterChildren(FinancialItem parent, IReadOnlyList<FinancialItem> allItems)
     {
         var children = allItems.Where(c => c.ParentId == parent.Id).ToList();
-        var hot = children.FirstOrDefault(c =>  c.WaterKind == WaterKind.Hot)
+        var hot = children.FirstOrDefault(c => c.CalculationType == CalculationType.ParentChildTiering && c.WaterKind == WaterKind.Hot)
             ?? throw new InvalidOperationException($"برای آیتم «{parent.Title}» آیتم فرزند آب گرم تعریف نشده است.");
-        var cold = children.FirstOrDefault(c => c.WaterKind == WaterKind.Cold)
+        var cold = children.FirstOrDefault(c => c.CalculationType == CalculationType.ParentChildTiering && c.WaterKind == WaterKind.Cold)
             ?? throw new InvalidOperationException($"برای آیتم «{parent.Title}» آیتم فرزند آب سرد تعریف نشده است.");
-        var shared = children.FirstOrDefault(c => c.CalculationType == CalculationType.SharedConsumption)
+        var shared = children.FirstOrDefault(c => c.CalculationType == CalculationType.ParentChildTiering && c.WaterKind == WaterKind.Shared)
             ?? throw new InvalidOperationException($"برای آیتم «{parent.Title}» آیتم فرزند مصرف مشترک تعریف نشده است.");
         return new WaterChildren(hot, cold, shared);
     }

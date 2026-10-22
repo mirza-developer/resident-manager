@@ -125,7 +125,7 @@
         {
             bills = await AuthorityBillRepo.GetAllAsync();
             authorityItems = (await FinancialItemRepo.GetAllAsync())
-                .Where(i => i.CalculationType == CalculationType.WaterParent).ToList();
+                .Where(i => i.CalculationType == CalculationType.ParentChildTiering && !i.ParentId.HasValue).ToList();
         }
         catch (Exception ex)
         {

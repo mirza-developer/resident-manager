@@ -19,7 +19,7 @@ public partial class FinancialItems : ComponentBase
     private bool showForm;
     private bool isLoading;
 
-    private IEnumerable<FinancialItem> WaterParents => items.Where(i => i.CalculationType == CalculationType.WaterParent);
+    private IEnumerable<FinancialItem> WaterParents => items.Where(i => i.CalculationType == CalculationType.ParentChildTiering && !i.ParentId.HasValue && i.Id != editing.Id);
 
     protected override async Task OnInitializedAsync()
     {
@@ -101,7 +101,7 @@ public partial class FinancialItems : ComponentBase
         isLoading = true;
         int? savedItemId = null;
         var savedItemTitle = editing.Title;
-        var wasGrouping = editing.CalculationType == CalculationType.Grouping;
+        var wasGrouping = editing.CalculationType == CalculationType.ParentChildTiering && editing.ParentId.HasValue && (editing.WaterKind == WaterKind.Hot || editing.WaterKind == WaterKind.Cold);
 
         var validationError = ValidateWaterRules();
         if (validationError != null)
@@ -124,7 +124,7 @@ public partial class FinancialItems : ComponentBase
                 Snackbar.Add("آیتم مالی با موفقیت بروزرسانی شد.", Severity.Success);
             }
 
-            if (editing.CalculationType == CalculationType.WaterParent)
+            if (editing.CalculationType == CalculationType.ParentChildTiering && !editing.ParentId.HasValue)
             {
                 await EnsureSharedChildAsync(editing);
             }
@@ -158,33 +158,25 @@ public partial class FinancialItems : ComponentBase
 
     private string? ValidateWaterRules()
     {
-        if (editing.CalculationType == CalculationType.WaterParent)
+        if (editing.CalculationType != CalculationType.ParentChildTiering)
         {
             editing.ParentId = null;
             editing.WaterKind = WaterKind.None;
             return null;
         }
 
-        if (editing.CalculationType == CalculationType.SharedConsumption)
+        if (!editing.ParentId.HasValue)
         {
             editing.WaterKind = WaterKind.None;
-            if (!editing.ParentId.HasValue)
-                return "آیتم مصرف مشترک باید زیرمجموعه یک آیتم والد آب باشد.";
             return null;
         }
 
-        if (editing.CalculationType == CalculationType.Grouping && editing.ParentId.HasValue)
-        {
-            if (editing.WaterKind == WaterKind.None)
-                return "نوع کنتور (آب گرم یا آب سرد) را انتخاب کنید.";
-            var duplicate = items.Any(i => i.Id != editing.Id && i.ParentId == editing.ParentId && i.WaterKind == editing.WaterKind);
-            if (duplicate)
-                return "برای این آیتم والد، آیتم فرزند از همین نوع کنتور قبلاً تعریف شده است.";
-            return null;
-        }
+        if (editing.WaterKind == WaterKind.None)
+            return "نقش آیتم فرزند (آب گرم، آب سرد یا مصرف مشترک) را انتخاب کنید.";
 
-        editing.ParentId = null;
-        editing.WaterKind = WaterKind.None;
+        var duplicate = items.Any(i => i.Id != editing.Id && i.ParentId == editing.ParentId && i.WaterKind == editing.WaterKind);
+        if (duplicate)
+            return "برای این آیتم والد، آیتم فرزند از همین نقش قبلاً تعریف شده است.";
         return null;
     }
 
@@ -192,14 +184,15 @@ public partial class FinancialItems : ComponentBase
     {
         var all = await FinancialItemRepo.GetAllAsync();
         var parentId = all.FirstOrDefault(i => i.Id == parent.Id)?.Id ?? all.OrderByDescending(i => i.Id).First().Id;
-        if (all.Any(i => i.ParentId == parentId && i.CalculationType == CalculationType.SharedConsumption))
+        if (all.Any(i => i.ParentId == parentId && i.WaterKind == WaterKind.Shared))
             return;
 
         await FinancialItemRepo.AddAsync(new FinancialItem
         {
             Title = $"{parent.Title} - مصرف مشترک",
             PeriodType = parent.PeriodType,
-            CalculationType = CalculationType.SharedConsumption,
+            CalculationType = CalculationType.ParentChildTiering,
+            WaterKind = WaterKind.Shared,
             IsActive = parent.IsActive,
             ParentId = parentId
         });
@@ -264,6 +257,7 @@ public partial class FinancialItems : ComponentBase
         {
             WaterKind.Hot => " (\u0622\u0628 \u06AF\u0631\u0645)",
             WaterKind.Cold => " (\u0622\u0628 \u0633\u0631\u062F)",
+            WaterKind.Shared => " (\u0645\u0635\u0631\u0641 \u0645\u0634\u062A\u0631\u06A9)",
             _ => string.Empty
         };
         return parentTitle + kind;
@@ -280,9 +274,7 @@ public partial class FinancialItems : ComponentBase
     private static string GetCalcLabel(CalculationType calculationType) => calculationType switch
     {
         CalculationType.EqualDivision => "تقسیم مساوی",
-        CalculationType.Grouping => "تعرفه‌ای (بر اساس کل مصرف)",
-        CalculationType.WaterParent => "آیتم والد آب (قبض مرجع)",
-        CalculationType.SharedConsumption => "مصرف مشترک آب",
+        CalculationType.ParentChildTiering => "تعرفه‌ای والد-فرزند",
         _ => string.Empty
     };
 }

@@ -42,16 +42,14 @@
                     <MudItem xs="12" md="6">
                         <MudSelect T="CalculationType" @bind-Value="editing.CalculationType" Label="نوع محاسبه" Variant="Variant.Outlined">
                             <MudSelectItem T="CalculationType" Value="@CalculationType.EqualDivision">تقسیم مساوی</MudSelectItem>
-                            <MudSelectItem T="CalculationType" Value="@CalculationType.Grouping">تعرفه‌ای (بر اساس کل مصرف)</MudSelectItem>
-                            <MudSelectItem T="CalculationType" Value="@CalculationType.WaterParent">آیتم والد آب (قبض مرجع)</MudSelectItem>
-                            <MudSelectItem T="CalculationType" Value="@CalculationType.SharedConsumption">مصرف مشترک آب (فرزند آیتم والد)</MudSelectItem>
+                            <MudSelectItem T="CalculationType" Value="@CalculationType.ParentChildTiering">تعرفه‌ای والد-فرزند (قبض مرجع)</MudSelectItem>
                         </MudSelect>
                     </MudItem>
-                    @if (editing.CalculationType == CalculationType.Grouping || editing.CalculationType == CalculationType.SharedConsumption)
+                    @if (editing.CalculationType == CalculationType.ParentChildTiering)
                     {
                         <div style="display:contents">
                             <MudItem xs="12" md="6">
-                                <MudSelect T="int?" @bind-Value="editing.ParentId" Label="آیتم والد (آب)" Variant="Variant.Outlined" Clearable="true">
+                                <MudSelect T="int?" @bind-Value="editing.ParentId" Label="آیتم والد (خالی = این آیتم والد است)" Variant="Variant.Outlined" Clearable="true">
                                     @foreach (var p in WaterParents)
                                     {
                                         <MudSelectItem T="int?" Value="@((int?)p.Id)">@p.Title</MudSelectItem>
@@ -64,6 +62,7 @@
                                     <MudSelect T="WaterKind" @bind-Value="editing.WaterKind" Label="نوع کنتور" Variant="Variant.Outlined">
                                         <MudSelectItem T="WaterKind" Value="@WaterKind.Hot">آب گرم</MudSelectItem>
                                         <MudSelectItem T="WaterKind" Value="@WaterKind.Cold">آب سرد</MudSelectItem>
+                                        <MudSelectItem T="WaterKind" Value="@WaterKind.Shared">مصرف مشترک</MudSelectItem>
                                     </MudSelect>
                                 </MudItem>
                             }
@@ -85,7 +84,7 @@
                     </MudItem>
                 </MudGrid>
 
-                @if (editing.CalculationType == CalculationType.Grouping)
+                @if (editing.CalculationType == CalculationType.ParentChildTiering && editing.ParentId.HasValue && (editing.WaterKind == WaterKind.Hot || editing.WaterKind == WaterKind.Cold))
                 {
                     <div>
                         @if (editing.Id != 0)
@@ -145,7 +144,7 @@
             </TemplateColumn>
             <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
                 <CellTemplate>
-                    @if (context.Item.CalculationType == CalculationType.Grouping)
+                    @if (context.Item.CalculationType == CalculationType.ParentChildTiering && context.Item.ParentId.HasValue && (context.Item.WaterKind == WaterKind.Hot || context.Item.WaterKind == WaterKind.Cold))
                     {
                         <MudTooltip Text="مدیریت تعرفه‌های مصرفی">
                             <MudIconButton Icon="@Icons.Material.Filled.Tune" Color="Color.Primary" Size="Size.Small"

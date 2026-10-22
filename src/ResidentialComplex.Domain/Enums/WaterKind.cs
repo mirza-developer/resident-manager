@@ -7,5 +7,6 @@ public enum WaterKind
 {
     None = 0,
     Hot = 1,
-    Cold = 2
+    Cold = 2,
+    Shared = 3
 }

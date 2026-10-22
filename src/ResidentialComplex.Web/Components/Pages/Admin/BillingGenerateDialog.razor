@@ -50,9 +50,9 @@
                             </TemplateColumn>
                             <TemplateColumn Title="مبلغ (ریال)">
                                 <CellTemplate>
-                                    @if (context.Item.CalculationType == CalculationType.Grouping || context.Item.CalculationType == CalculationType.WaterParent || context.Item.CalculationType == CalculationType.SharedConsumption)
+                                    @if (context.Item.CalculationType == CalculationType.ParentChildTiering)
                                     {
-                                        <text><MudText Color="Color.Secondary">@(context.Item.CalculationType == CalculationType.Grouping ? "تعرفه‌ای (محاسبه از مصرف)" : "محاسبه از قبض مرجع")</MudText></text>
+                                        <text><MudText Color="Color.Secondary">محاسبه از قبض مرجع</MudText></text>
                                     }
                                     else
                                     {

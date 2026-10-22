@@ -55,15 +55,12 @@ public partial class BillingGenerateDialog
     private static string GetCalcLabel(CalculationType calculationType) => calculationType switch
     {
         CalculationType.EqualDivision => "تقسیم مساوی",
-        CalculationType.Grouping => "تعرفه‌ای (بر اساس کل مصرف)",
-        CalculationType.WaterParent => "آیتم والد آب (قبض مرجع)",
-        CalculationType.SharedConsumption => "مصرف مشترک آب",
+        CalculationType.ParentChildTiering => "تعرفه‌ای والد-فرزند",
         _ => string.Empty
     };
 
     private static bool IsWaterLine(FinancialItem item) =>
-        item.CalculationType == CalculationType.SharedConsumption ||
-        (item.CalculationType == CalculationType.Grouping && item.ParentId.HasValue);
+        item.CalculationType == CalculationType.ParentChildTiering && item.ParentId.HasValue;
 
     private string GetBillItemDetail(Bill bill, BillItem billItem)
     {
@@ -72,7 +69,7 @@ public partial class BillingGenerateDialog
         {
             return string.IsNullOrWhiteSpace(billItem.Description) ? "-" : billItem.Description;
         }
-        if (financialItem?.CalculationType != CalculationType.Grouping || !financialItem.Tiers.Any())
+        if (financialItem?.CalculationType != CalculationType.ParentChildTiering || !financialItem.Tiers.Any())
         {
             return "-";
         }

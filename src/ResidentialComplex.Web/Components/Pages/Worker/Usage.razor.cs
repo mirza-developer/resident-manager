@@ -39,7 +39,7 @@ public partial class Usage : ComponentBase
         {
             var houses = await HouseRepo.GetActiveHousesAsync();
             var activeItems = await FinancialItemRepo.GetActiveAsync();
-            var groupingItems = activeItems.Where(item => item.CalculationType == CalculationType.Grouping).ToList();
+            var groupingItems = activeItems.Where(item => item.CalculationType == CalculationType.ParentChildTiering && item.ParentId.HasValue && (item.WaterKind == WaterKind.Hot || item.WaterKind == WaterKind.Cold)).ToList();
 
             usageItems = new List<UsageItemViewModel>();
             foreach (var item in groupingItems)

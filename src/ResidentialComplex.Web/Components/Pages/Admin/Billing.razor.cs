@@ -77,7 +77,7 @@ public partial class Billing
 
     private async Task LoadMissingUsageDataAsync()
     {
-        var groupingItems = activeItems.Where(item => item.CalculationType == CalculationType.Grouping && IsApplicable(item)).ToList();
+        var groupingItems = activeItems.Where(item => item.CalculationType == CalculationType.ParentChildTiering && item.ParentId.HasValue && (item.WaterKind == WaterKind.Hot || item.WaterKind == WaterKind.Cold) && IsApplicable(item)).ToList();
         if (!groupingItems.Any())
         {
             return;
