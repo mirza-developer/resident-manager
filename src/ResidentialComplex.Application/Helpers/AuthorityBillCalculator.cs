@@ -49,8 +49,8 @@ public static class AuthorityBillCalculator
             throw new InvalidOperationException("مصرف کل قبض مرجع باید بزرگتر از صفر باشد.");
         if (bill.PeriodDays <= 0)
             throw new InvalidOperationException("تعداد روزهای دوره باید بزرگتر از صفر باشد.");
-        if (tiers.Count > 0 && tiers.All(t => t.MonthlyPrice <= 0))
-            throw new InvalidOperationException("برای تعرفه‌های آیتم آب قیمت ماهانه تعریف نشده است.");
+        if (tiers.Count > 0 && tiers.Any(t => t.MonthlyPrice <= 0))
+            throw new InvalidOperationException("قیمت ماهانه همه تعرفه‌های آیتم آب باید بزرگتر از صفر باشد.");
 
         var ordered = tiers.OrderBy(t => t.TierOrder).ToList();
 
@@ -67,7 +67,7 @@ public static class AuthorityBillCalculator
 
             var tier = ordered.FirstOrDefault(t => !t.UpperLimit.HasValue || avg <= t.UpperLimit.Value);
             var monthPrice = tier?.MonthlyPrice
-                ?? (avg / WaterBillingConstants.FallbackDivisor * WaterBillingConstants.FallbackFactor
+                ?? Math.Max(0m, avg / WaterBillingConstants.FallbackDivisor * WaterBillingConstants.FallbackFactor
                     - WaterBillingConstants.FallbackOffset);
             var price = Math.Round(monthPrice * bill.PeriodDays / WaterBillingConstants.DaysPerMonth, 0, MidpointRounding.AwayFromZero);
             var tax = Math.Round(price * WaterBillingConstants.TaxRate, 0, MidpointRounding.AwayFromZero);
@@ -76,27 +76,52 @@ public static class AuthorityBillCalculator
 
         var totalHomeUse = rows.Sum(r => r.Use);
         var totalHomePrice = rows.Sum(r => r.Tariff);
-        if (totalHomePrice <= 0)
+
+        // Allocation weight: tier tariff, floored so any positive usage always carries a positive weight.
+        var weights = rows.Select(r => r.Use > 0
+            ? Math.Max(r.Tariff, r.Use * WaterBillingConstants.MinWeightPerUnit)
+            : 0m).ToList();
+        var totalWeight = weights.Sum();
+        if (totalWeight <= 0)
             throw new InvalidOperationException("مجموع مبلغ تعرفه‌ای واحدها صفر است؛ مصرف واحدها را ثبت کنید.");
 
         var homeCount = rows.Count;
-        var sharedUse = bill.TotalUse - totalHomeUse;
+        // Meters summing above the authority total are never turned into a credit.
+        var sharedUse = Math.Max(0m, bill.TotalUse - totalHomeUse);
         var sharedPrice = bill.TotalPrice * sharedUse / bill.TotalUse;
-        var increaser = (bill.TotalPrice - sharedPrice) / totalHomePrice;
+        var privatePool = bill.TotalPrice - sharedPrice;
+        var increaser = privatePool / totalWeight;
         var sharedPerHome = sharedPrice / homeCount;
 
-        var results = new List<WaterHouseResult>(homeCount);
-        foreach (var r in rows)
+        var step = WaterBillingConstants.HomeRoundingStep;
+        var realPrices = weights.Select(w => w * increaser).ToList();
+        var totals = realPrices.Select(p => p + sharedPerHome).ToList();
+
+        // Largest-remainder rounding so the rounded finals add up to the authority price.
+        var units = totals.Select(t => Math.Floor(t / step)).ToList();
+        var remaining = (int)(Math.Round(bill.TotalPrice / step, 0, MidpointRounding.AwayFromZero) - units.Sum());
+        if (remaining > 0)
         {
-            var realPrice = r.Tariff * increaser;
-            var metered = Math.Round(realPrice, 0, MidpointRounding.AwayFromZero);
-            var totalReal = realPrice + sharedPerHome;
-            var final = Math.Round(totalReal / WaterBillingConstants.HomeRoundingStep, 0, MidpointRounding.AwayFromZero)
-                        * WaterBillingConstants.HomeRoundingStep;
+            foreach (var i in Enumerable.Range(0, homeCount)
+                         .OrderByDescending(i => totals[i] / step - units[i])
+                         .Take(remaining))
+                units[i] += 1;
+        }
+
+        var results = new List<WaterHouseResult>(homeCount);
+        for (var i = 0; i < homeCount; i++)
+        {
+            var r = rows[i];
+            var metered = Math.Round(realPrices[i], 0, MidpointRounding.AwayFromZero);
+            if (r.Use > 0)
+                metered = Math.Max(1m, metered);
+            var final = units[i] * step;
+            if (r.Use > 0 && final < metered)
+                final = Math.Ceiling(metered / step) * step;
             // The rounding difference is carried by the shared line so metered + shared == final.
             results.Add(new WaterHouseResult(
                 r.HouseId, r.Use, r.Avg, r.Tier, r.MonthPrice, r.Price, r.Tax, r.Tariff,
-                metered, final - metered, totalReal, final, final - totalReal));
+                metered, final - metered, totals[i], final, final - totals[i]));
         }
 
         return new AuthorityBillResult(totalHomeUse, totalHomePrice, homeCount, sharedUse, sharedPrice, increaser, results);

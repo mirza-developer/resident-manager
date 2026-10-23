@@ -79,11 +79,17 @@ public class AuthorityBillCalculatorTests
     }
 
     [Fact]
-    public void SharedUseNegative_IsEqualCreditPerHome()
+    public void SharedUseNegative_IsClampedToZero_AndEveryHouseStaysPositive()
     {
         var r = AuthorityBillCalculator.Calculate(Bill(use: 150, price: 5_000_000), Tiers(), TwoHouses());
-        Assert.True(r.TotalSharedUse < 0);
-        Assert.True(r.TotalSharedPrice < 0);
+        Assert.Equal(0m, r.TotalSharedUse);
+        Assert.Equal(0m, r.TotalSharedPrice);
+        Assert.All(r.Houses, h =>
+        {
+            Assert.True(h.MeteredAmount > 0);
+            Assert.True(h.SharedAmount >= 0);
+            Assert.Equal(h.Final, h.MeteredAmount + h.SharedAmount);
+        });
     }
 
     [Fact]

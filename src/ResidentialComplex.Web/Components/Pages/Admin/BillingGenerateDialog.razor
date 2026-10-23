@@ -76,9 +76,12 @@
                     <TemplateColumn Title="نوع محاسبه">
                         <CellTemplate>@(context.Item.FinancialItem is null ? "-" : GetCalcLabel(context.Item.FinancialItem.CalculationType))</CellTemplate>
                     </TemplateColumn>
-                    <TemplateColumn Title="جزئیات">
-                        <CellTemplate>@GetBillItemDetail(Bill, context.Item)</CellTemplate>
-                    </TemplateColumn>
+                    @if (Mode == BillingDialogMode.Generate)
+                    {
+                        <TemplateColumn Title="جزئیات">
+                            <CellTemplate>@GetBillItemDetail(Bill, context.Item)</CellTemplate>
+                        </TemplateColumn>
+                    }
                     <TemplateColumn Title="مبلغ (ریال)">
                         <CellTemplate>@context.Item.Amount.ToString("N0")</CellTemplate>
                     </TemplateColumn>
