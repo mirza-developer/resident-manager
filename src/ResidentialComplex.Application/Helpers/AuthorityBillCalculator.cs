@@ -58,7 +58,7 @@ public static class AuthorityBillCalculator
         foreach (var h in houses)
         {
             var use = Math.Max(0m, h.HotUsage) + Math.Max(0m, h.ColdUsage);
-            var avg = use / bill.PeriodDays * WaterBillingConstants.DaysPerMonth;
+            var avg = use * WaterBillingConstants.DaysPerMonth / bill.PeriodDays;
             if (use <= 0)
             {
                 rows.Add((h.HouseId, 0m, 0m, null, 0m, 0m, 0m, 0m));
@@ -122,7 +122,7 @@ public static class AuthorityBillCalculator
             results.Add(new WaterHouseResult(
                 r.HouseId, r.Use, r.Avg, r.Tier, r.MonthPrice, r.Price, r.Tax, r.Tariff,
                 metered, final - metered, totals[i], final, final - totals[i]));
-        }
+            }
 
         return new AuthorityBillResult(totalHomeUse, totalHomePrice, homeCount, sharedUse, sharedPrice, increaser, results);
     }

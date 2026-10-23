@@ -20,7 +20,6 @@ public class BillingService
     private readonly ISmsTemplateRepository _smsTemplateRepo;
     private readonly IAuthorityBillRepository? _authorityBillRepo;
     private readonly IMonthlyUsageRepository? _usageRepo;
-
     /// <summary>
     /// Fallback text used only if no "BillApproved" SmsTemplate row exists in the database
     /// yet (e.g. the AddSmsTemplates migration hasn't run). Identical to the wording that
@@ -82,7 +81,7 @@ public class BillingService
 
         var bills = new List<Bill>();
 
-        // Old PITS formula: needs all houses at once (Increaser + shared share), so compute up front.
+        // Old PITS
         var authorityResults = new Dictionary<int, AuthorityBillResult>();
         var waterChildren = new Dictionary<int, WaterChildren>();
         foreach (var fi in applicableItems.Where(fi => fi.CalculationType == CalculationType.ParentChildTiering && !fi.ParentId.HasValue))
@@ -181,7 +180,7 @@ public class BillingService
             bills.Add(bill);
         }
 
-        // Apply rounding adjustments per financial item across all bills (EqualDivision only)
+        // Apply rounding adjustments
         foreach (var fi in applicableItems)
         {
             if (fi.CalculationType == CalculationType.ParentChildTiering)
@@ -390,7 +389,6 @@ public class BillingService
 
         var hotUsages = await _usageRepo.GetByFinancialItemMonthYearAsync(children.Hot.Id, year, month);
         var coldUsages = await _usageRepo.GetByFinancialItemMonthYearAsync(children.Cold.Id, year, month);
-
         var missing = houses
             .Where(h => hotUsages.All(u => u.HouseId != h.Id) || coldUsages.All(u => u.HouseId != h.Id))
             .ToList();

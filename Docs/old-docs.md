@@ -196,3 +196,13 @@ All CRUD procedures return an `@ErrorMessage` OUTPUT (`''` on success); insert p
 12. **Periods are not cross‑checked** (section 6.4): a bill and a reading period of different length or dates are silently combined.
 13. **No protection against meter anomalies** (section 4.2): negative consumption, roll‑over and typing errors flow straight into the allocation.
 14. **Rounded sum ≠ bill total.** Per‑home rounding to 1 000 Rial is not reconciled, so the sum of `FinalRealPrice` can differ slightly from `Bill.Price`.
+
+## 9. Findings from real data (period 1405/07, checked against the live PITS DB)
+
+1. **Zero-use homes still pay a tariff.** Homes with use 0 (units 18, 35, 51) are priced on the lowest used tier, so they paid 417,000 Rial: tariff share plus the equal shared share. The new app deliberately differs and charges them only the equal shared share (about 250,000).
+2. **Rounded sum is really off.** The old per-home finals summed to 364,641,000 against an authority price of 364,642,000 (1,000 short), which confirms risk 14.
+3. **Tier boundaries are order-sensitive.** In decimal arithmetic `use / period * 30` can give 35000.0000...1 for an exact boundary and push the home into the next tier. Compute `use * 30 / period` instead (fixed in the new app).
+4. **Bad readings distort everyone.** One wrong reading (e.g. 403,106 instead of 8,500) inflates the sum of tariffs and lowers the multiplier from about 57 to about 13 for all homes. The old system has no outlier check (risk 13).
+5. **A reading period can exist without an issued final bill.** Period 177 had `fldIncreaser` NULL, so amounts were computed only through the views/SQL, not stored.
+6. **Old tier table.** `tblPattern` ids 218-260 hold tiers 2-44; tier 1 and tiers 45-50 are not in the old data (the new app adds them).
+

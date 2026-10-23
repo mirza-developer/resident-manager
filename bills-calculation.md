@@ -86,12 +86,13 @@ Implemented in `AuthorityBillCalculator.Calculate(authorityBill, parentTiers, ho
 - `AuthorityBill.TotalUse > 0` and `PeriodDays > 0`.
 - If tiers exist, at least one has `MonthlyPrice > 0`.
 - The authority bill must exist for the parent/month, and every active house must have hot and cold usage.
-- The sum of all tariffs must be > 0.
+- The sum of all weights must be > 0 (at least one house with usage).
+- Wrong readings distort everyone: one outlier inflates the weights and lowers the Increaser for all houses. There is no outlier check.
 
 ### 5.2 Per house
 ```
 Use        = Hot + Cold                     (each clamped to >= 0)
-Avg        = Use / PeriodDays * 30          (monthly average)
+Avg        = Use * 30 / PeriodDays          (multiply first: avoids 35000.0000...1 at a tier boundary)
 Tier       = first tier with UpperLimit == null or Avg <= UpperLimit
 MonthPrice = Tier.MonthlyPrice
              or, if no tier matches / none defined:
@@ -100,25 +101,30 @@ Price      = round(MonthPrice * PeriodDays / 30)
 Tax        = round(Price * 0.04)
 Tariff     = Price + Tax
 ```
-Zero usage gives zero for everything. Rounding is `MidpointRounding.AwayFromZero`.
+Zero usage gives zero tariff (the old system charged a tier tariff; the new app does not).
+Weight     = max(Tariff, Use * 1) when Use > 0, else 0   (positive usage always carries a positive weight)
+
+
 
 ### 5.3 Reconciling with the authority bill
 ```
 SumUse        = sum(Use of all houses)
 SumTariff     = sum(Tariff of all houses)
-SharedUse     = Bill.TotalUse - SumUse
+SumWeight     = sum(Weight of all houses)
+SharedUse     = max(0, Bill.TotalUse - SumUse)     (never negative)
 SharedPrice   = Bill.TotalPrice * SharedUse / Bill.TotalUse
-Increaser     = (Bill.TotalPrice - SharedPrice) / SumTariff
+Increaser     = (Bill.TotalPrice - SharedPrice) / SumWeight
 SharedPerHome = SharedPrice / HomeCount
 ```
-`SharedUse` is common-area consumption. If negative, it becomes an **equal credit per home**.
+`SharedUse` is common-area consumption. If the meters sum above the authority total it is clamped to 0, so no credit is ever created.
 
 ### 5.4 Per-house result
 ```
-RealPrice  = Tariff * Increaser
+RealPrice  = Weight * Increaser
 Metered    = round(RealPrice)                 -> BillItem on the PARENT
 TotalReal  = RealPrice + SharedPerHome
-Final      = round(TotalReal / 1000) * 1000   (per-house water total)
+Final      = TotalReal rounded to 1000 by largest remainder, so the finals add up to Bill.TotalPrice (rounded to 1000)
+             (if Use > 0 and Final < Metered, Final is raised to the next 1000 above Metered)
 Shared     = Final - Metered                  -> BillItem on the SHARED child
 RoundPrice = Final - TotalReal
 ```
