@@ -31,7 +31,7 @@ public partial class FinancialItemTiersDialog : ComponentBase
             var tiers = await FinancialItemRepo.GetTiersAsync(FinancialItemId);
             rows = tiers
                 .OrderBy(x => x.TierOrder)
-                .Select(x => new TierRow { Id = x.Id, UpperLimit = x.UpperLimit, RatePerUnit = x.RatePerUnit })
+                .Select(x => new TierRow { Id = x.Id, UpperLimit = x.UpperLimit, MonthlyPrice = x.MonthlyPrice })
                 .ToList();
 
             if (rows.Count == 0)
@@ -101,7 +101,7 @@ public partial class FinancialItemTiersDialog : ComponentBase
                     FinancialItemId = FinancialItemId,
                     TierOrder = index + 1,
                     UpperLimit = row.UpperLimit,
-                    RatePerUnit = row.RatePerUnit
+                    MonthlyPrice = row.MonthlyPrice
                 });
             }
 
@@ -124,6 +124,6 @@ public partial class FinancialItemTiersDialog : ComponentBase
     {
         public int Id { get; set; }
         public int? UpperLimit { get; set; }
-        public decimal RatePerUnit { get; set; }
+        public decimal MonthlyPrice { get; set; }
     }
 }

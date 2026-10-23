@@ -101,7 +101,7 @@ public partial class FinancialItems : ComponentBase
         isLoading = true;
         int? savedItemId = null;
         var savedItemTitle = editing.Title;
-        var wasGrouping = editing.CalculationType == CalculationType.ParentChildTiering && editing.ParentId.HasValue && (editing.WaterKind == WaterKind.Hot || editing.WaterKind == WaterKind.Cold);
+        var wasGrouping = editing.CalculationType == CalculationType.ParentChildTiering && !editing.ParentId.HasValue;
 
         var validationError = ValidateWaterRules();
         if (validationError != null)

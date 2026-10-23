@@ -83,15 +83,7 @@ public partial class Billing
             return;
         }
 
-        foreach (var item in groupingItems)
-        {
-            if (!item.Tiers.Any())
-            {
-                Snackbar.Add("ابتدا مقادیر مصرف تمام آیتم‌های گروه‌بندی را ثبت کنید.", Severity.Warning);
-            }
-        }
-
-        var itemsWithTiers = groupingItems.Where(item => item.Tiers.Any()).ToList();
+        var itemsWithTiers = groupingItems;
 
         if (!itemsWithTiers.Any())
         {

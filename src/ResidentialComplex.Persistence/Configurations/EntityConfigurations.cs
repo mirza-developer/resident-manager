@@ -119,6 +119,7 @@ public class FinancialItemTierConfiguration : IEntityTypeConfiguration<Financial
     {
         builder.HasKey(t => t.Id);
         builder.Property(t => t.RatePerUnit).HasColumnType("decimal(18,4)");
+        builder.Property(t => t.MonthlyPrice).HasColumnType("decimal(18,4)");
         builder.HasOne(t => t.FinancialItem).WithMany(f => f.Tiers).HasForeignKey(t => t.FinancialItemId).OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -30,9 +30,9 @@
                                              Culture="@CultureInfo.InvariantCulture" />
                         </CellTemplate>
                     </TemplateColumn>
-                    <TemplateColumn Title="نرخ هر واحد (ریال)">
+                    <TemplateColumn Title="قیمت ماهانه (ریال)">
                         <CellTemplate>
-                            <MudNumericField T="decimal" @bind-Value="context.Item.RatePerUnit" Variant="Variant.Outlined"
+                            <MudNumericField T="decimal" @bind-Value="context.Item.MonthlyPrice"
                                              HideSpinButtons="true" Format="N0" Culture="@CultureInfo.InvariantCulture" />
                         </CellTemplate>
                     </TemplateColumn>

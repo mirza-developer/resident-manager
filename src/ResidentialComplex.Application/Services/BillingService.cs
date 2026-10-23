@@ -80,19 +80,6 @@ public class BillingService
             .Where(fi => !(fi.ParentId.HasValue && waterParentIds.Contains(fi.ParentId.Value)))
             .ToList();
 
-        // Validate that Grouping items have tiers configured
-        var groupingItemsWithoutTiers = activeItems
-            .Where(fi => fi.CalculationType == CalculationType.ParentChildTiering
-                && fi.ParentId.HasValue && waterParentIds.Contains(fi.ParentId.Value)
-                && (fi.WaterKind == WaterKind.Hot || fi.WaterKind == WaterKind.Cold)
-                && !fi.Tiers.Any())
-            .ToList();
-        if (groupingItemsWithoutTiers.Any())
-        {
-            var names = string.Join("، ", groupingItemsWithoutTiers.Select(fi => fi.Title));
-            throw new InvalidOperationException($"آیتم‌های زیر نوع گروه‌بندی (تعرفه‌ای) دارند ولی هیچ تعرفه‌ای برای آن‌ها تعریف نشده است: {names}. لطفاً ابتدا تعرفه‌ها را در صفحه آیتم‌های مالی تنظیم کنید.");
-        }
-
         var bills = new List<Bill>();
 
         // Old PITS formula: needs all houses at once (Increaser + shared share), so compute up front.
@@ -146,17 +133,12 @@ public class BillingService
                     var result = authorityResults[fi.Id];
                     var children = waterChildren[fi.Id];
                     var r = result.Houses.First(x => x.HouseId == house.Id);
+                    var tierText = r.TierOrder.HasValue ? $"پله {r.TierOrder}" : "فرمول خارج از پله";
                     bill.BillItems.Add(new BillItem
                     {
-                        FinancialItemId = children.Hot.Id,
-                        Amount = r.HotAmount,
-                        Description = $"{children.Hot.Title} (مصرف {r.HotUsage:0.##}، تعرفه+مالیات {r.HotTariffTotal:0}، ضریب {result.Increaser:0.####})"
-                    });
-                    bill.BillItems.Add(new BillItem
-                    {
-                        FinancialItemId = children.Cold.Id,
-                        Amount = r.ColdAmount,
-                        Description = $"{children.Cold.Title} (مصرف {r.ColdUsage:0.##}، تعرفه+مالیات {r.ColdTariffTotal:0}، ضریب {result.Increaser:0.####})"
+                        FinancialItemId = fi.Id,
+                        Amount = r.MeteredAmount,
+                        Description = $"{fi.Title} (مصرف {r.Use:0.##}، میانگین ماهانه {r.Average:0.##}، {tierText}، قیمت ماهانه {r.MonthPrice:0}، تعرفه+مالیات {r.TariffTotal:0}، ضریب {result.Increaser:0.####})"
                     });
                     bill.BillItems.Add(new BillItem
                     {
@@ -423,7 +405,7 @@ public class BillingService
                 coldUsages.First(u => u.HouseId == h.Id).UsageCount))
             .ToList();
 
-        return AuthorityBillCalculator.Calculate(authorityBill, children.Hot.Tiers.ToList(), children.Cold.Tiers.ToList(), houseUsages);
+        return AuthorityBillCalculator.Calculate(authorityBill, parent.Tiers.ToList(), houseUsages);
     }
 
     private static bool IsApplicable(FinancialItem fi)

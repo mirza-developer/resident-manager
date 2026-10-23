@@ -60,7 +60,7 @@ public partial class BillingGenerateDialog
     };
 
     private static bool IsWaterLine(FinancialItem item) =>
-        item.CalculationType == CalculationType.ParentChildTiering && item.ParentId.HasValue;
+        item.CalculationType == CalculationType.ParentChildTiering;
 
     private string GetBillItemDetail(Bill bill, BillItem billItem)
     {

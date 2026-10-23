@@ -251,8 +251,14 @@ public class MonthlyUsageRepository : IMonthlyUsageRepository
             .OrderByDescending(m => m.Year)
             .ThenByDescending(m => m.Month)
             .FirstOrDefaultAsync();
-    public async Task<MonthlyUsage> AddAsync(MonthlyUsage usage) { _db.MonthlyUsages.Add(usage); await _db.SaveChangesAsync(); return usage; }
-    public Task UpdateAsync(MonthlyUsage usage) => _db.UpdateEntityAsync(_db.MonthlyUsages, usage.Id, usage);
+    public async Task<MonthlyUsage> AddAsync(MonthlyUsage usage) { EnsureNonNegative(usage); _db.MonthlyUsages.Add(usage); await _db.SaveChangesAsync(); return usage; }
+    public Task UpdateAsync(MonthlyUsage usage) { EnsureNonNegative(usage); return _db.UpdateEntityAsync(_db.MonthlyUsages, usage.Id, usage); }
+
+    private static void EnsureNonNegative(MonthlyUsage usage)
+    {
+        if (usage.CurrentReading < usage.PreviousReading || usage.UsageCount < 0)
+            throw new InvalidOperationException("کنتور فعلی نمی‌تواند کمتر از کنتور قبلی باشد (مصرف منفی).");
+    }
 }
 
 public class AuditLogRepository : IAuditLogRepository

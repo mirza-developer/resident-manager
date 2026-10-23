@@ -84,7 +84,7 @@
                     </MudItem>
                 </MudGrid>
 
-                @if (editing.CalculationType == CalculationType.ParentChildTiering && editing.ParentId.HasValue && (editing.WaterKind == WaterKind.Hot || editing.WaterKind == WaterKind.Cold))
+                @if (editing.CalculationType == CalculationType.ParentChildTiering && !editing.ParentId.HasValue)
                 {
                     <div>
                         @if (editing.Id != 0)
@@ -144,7 +144,7 @@
             </TemplateColumn>
             <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
                 <CellTemplate>
-                    @if (context.Item.CalculationType == CalculationType.ParentChildTiering && context.Item.ParentId.HasValue && (context.Item.WaterKind == WaterKind.Hot || context.Item.WaterKind == WaterKind.Cold))
+                    @if (context.Item.CalculationType == CalculationType.ParentChildTiering && !context.Item.ParentId.HasValue)
                     {
                         <MudTooltip Text="مدیریت تعرفه‌های مصرفی">
                             <MudIconButton Icon="@Icons.Material.Filled.Tune" Color="Color.Primary" Size="Size.Small"
