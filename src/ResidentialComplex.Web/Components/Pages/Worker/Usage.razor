@@ -6,14 +6,6 @@
     <HelpButton PageKey="usage" />
 </MudStack>
 
-@* fixed-height slot so the page does not jump when the loading bar appears *@
-<div style="height: 4px" class="mb-2">
-    @if (isLoading)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-    }
-</div>
-
 <MudPaper Class="pa-3 mb-3">
     <MudGrid Spacing="2" Class="align-center">
         <MudItem xs="6" md="2">
@@ -129,3 +121,10 @@
         </MudTabs>
     </div>
 }
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

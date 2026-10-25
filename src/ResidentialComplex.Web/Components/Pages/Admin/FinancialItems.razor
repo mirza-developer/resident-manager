@@ -14,11 +14,6 @@
     </MudButton>
 </MudStack>
 
-@if (isLoading)
-{
-    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
-}
-
 @if (showForm)
 {
     <div>
@@ -164,3 +159,11 @@
         </PagerContent>
     </MudDataGrid>
 </MudPaper>
+
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

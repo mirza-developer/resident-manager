@@ -6,18 +6,13 @@
         <MudText Typo="Typo.h6">تعرفه‌های مصرفی — @ItemTitle</MudText>
     </TitleContent>
     <DialogContent>
-        @if (isLoading)
-        {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
-        }
-        else
+        @if (!isLoading)
         {
             <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
                 تعرفه‌ها را به هر ترتیبی که مایل باشید وارد کنید؛ سیستم به‌صورت خودکار بر اساس حد مصرف مرتب و اعتبارسنجی می‌کند.
                 کل مصرف واحد فقط در یکی از این تعرفه‌ها قرار می‌گیرد و تمام مصرف با نرخ همان تعرفه محاسبه خواهد شد.
                 یک ردیف را برای تعرفه نامحدود (بالاترین سطح) خالی بگذارید.
             </MudAlert>
-
             <MudDataGrid T="TierRow" Items="@rows" Hover="true" Dense="true" Elevation="0" Bordered="true" Class="mb-3">
                 <Columns>
                     <TemplateColumn Title="#">
@@ -58,3 +53,11 @@
         </MudButton>
     </DialogActions>
 </MudDialog>
+
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

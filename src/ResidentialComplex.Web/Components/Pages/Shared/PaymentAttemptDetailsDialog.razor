@@ -6,11 +6,8 @@
         <MudText Typo="Typo.h6">جزئیات پرداخت آنلاین</MudText>
     </TitleContent>
     <DialogContent>
-        @if (isLoading)
-        {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-        }
-        else if (attempt is null)
+        
+        @if (attempt is null)
         {
             <MudAlert Severity="Severity.Warning">پرداخت مورد نظر یافت نشد.</MudAlert>
         }
@@ -83,3 +80,11 @@
         <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="Close">بستن</MudButton>
     </DialogActions>
 </MudDialog>
+
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>
