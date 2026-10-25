@@ -39,13 +39,13 @@
             <PropertyColumn Property="x => x.House!.Title" Title="واحد" />
             <TemplateColumn Title="مبلغ کل(ریال)">
                 <CellTemplate>
-                    @if (context.Item.Status == BillStatus.Draft)
+                    @if (context.Item.Status == BillStatus.Approved)
                     {
-                        <text><MudNumericField T="decimal" Value="@context.Item.TotalAmount" ValueChanged="@((decimal value) => UpdateBillAmountAsync(context.Item, value))" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" Immediate="false" /></text>
+                        @context.Item.TotalAmount.ToString("N0")
                     }
                     else
                     {
-                        @context.Item.TotalAmount.ToString("N0")
+                        <text><MudNumericField T="decimal" Value="@GetPendingAmount(context.Item)" ValueChanged="@((decimal value) => SetPendingAmount(context.Item, value))" Variant="Variant.Outlined" Format="N0" HideSpinButtons="true" Immediate="false" /></text>
                     }
                 </CellTemplate>
             </TemplateColumn>
@@ -55,6 +55,10 @@
             <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
                 <CellTemplate>
                     <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowBillDetails(context.Item.Id))" />
+                    @if (context.Item.Status != BillStatus.Paid)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SaveBillAmountAsync(context.Item))" />
+                    }
                     @if (context.Item.Status == BillStatus.Approved)
                     {
                         <text><MudIconButton Icon="@Icons.Material.Filled.Sms" Color="Color.Primary" Size="Size.Small" OnClick="@(() => ResendSms(context.Item.Id))" /></text>

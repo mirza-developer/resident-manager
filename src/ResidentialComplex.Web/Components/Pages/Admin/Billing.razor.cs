@@ -40,6 +40,7 @@ public partial class Billing
     private bool isLoading;
     private int? payingBillId;
     private bool CanPayOnline => PaymentService.IsGatewayConfigured;
+    private readonly Dictionary<int, decimal> pendingAmounts = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -285,9 +286,29 @@ public partial class Billing
         }
     }
 
+
+    private decimal GetPendingAmount(Bill bill)
+        => pendingAmounts.TryGetValue(bill.Id, out var value) ? value : bill.TotalAmount;
+
+    private void SetPendingAmount(Bill bill, decimal value)
+        => pendingAmounts[bill.Id] = value;
+
+    private async Task SaveBillAmountAsync(Bill bill)
+    {
+        if (!pendingAmounts.TryGetValue(bill.Id, out var value))
+        {
+            return;
+        }
+
+        await UpdateBillAmountAsync(bill, value);
+
+        pendingAmounts.Remove(bill.Id);
+    }
+
     private async Task UpdateBillAmountAsync(Bill bill, decimal value)
     {
         isLoading = true;
+
         try
         {
             bill.TotalAmount = value;

@@ -297,7 +297,7 @@ public class BillingService
             BillId = billId,
             Amount = bill.TotalAmount,
             PaymentDate = DateTime.Now,
-            Description = $"پرداخت قبض {bill.Year}/{bill.Month}"
+            Description = $"پرداخت قبض بصورت حضوری {bill.Year}/{bill.Month}"
         };
 
         await _paymentRepo.AddAsync(payment);
