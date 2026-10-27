@@ -30,16 +30,17 @@
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Calculate" OnClick="OpenGenerateDialogAsync">تولید صورتحساب</MudButton>
             @if (bills.Any(x => x.Status == BillStatus.Draft))
             {
-                <text><MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Check" OnClick="ApproveBillsAsync">تایید قبوض پیش‌نویس</MudButton></text>
+                <text><MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.ThumbUp" OnClick="ApproveBillsAsync">تایید قبوض پیش‌نویس</MudButton></text>
             }
         </MudItem>
     </MudGrid>
     <MudDataGrid T="Bill" Items="@bills" Filterable="true" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
         <Columns>
             <PropertyColumn Property="x => x.House!.Title" Title="واحد" />
+            <PropertyColumn Property="x => x.House!.ResidentName" Title="نام ساکن" />
             <TemplateColumn Title="مبلغ کل(ریال)">
                 <CellTemplate>
-                    @if (context.Item.Status == BillStatus.Approved)
+                    @if (context.Item.Status >= BillStatus.Approved)
                     {
                         @context.Item.TotalAmount.ToString("N0")
                     }
@@ -54,19 +55,23 @@
             </TemplateColumn>
             <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
                 <CellTemplate>
-                    <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowBillDetails(context.Item.Id))" />
-                    @if (context.Item.Status != BillStatus.Paid)
+                    <MudIconButton title="جزییات" Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowBillDetails(context.Item.Id))" />
+                    @if (context.Item.Status < BillStatus.Paid)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SaveBillAmountAsync(context.Item))" />
+                        <MudIconButton title="بروزرسانی مبلغ قبض" Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SaveBillAmountAsync(context.Item))" />
                     }
                     @if (context.Item.Status == BillStatus.Approved)
                     {
-                        <text><MudIconButton Icon="@Icons.Material.Filled.Sms" Color="Color.Primary" Size="Size.Small" OnClick="@(() => ResendSms(context.Item.Id))" /></text>
-                        <text><MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" OnClick="@(() => PayAsync(context.Item.Id))" /></text>
+                        <text><MudIconButton title="بازارسال پیامک قبض" Icon="@Icons.Material.Filled.Sms" Color="Color.Primary" Size="Size.Small" OnClick="@(() => ResendSms(context.Item.Id))" /></text>
+                        <text><MudIconButton title="تایید پرداخت نقدی" Icon="@Icons.Material.Filled.Check" Color="Color.Primary" Size="Size.Small" OnClick="@(() => PayAsync(context.Item.Id))" /></text>
                         @if (CanPayOnline)
                         {
                             <text><MudIconButton Icon="@Icons.Material.Filled.Payment" Color="Color.Success" Size="Size.Small" Disabled="@(payingBillId.HasValue)" title="پرداخت آنلاین" OnClick="@(() => PayOnlineAsync(context.Item))" /></text>
                         }
+                    }
+                    @if (context.Item.Status == BillStatus.Draft)
+                    {
+                        <text><MudIconButton title="تایید قبض" Icon="@Icons.Material.Filled.ThumbUp" Color="Color.Success" Size="Size.Small" OnClick="@(() => ApproveBill(context.Item.Id))" /></text>
                     }
                 </CellTemplate>
             </TemplateColumn>

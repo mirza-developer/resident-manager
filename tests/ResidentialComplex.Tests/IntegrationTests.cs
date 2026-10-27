@@ -444,7 +444,7 @@ public class BillRoundingTests : TestBase
         Assert.Equal(150_000m, bills[0].TotalAmount);
         Assert.Equal(50_000m, bills[0].PreviousDebt);
 
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
 
         var updated = await houseRepo.GetByIdAsync(house.Id);
         Assert.Equal(150_000m, updated!.CurrentDebt);
@@ -468,7 +468,7 @@ public class BillRoundingTests : TestBase
         h!.CurrentDebt = 20_000m;
         await houseRepo.UpdateAsync(h);
 
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
 
         var updated = await houseRepo.GetByIdAsync(house.Id);
         Assert.Equal(120_000m, updated!.CurrentDebt);
@@ -567,11 +567,11 @@ public class BillRoundingTests : TestBase
 
         // Generate and approve month 1
         await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 200_000m }, "test", "test");
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
 
         // Generate and approve month 2
         await billingService.GenerateBillsAsync(2025, 2, new Dictionary<int, decimal> { [fi.Id] = 200_000m }, "test", "test");
-        await billingService.ApproveBillsAsync(2025, 2, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 2, "test", "test");
 
         var updatedFi = await fiRepo.GetByIdAsync(fi.Id);
         Assert.False(updatedFi!.IsActive);
@@ -603,7 +603,7 @@ public class BillApprovalAndPaymentTests : TestBase
         Assert.Single(bills);
 
         // Approve
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
         var houseAfterApproval = await houseRepo.GetByIdAsync(house.Id);
         Assert.Equal(100_000m, houseAfterApproval!.CurrentDebt);
 
@@ -650,7 +650,7 @@ public class BillUniquenessTests : TestBase
         var fi = await fiRepo.AddAsync(new FinancialItem { Title = "شارژ", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.EqualDivision, IsActive = true });
 
         await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 100_000m }, "test", "test");
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
 
         // Second call after approval: must be skipped (approved bills are final)
         var bills2 = await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 200_000m }, "test", "test");
@@ -715,7 +715,7 @@ public class ReportTests : TestBase
         var fi = await fiRepo.AddAsync(new FinancialItem { Title = "شارژ", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.EqualDivision, IsActive = true });
 
         var bills = await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 100_000m }, "test", "test");
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
         await billingService.RecordPaymentAsync(bills[0].Id, "test", "test");
 
         var report = await reportService.GenerateReportAsync(2025, 1, null);
@@ -966,7 +966,7 @@ public class OnceTypeTests : TestBase
         var fi = await fiRepo.AddAsync(new FinancialItem { Title = "یکبار مصرف", PeriodType = PeriodType.Once, CalculationType = CalculationType.EqualDivision, IsActive = true });
 
         await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 50_000m }, "test", "test");
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
 
         var updated = await fiRepo.GetByIdAsync(fi.Id);
         Assert.False(updated!.IsActive);

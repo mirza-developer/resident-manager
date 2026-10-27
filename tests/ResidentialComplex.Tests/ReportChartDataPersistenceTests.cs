@@ -20,7 +20,7 @@ public class ReportChartDataPersistenceTests : TestBase
         var billing = GetService<BillingService>();
 
         var bills = await billing.GenerateBillsAsync(1404, 1, new Dictionary<int, decimal> { [fi.Id] = 2_000_000m }, "test", "test");
-        await billing.ApproveBillsAsync(1404, 1, "test", "test");
+        await billing.ApproveBillsOfPeriodAsync(1404, 1, "test", "test");
         await billing.RecordPaymentAsync(bills[0].Id, "test", "test");   // one of the two houses pays
 
         var report = await GetService<ReportService>().GenerateReportAsync(1404, null, null);

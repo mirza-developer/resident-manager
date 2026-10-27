@@ -203,7 +203,7 @@ public partial class Billing
         {
             var (userId, userName) = await GetCurrentUserAsync();
             
-            await BillingService.ApproveBillsAsync(year, month, userId, userName);
+            await BillingService.ApproveBillsOfPeriodAsync(year, month, userId, userName);
             
             await LoadBillsCoreAsync();
             
@@ -228,6 +228,42 @@ public partial class Billing
         {
             isLoading = false;
 
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ApproveBill(int billId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "تأیید قبض",
+            "آیا از تایید این قبض مطمئن هستید؟",
+            yesText: "تأیید",
+            cancelText: "انصراف");
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            var (userId, userName) = await GetCurrentUserAsync();
+
+            await BillingService.ApproveBillByIdAsync(billId, userId, userName);
+
+            await LoadBillsCoreAsync();
+
+            Snackbar.Add("قبض تایید شد.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطا در تایید قبض: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
             await InvokeAsync(StateHasChanged);
         }
     }

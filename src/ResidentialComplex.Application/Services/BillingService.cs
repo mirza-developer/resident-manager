@@ -229,7 +229,7 @@ public class BillingService
     /// <summary>
     /// Approves bills for a given month, updating house debts.
     /// </summary>
-    public async Task ApproveBillsAsync(int year, int month, string userId, string userName)
+    public async Task ApproveBillsOfPeriodAsync(int year, int month, string userId, string userName)
     {
         var bills = await _billRepo.GetByMonthYearAsync(year, month);
         var draftBills = bills.Where(b => b.Status == BillStatus.Draft).ToList();
@@ -279,6 +279,38 @@ public class BillingService
                 await _financialItemRepo.UpdateAsync(fi);
             }
         }
+    }
+
+    public async Task ApproveBillByIdAsync(int billId, string userId, string userName)
+    {
+        var bill = await _billRepo.GetByIdAsync(billId);
+        if (bill is null)
+            throw new InvalidOperationException("قبض یافت نشد.");
+
+        if (bill.Status != BillStatus.Draft)
+            throw new InvalidOperationException("قبض باید در وضعیت پیش‌نویس باشد.");
+
+        bill.Status = BillStatus.Approved;
+        bill.ApprovedDate = DateTime.Now;
+        await _billRepo.UpdateAsync(bill);
+        // Update house debt
+        var house = await _houseRepo.GetByIdAsync(bill.HouseId);
+
+        if (house is not null)
+        {
+            // The bill total already includes the previous debt, which is in CurrentDebt
+            house.CurrentDebt += Math.Max(0m, bill.TotalAmount - bill.PreviousDebt);
+            await _houseRepo.UpdateAsync(house);
+            // Send SMS notification to household owner (only on Draft→Approved transition)
+            if (!string.IsNullOrWhiteSpace(house.ResidentPhoneNumber))
+            {
+                var smsText = await BuildBillApprovedSmsTextAsync(house, bill);
+                await _smsService.SendAsync(house.ResidentPhoneNumber, smsText);
+            }
+        }
+
+        await _audit.LogAsync(userId, userName, nameof(Bill), bill.Id.ToString(), "Approved", null,
+            $"TotalAmount={bill.TotalAmount}");
     }
 
     /// <summary>
