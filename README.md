@@ -48,7 +48,7 @@ ResidentialComplex.slnx
 | Entity | Description |
 |--------|-------------|
 | `Apartment` | A block/building in the complex |
-| `House` | A residential unit within an apartment |
+| `House` | A residential unit within an apartment; `SortOrder` is its manual display order (all house lists sort by it, editable on the Houses page) |
 | `FinancialItem` | A billing item with period and calculation type |
 | `FinancialItemGroupPoint` | Point values for groups in Grouping calculation |
 | `MonthlyUsage` | Monthly usage count per house (for Grouping) |

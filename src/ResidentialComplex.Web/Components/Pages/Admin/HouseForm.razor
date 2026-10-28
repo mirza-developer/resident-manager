@@ -43,6 +43,10 @@ else
                     <MudItem xs="12" md="6">
                         <MudNumericField T="int" @bind-Value="house.NumberOfResidents" For="@(() => house.NumberOfResidents)" Label="تعداد ساکنین" Variant="Variant.Outlined" Min="0" />
                     </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudNumericField T="int" @bind-Value="house.SortOrder" For="@(() => house.SortOrder)" Label="ترتیب نمایش" Variant="Variant.Outlined"
+                                         HelperText="@(IsEditMode ? "واحدها در همه فهرست‌ها به‌صورت صعودی بر اساس این عدد مرتب می‌شوند." : "اگر ۰ بماند و عنوان به شکل «واحد N» باشد، N ثبت می‌شود.")" />
+                    </MudItem>
                     <MudItem xs="12" md="6" Class="d-flex align-center">
                         <MudCheckBox T="bool" @bind-Value="house.IsActive" Label="فعال" Color="Color.Primary" />
                     </MudItem>

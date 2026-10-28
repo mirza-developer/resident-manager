@@ -69,7 +69,7 @@ Docs/                                Zibal-docs.json, payment-docs.md (payment d
 
 - Migrations are **hand-written**; never run `dotnet ef migrations add`. Files live in `src/ResidentialComplex.Persistence/Migrations_<Name>.cs`
   (namespace `...Persistence.Migrations`) with `[DbContext(typeof(ApplicationDbContext))]` and `[Migration("2025010100000N_<Name>")]`.
-  Use the next free number (currently `000007`). The model snapshot is intentionally minimal — do not regenerate it.
+  Use the next free number (currently `000013`; the last one is `000012_AddHouseSortOrder`). The model snapshot is intentionally minimal — do not regenerate it.
 - Every migration implements **both providers**: `if (migrationBuilder.ActiveProvider == "Microsoft.EntityFrameworkCore.SqlServer") { ... } else { /* SQLite */ }`,
   plus a working `Down`.
 - When you change an entity: update the entity, its configuration in `Configurations/EntityConfigurations.cs`, the migration, and the tests.
@@ -103,6 +103,7 @@ Docs/                                Zibal-docs.json, payment-docs.md (payment d
 
 ## 8. Domain quick reference
 
+- Houses are listed by `House.SortOrder` ascending (ties by `Id`) everywhere — repository queries do the ordering, so new house/bill/usage listings must `OrderBy` it too. New houses get `SortOrder` from a "واحد N" title (`House.DefaultSortOrderFromTitle`), else 0; `HouseForm` must copy it when editing.
 - Bill: `Draft → Approved → Paid`. Approved bills are immutable; approving raises `House.CurrentDebt`, paying lowers it.
 - Calculation types: `EqualDivision`, `Grouping` (whole-consumption bracket pricing: the total usage picks one tier and the whole usage is
   billed at that tier's rate — not incremental). Bill totals are rounded **up** to the nearest 10,000 Rial.

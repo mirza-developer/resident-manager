@@ -56,6 +56,38 @@ public partial class Houses : ComponentBase
             : houses.Where(h => h.ApartmentId == filterApartmentId).ToList();
     }
 
+    /// <summary>
+    /// Saves the manual order typed in the grid and reloads the list so it is shown sorted by the new value.
+    /// </summary>
+    private async Task SaveSortOrderAsync(House house, int value)
+    {
+        if (house.SortOrder == value)
+        {
+            return;
+        }
+
+        var previous = house.SortOrder;
+        isLoading = true;
+        try
+        {
+            house.SortOrder = value;
+            await HouseRepo.UpdateAsync(house);
+            houses = await HouseRepo.GetAllAsync();
+            ApplyFilter();
+            Snackbar.Add("ترتیب واحد ذخیره شد.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            house.SortOrder = previous;
+            Snackbar.Add($"خطا در ذخیره ترتیب واحد: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     private void OnApartmentFilterChanged(int value)
     {
         filterApartmentId = value;

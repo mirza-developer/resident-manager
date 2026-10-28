@@ -1,0 +1,48 @@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">نتیجه ارسال پیامک</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Row="true" Spacing="2" Class="mb-4">
+            <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined">موفق: @Succeeded.Count</MudChip>
+            <MudChip T="string" Color="@(Failed.Count > 0 ? Color.Error : Color.Default)" Variant="Variant.Outlined">ناموفق: @Failed.Count</MudChip>
+        </MudStack>
+
+        @if (Failed.Count > 0)
+        {
+            <MudText Typo="Typo.subtitle1" Color="Color.Error" Class="mb-1">ارسال ناموفق</MudText>
+            <MudSimpleTable Dense="true" Hover="true" Class="mb-4">
+                <thead>
+                    <tr><th>واحد</th><th>نام مالک</th><th>شماره</th><th>علت</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var o in Failed)
+                    {
+                        <tr><td>@o.HouseTitle</td><td>@o.ResidentName</td><td>@o.Phone</td><td>@o.Detail</td></tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">متن پیامک حفظ شد و واحدهای ناموفق دوباره انتخاب شده‌اند تا بتوانید دوباره تلاش کنید.</MudAlert>
+        }
+
+        @if (Succeeded.Count > 0)
+        {
+            <MudText Typo="Typo.subtitle1" Color="Color.Success" Class="mb-1">ارسال موفق</MudText>
+            <MudSimpleTable Dense="true" Hover="true">
+                <thead>
+                    <tr><th>واحد</th><th>نام مالک</th><th>شماره</th><th>توضیح</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var o in Succeeded)
+                    {
+                        <tr><td>@o.HouseTitle</td><td>@o.ResidentName</td><td>@o.Phone</td><td>@o.Detail</td></tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+            <MudText Typo="Typo.caption" Class="mt-2">«موفق» یعنی پیامک بدون خطا به سرویس‌دهنده تحویل داده شد؛ گزارش تحویل به گوشی دریافت نمی‌شود.</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">بستن</MudButton>
+    </DialogActions>
+</MudDialog>

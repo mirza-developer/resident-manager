@@ -54,6 +54,7 @@ public partial class HouseForm : ComponentBase
                 ResidentPhoneNumber = existing.ResidentPhoneNumber,
                 NumberOfResidents = existing.NumberOfResidents,
                 IsActive = existing.IsActive,
+                SortOrder = existing.SortOrder,
                 CurrentDebt = existing.CurrentDebt,
                 RowVersion = existing.RowVersion,
                 ApplicationUserId = existing.ApplicationUserId
