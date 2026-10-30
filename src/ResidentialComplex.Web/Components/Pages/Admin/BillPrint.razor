@@ -85,7 +85,6 @@
                         <tr>
                             <th class="col-row">ردیف</th>
                             <th>شرح</th>
-                            <th>توضیحات</th>
                             <th class="col-amount">مبلغ (ریال)</th>
                         </tr>
                     </thead>
@@ -97,7 +96,6 @@
                             <tr>
                                 <td class="col-row">@Fa(row.ToString())</td>
                                 <td>@(item.FinancialItem?.Title ?? "-")</td>
-                                <td>@GetItemNote(sheet, item)</td>
                                 <td class="col-amount">@Money(item.Amount)</td>
                             </tr>
                         }
@@ -107,22 +105,11 @@
                         }
                     </tbody>
                     <tfoot>
-                        <tr>
-                            <td colspan="3">جمع آیتم‌ها</td>
-                            <td class="col-amount">@Money(itemsTotal)</td>
-                        </tr>
                         @if (bill.PreviousDebt > 0)
                         {
                             <tr>
                                 <td colspan="3">بدهی قبلی</td>
                                 <td class="col-amount">@Money(bill.PreviousDebt)</td>
-                            </tr>
-                        }
-                        @if (rounding != 0)
-                        {
-                            <tr>
-                                <td colspan="3">گرد کردن مبلغ</td>
-                                <td class="col-amount">@Money(rounding)</td>
                             </tr>
                         }
                         <tr class="bill-total">
