@@ -56,10 +56,6 @@
             <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
                 <CellTemplate>
                     <MudIconButton title="جزییات" Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowBillDetails(context.Item.Id))" />
-                    @if (context.Item.Status < BillStatus.Paid)
-                    {
-                        <MudIconButton title="بروزرسانی مبلغ قبض" Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SaveBillAmountAsync(context.Item))" />
-                    }
                     @if (context.Item.Status == BillStatus.Approved)
                     {
                         <text><MudIconButton title="بازارسال پیامک قبض" Icon="@Icons.Material.Filled.Sms" Color="Color.Primary" Size="Size.Small" OnClick="@(() => ResendSms(context.Item.Id))" /></text>
@@ -71,7 +67,8 @@
                     }
                     @if (context.Item.Status == BillStatus.Draft)
                     {
-                        <text><MudIconButton title="تایید قبض" Icon="@Icons.Material.Filled.ThumbUp" Color="Color.Success" Size="Size.Small" OnClick="@(() => ApproveBill(context.Item.Id))" /></text>
+                        <MudIconButton title="بروزرسانی مبلغ قبض" Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SaveBillAmountAsync(context.Item))" />
+                        <text><MudIconButton title="تایید قبض پیش نویس" Icon="@Icons.Material.Filled.ThumbUp" Color="Color.Success" Size="Size.Small" OnClick="@(() => ApproveBill(context.Item.Id))" /></text>
                     }
                 </CellTemplate>
             </TemplateColumn>

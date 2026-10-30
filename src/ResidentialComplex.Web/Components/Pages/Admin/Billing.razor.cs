@@ -236,7 +236,7 @@ public partial class Billing
     {
         var confirmed = await DialogService.ShowMessageBox(
             "تأیید قبض",
-            "آیا از تایید این قبض مطمئن هستید؟",
+            "آیا از تایید پیش نویس این قبض مطمئن هستید؟",
             yesText: "تأیید",
             cancelText: "انصراف");
 
