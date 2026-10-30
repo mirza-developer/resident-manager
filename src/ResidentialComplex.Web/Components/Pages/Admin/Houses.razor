@@ -39,6 +39,12 @@
 <MudPaper Class="pa-4">
     <MudDataGrid T="House" Items="@filteredHouses" Filterable="true" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
         <Columns>
+            <TemplateColumn Title="ترتیب" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudNumericField T="int" Value="@context.Item.SortOrder" ValueChanged="@((int value) => SaveSortOrderAsync(context.Item, value))"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" HideSpinButtons="true" Style="width: 90px;" Disabled="isLoading" />
+                </CellTemplate>
+            </TemplateColumn>
             <PropertyColumn Property="x => x.Title" Title="عنوان" />
             <PropertyColumn Property="x => x.Apartment!.Title" Title="آپارتمان" />
             <PropertyColumn Property="x => x.ResidentName" Title="ساکن" />

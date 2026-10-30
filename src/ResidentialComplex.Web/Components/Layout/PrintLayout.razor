@@ -1,0 +1,10 @@
+@inherits LayoutComponentBase
+
+@* Bare layout for printable pages: no app bar or drawer, only the RTL/theme providers the Mud components need. *@
+<MudRTLProvider RightToLeft="true">
+    <MudThemeProvider Theme="@AppTheme.Default" />
+    <MudPopoverProvider />
+    <MudSnackbarProvider />
+
+    @Body
+</MudRTLProvider>

@@ -28,6 +28,10 @@
         <MudItem xs="12" md="6" Class="d-flex align-center gap-2 flex-wrap">
             <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.Search" OnClick="LoadBillsAsync">بارگذاری</MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Calculate" OnClick="OpenGenerateDialogAsync">تولید صورتحساب</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Print"
+                       Href="@SelectedPrintHref" Target="_blank" Disabled="@(selectedPrintIds.Count == 0)">
+                چاپ انتخاب‌شده (@selectedPrintIds.Count)
+            </MudButton>
             @if (bills.Any(x => x.Status == BillStatus.Draft))
             {
                 <text><MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.ThumbUp" OnClick="ApproveBillsAsync">تایید قبوض پیش‌نویس</MudButton></text>
@@ -36,6 +40,21 @@
     </MudGrid>
     <MudDataGrid T="Bill" Items="@bills" Filterable="true" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
         <Columns>
+            <TemplateColumn Sortable="false" Filterable="false">
+                <HeaderTemplate>
+                    <MudTooltip Text="انتخاب همه قبوض تاییدشده برای چاپ">
+                        <MudCheckBox T="bool" Value="AllPrintableSelected" ValueChanged="OnSelectAllPrintableChanged"
+                                     Disabled="@(PrintableCount == 0)" Color="Color.Primary" />
+                    </MudTooltip>
+                </HeaderTemplate>
+                <CellTemplate>
+                    @if (IsPrintable(context.Item))
+                    {
+                        <MudCheckBox T="bool" Value="@selectedPrintIds.Contains(context.Item.Id)"
+                                     ValueChanged="@((bool value) => SetPrintSelected(context.Item.Id, value))" Color="Color.Primary" />
+                    }
+                </CellTemplate>
+            </TemplateColumn>
             <PropertyColumn Property="x => x.House!.Title" Title="واحد" />
             <PropertyColumn Property="x => x.House!.ResidentName" Title="نام ساکن" />
             <TemplateColumn Title="مبلغ کل(ریال)">
@@ -56,6 +75,15 @@
             <TemplateColumn Title="عملیات" Sortable="false" Filterable="false">
                 <CellTemplate>
                     <MudIconButton title="جزییات" Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowBillDetails(context.Item.Id))" />
+                    @if (IsPrintable(context.Item))
+                    {
+                        <MudIconButton title="چاپ قبض" Icon="@Icons.Material.Filled.Print" Color="Color.Secondary" Size="Size.Small"
+                                       Href="@($"/admin/billing/print?ids={context.Item.Id}")" Target="_blank" />
+                    }
+                    @if (context.Item.Status < BillStatus.Paid)
+                    {
+                        <MudIconButton title="بروزرسانی مبلغ قبض" Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SaveBillAmountAsync(context.Item))" />
+                    }
                     @if (context.Item.Status == BillStatus.Approved)
                     {
                         <text><MudIconButton title="بازارسال پیامک قبض" Icon="@Icons.Material.Filled.Sms" Color="Color.Primary" Size="Size.Small" OnClick="@(() => ResendSms(context.Item.Id))" /></text>
@@ -67,8 +95,7 @@
                     }
                     @if (context.Item.Status == BillStatus.Draft)
                     {
-                        <MudIconButton title="بروزرسانی مبلغ قبض" Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SaveBillAmountAsync(context.Item))" />
-                        <text><MudIconButton title="تایید قبض پیش نویس" Icon="@Icons.Material.Filled.ThumbUp" Color="Color.Success" Size="Size.Small" OnClick="@(() => ApproveBill(context.Item.Id))" /></text>
+                        <text><MudIconButton title="تایید قبض" Icon="@Icons.Material.Filled.ThumbUp" Color="Color.Success" Size="Size.Small" OnClick="@(() => ApproveBill(context.Item.Id))" /></text>
                     }
                 </CellTemplate>
             </TemplateColumn>

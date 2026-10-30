@@ -41,6 +41,32 @@ public partial class Billing
     private int? payingBillId;
     private bool CanPayOnline => PaymentService.IsGatewayConfigured;
     private readonly Dictionary<int, decimal> pendingAmounts = new();
+    private readonly HashSet<int> selectedPrintIds = new();
+
+    private static bool IsPrintable(Bill bill) => bill.Status >= BillStatus.Approved;
+
+    private int PrintableCount => bills.Count(IsPrintable);
+
+    private bool AllPrintableSelected => PrintableCount > 0 && bills.Where(IsPrintable).All(b => selectedPrintIds.Contains(b.Id));
+
+    private static string PrintHref(IEnumerable<int> billIds) => $"/admin/billing/print?ids={string.Join(",", billIds)}";
+
+    private string SelectedPrintHref => PrintHref(bills.Where(b => selectedPrintIds.Contains(b.Id)).Select(b => b.Id));
+
+    private void SetPrintSelected(int billId, bool selected)
+    {
+        if (selected) selectedPrintIds.Add(billId);
+        else selectedPrintIds.Remove(billId);
+    }
+
+    /// <summary>Selects (or clears) every printable (approved or paid) bill of the loaded month.</summary>
+    private void OnSelectAllPrintableChanged(bool selected)
+    {
+        foreach (var bill in bills.Where(IsPrintable))
+        {
+            SetPrintSelected(bill.Id, selected);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -180,6 +206,8 @@ public partial class Billing
     private async Task LoadBillsCoreAsync()
     {
         bills = await BillRepo.GetByMonthYearAsync(year, month);
+        // Keep only selected bills that still exist and are printable (the period or statuses may have changed).
+        selectedPrintIds.IntersectWith(bills.Where(IsPrintable).Select(b => b.Id));
         var usages = await UsageRepo.GetByMonthYearAsync(year, month);
         usageByHouseItem = usages
             .GroupBy(usage => (usage.HouseId, usage.FinancialItemId))

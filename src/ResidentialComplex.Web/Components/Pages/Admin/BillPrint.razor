@@ -1,0 +1,142 @@
+@page "/admin/billing/print"
+@layout ResidentialComplex.Web.Components.Layout.PrintLayout
+@attribute [Authorize(Roles = "Administrator")]
+@using ResidentialComplex.Application.Helpers
+@using ResidentialComplex.Domain.Entities
+@using ResidentialComplex.Domain.Enums
+
+<PageTitle>چاپ صورتحساب</PageTitle>
+<HeadContent>
+    <link href="/css/bill-print.css" rel="stylesheet" />
+</HeadContent>
+
+<div class="bill-print-root">
+    <div class="bill-print-toolbar no-print">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print" OnClick="PrintAsync" Disabled="@(isLoading || sheets.Count == 0)">
+            چاپ (@Fa(sheets.Count.ToString()) قبض)
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" Href="/admin/billing">
+            بازگشت به صورتحساب
+        </MudButton>
+        <MudText Typo="Typo.caption">اندازه کاغذ: A5 عمودی — در پنجره چاپ، حاشیه‌ها را «پیش‌فرض» و مقیاس را ۱۰۰٪ بگذارید.</MudText>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="no-print bill-print-message"><MudProgressCircular Color="Color.Primary" Indeterminate="true" /></div>
+    }
+    else
+    {
+        @if (skippedCount > 0)
+        {
+            <div class="no-print bill-print-message">
+                <MudAlert Severity="Severity.Info" Dense="true">@Fa(skippedCount.ToString()) مورد انتخاب‌شده چاپ نشد (قبض تاییدنشده، نامعتبر یا بیش از @Fa(MaxBills.ToString()) قبض).</MudAlert>
+            </div>
+        }
+
+        @if (sheets.Count == 0)
+        {
+            <div class="no-print bill-print-message">
+                <MudAlert Severity="Severity.Warning" Dense="true">قبض تاییدشده‌ای برای چاپ یافت نشد.</MudAlert>
+            </div>
+        }
+
+        @foreach (var sheet in sheets)
+        {
+            var bill = sheet.Bill;
+            var itemsTotal = bill.BillItems.Sum(x => x.Amount);
+            var rounding = bill.TotalAmount - bill.PreviousDebt - itemsTotal;
+            <section class="bill-sheet">
+                <header class="bill-head">
+                    <div class="bill-complex">@complexName</div>
+                    <div class="bill-title">صورتحساب ماهانه</div>
+                    <div class="bill-period">@Fa(PersianCalendarHelper.FormatYearMonth(bill.Year, bill.Month))</div>
+                </header>
+
+                <table class="bill-meta">
+                    <tbody>
+                        <tr>
+                            <th>واحد</th><td>@Fa(sheet.House?.Title ?? bill.House?.Title ?? "-")</td>
+                            <th>شماره قبض</th><td>@Fa(bill.Id.ToString())</td>
+                        </tr>
+                        <tr>
+                            <th>آپارتمان</th><td>@Fa(sheet.House?.Apartment?.Title ?? "-")</td>
+                            <th>تاریخ صدور</th><td>@Fa(PersianCalendarHelper.ToPersianDateString(bill.ApprovedDate ?? bill.CreatedDate))</td>
+                        </tr>
+                        <tr>
+                            <th>نام ساکن</th><td>@(sheet.House?.ResidentName ?? bill.House?.ResidentName ?? "-")</td>
+                            <th>وضعیت</th>
+                            <td>
+                                @if (bill.Status == BillStatus.Paid)
+                                {
+                                    <span>پرداخت‌شده@(bill.PaidDate.HasValue ? " — " + Fa(PersianCalendarHelper.ToPersianDateString(bill.PaidDate.Value)) : "")</span>
+                                }
+                                else
+                                {
+                                    <span>تاییدشده — در انتظار پرداخت</span>
+                                }
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table class="bill-items">
+                    <thead>
+                        <tr>
+                            <th class="col-row">ردیف</th>
+                            <th>شرح</th>
+                            <th>توضیحات</th>
+                            <th class="col-amount">مبلغ (ریال)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ var row = 0; }
+                        @foreach (var item in bill.BillItems.OrderBy(x => x.Id))
+                        {
+                            row++;
+                            <tr>
+                                <td class="col-row">@Fa(row.ToString())</td>
+                                <td>@(item.FinancialItem?.Title ?? "-")</td>
+                                <td>@GetItemNote(sheet, item)</td>
+                                <td class="col-amount">@Money(item.Amount)</td>
+                            </tr>
+                        }
+                        @if (bill.BillItems.Count == 0)
+                        {
+                            <tr><td colspan="4" class="bill-empty">آیتمی برای این قبض ثبت نشده است.</td></tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3">جمع آیتم‌ها</td>
+                            <td class="col-amount">@Money(itemsTotal)</td>
+                        </tr>
+                        @if (bill.PreviousDebt > 0)
+                        {
+                            <tr>
+                                <td colspan="3">بدهی قبلی</td>
+                                <td class="col-amount">@Money(bill.PreviousDebt)</td>
+                            </tr>
+                        }
+                        @if (rounding != 0)
+                        {
+                            <tr>
+                                <td colspan="3">گرد کردن مبلغ</td>
+                                <td class="col-amount">@Money(rounding)</td>
+                            </tr>
+                        }
+                        <tr class="bill-total">
+                            <td colspan="3">مبلغ قابل پرداخت</td>
+                            <td class="col-amount">@Money(bill.TotalAmount)</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                @if (!string.IsNullOrWhiteSpace(bill.Description))
+                {
+                    <div class="bill-note">@bill.Description</div>
+                }
+            </section>
+        }
+    }
+</div>

@@ -111,6 +111,7 @@ Uses ASP.NET Identity with cookie authentication. Authentication is **username-b
 3. **Administrator reviews** generated draft bills (may edit amounts/descriptions)
 4. **Administrator approves** — bills become immutable, house debt increases
 5. **Administrator records payment** — bill marked paid, house debt decreases
+6. **Administrator can print approved/paid bills** — per-row button or checkbox selection on the Billing page opens `/admin/billing/print` (A5, Persian RTL, one sheet per bill with all its items)
 
 ### Financial Calculation Algorithms
 

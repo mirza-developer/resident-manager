@@ -104,6 +104,7 @@ Docs/                                Zibal-docs.json, payment-docs.md (payment d
 ## 8. Domain quick reference
 
 - Houses are listed by `House.SortOrder` ascending (ties by `Id`) everywhere — repository queries do the ordering, so new house/bill/usage listings must `OrderBy` it too. New houses get `SortOrder` from a "واحد N" title (`House.DefaultSortOrderFromTitle`), else 0; `HouseForm` must copy it when editing.
+- Bill printing: `/admin/billing/print?ids=1,2,3` (`BillPrint`, `PrintLayout`, `wwwroot/css/bill-print.css`) prints Approved/Paid bills only, A5 portrait, RTL, Vazirmatn from `wwwroot/fonts`. Billing links to it with plain `Href` + `Target="_blank"` (no JS `window.open`, which popup blockers stop).
 - Bill: `Draft → Approved → Paid`. Approved bills are immutable; approving raises `House.CurrentDebt`, paying lowers it.
 - Calculation types: `EqualDivision`, `Grouping` (whole-consumption bracket pricing: the total usage picks one tier and the whole usage is
   billed at that tier's rate — not incremental). Bill totals are rounded **up** to the nearest 10,000 Rial.
