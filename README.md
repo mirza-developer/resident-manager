@@ -48,7 +48,7 @@ ResidentialComplex.slnx
 | Entity | Description |
 |--------|-------------|
 | `Apartment` | A block/building in the complex |
-| `House` | A residential unit within an apartment |
+| `House` | A residential unit within an apartment; `SortOrder` is its manual display order (all house lists sort by it, editable on the Houses page) |
 | `FinancialItem` | A billing item with period and calculation type |
 | `FinancialItemGroupPoint` | Point values for groups in Grouping calculation |
 | `MonthlyUsage` | Monthly usage count per house (for Grouping) |
@@ -111,6 +111,7 @@ Uses ASP.NET Identity with cookie authentication. Authentication is **username-b
 3. **Administrator reviews** generated draft bills (may edit amounts/descriptions)
 4. **Administrator approves** — bills become immutable, house debt increases
 5. **Administrator records payment** — bill marked paid, house debt decreases
+6. **Administrator can print approved/paid bills** — per-row button or checkbox selection on the Billing page opens `/admin/billing/print` (A5, Persian RTL, one sheet per bill with all its items)
 
 ### Financial Calculation Algorithms
 

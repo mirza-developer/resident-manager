@@ -15,6 +15,9 @@ public partial class Houses : ComponentBase
     [Inject] private IDialogService DialogService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
+    private const string DefaultResidentPassword = "Aa123456";
+    private const string ResidentRole = "Resident";
+
     private List<House> houses = new();
     private List<House> filteredHouses = new();
     private List<Apartment> apartments = new();
@@ -53,10 +56,78 @@ public partial class Houses : ComponentBase
             : houses.Where(h => h.ApartmentId == filterApartmentId).ToList();
     }
 
+    /// <summary>
+    /// Saves the manual order typed in the grid and reloads the list so it is shown sorted by the new value.
+    /// </summary>
+    private async Task SaveSortOrderAsync(House house, int value)
+    {
+        if (house.SortOrder == value)
+        {
+            return;
+        }
+
+        var previous = house.SortOrder;
+        isLoading = true;
+        try
+        {
+            house.SortOrder = value;
+            await HouseRepo.UpdateAsync(house);
+            houses = await HouseRepo.GetAllAsync();
+            ApplyFilter();
+            Snackbar.Add("ترتیب واحد ذخیره شد.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            house.SortOrder = previous;
+            Snackbar.Add($"خطا در ذخیره ترتیب واحد: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     private void OnApartmentFilterChanged(int value)
     {
         filterApartmentId = value;
         ApplyFilter();
+    }
+
+    private async Task CreateResidentAccountsAsync()
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "ایجاد حساب کاربری",
+            "برای واحدهای بدون حساب کاربری، کاربر با نام کاربری شماره تلفن ساکن و رمز عبور پیش‌فرض ایجاد می‌شود. ادامه می‌دهید؟",
+            yesText: "ادامه",
+            cancelText: "انصراف");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            var result = await HouseRepo.CreateResidentAccountsAsync(DefaultResidentPassword, ResidentRole);
+
+            houses = await HouseRepo.GetAllAsync();
+            ApplyFilter();
+            Snackbar.Add(
+                result.LinkedHouses == 0 && result.CreatedUsers == 0 && result.SkippedHouses == 0
+                    ? "همه واحدها دارای حساب کاربری هستند."
+                    : $"{result.CreatedUsers} کاربر ایجاد و {result.LinkedHouses} واحد متصل شد. ردشده: {result.SkippedHouses}",
+                Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطا در ایجاد حساب کاربری: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private void NavigateToCreate() => Navigation.NavigateTo("/admin/houses/create");

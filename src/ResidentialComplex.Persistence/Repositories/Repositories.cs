@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ResidentialComplex.Application.Interfaces;
 using ResidentialComplex.Domain.Entities;
@@ -34,8 +35,8 @@ public class ApartmentRepository : IApartmentRepository
     private readonly ApplicationDbContext _db;
     public ApartmentRepository(ApplicationDbContext db) => _db = db;
 
-    public async Task<List<Apartment>> GetAllAsync() => await _db.Apartments.Include(a => a.Houses).ToListAsync();
-    public async Task<Apartment?> GetByIdAsync(int id) => await _db.Apartments.Include(a => a.Houses).FirstOrDefaultAsync(a => a.Id == id);
+    public async Task<List<Apartment>> GetAllAsync() => await _db.Apartments.Include(a => a.Houses.OrderBy(h => h.SortOrder).ThenBy(h => h.Id)).ToListAsync();
+    public async Task<Apartment?> GetByIdAsync(int id) => await _db.Apartments.Include(a => a.Houses.OrderBy(h => h.SortOrder).ThenBy(h => h.Id)).FirstOrDefaultAsync(a => a.Id == id);
     public async Task<Apartment> AddAsync(Apartment apartment) { _db.Apartments.Add(apartment); await _db.SaveChangesAsync(); return apartment; }
     public Task UpdateAsync(Apartment apartment) => _db.UpdateEntityAsync(_db.Apartments, apartment.Id, apartment);
     public async Task DeleteAsync(int id) { var e = await _db.Apartments.FindAsync(id); if (e != null) { _db.Apartments.Remove(e); await _db.SaveChangesAsync(); } }
@@ -44,14 +45,84 @@ public class ApartmentRepository : IApartmentRepository
 public class HouseRepository : IHouseRepository
 {
     private readonly ApplicationDbContext _db;
-    public HouseRepository(ApplicationDbContext db) => _db = db;
+    private readonly UserManager<ApplicationUser> _userManager;
+    public HouseRepository(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+    {
+        _db = db;
+        _userManager = userManager;
+    }
 
-    public async Task<List<House>> GetAllAsync() => await _db.Houses.Include(h => h.Apartment).ToListAsync();
-    public async Task<List<House>> GetByApartmentIdAsync(int apartmentId) => await _db.Houses.Where(h => h.ApartmentId == apartmentId).ToListAsync();
-    public async Task<List<House>> GetActiveHousesAsync() => await _db.Houses.Where(h => h.IsActive).ToListAsync();
+    public async Task<ResidentAccountsResult> CreateResidentAccountsAsync(string defaultPassword, string role)
+    {
+        var houses = await _db.Houses.Where(h => h.ApplicationUserId == null).ToListAsync();
+        if (houses.Count == 0)
+            return new ResidentAccountsResult(0, 0, 0);
+
+        var linkedUserIds = (await _db.Houses.Where(h => h.ApplicationUserId != null)
+            .Select(h => h.ApplicationUserId!).ToListAsync()).ToHashSet();
+        int created = 0, linked = 0, skipped = 0;
+
+        foreach (var house in houses)
+        {
+            var userName = NormalizePhone(house.ResidentPhoneNumber);
+            if (userName.Length == 0)
+            {
+                skipped++;
+                continue;
+            }
+
+            var user = await _userManager.FindByNameAsync(userName);
+            if (user == null)
+            {
+                user = new ApplicationUser { UserName = userName, PhoneNumber = userName, FullName = house.ResidentName };
+                var result = await _userManager.CreateAsync(user, defaultPassword);
+                if (!result.Succeeded)
+                {
+                    skipped++;
+                    continue;
+                }
+                await _userManager.AddToRoleAsync(user, role);
+                created++;
+            }
+
+            // A user maps to a single house (GetByUserIdAsync), so a shared phone is linked once.
+            if (linkedUserIds.Add(user.Id))
+            {
+                house.ApplicationUserId = user.Id;
+                house.IsActive = true;
+                linked++;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        return new ResidentAccountsResult(created, linked, skipped);
+    }
+
+    private static string NormalizePhone(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone)) return string.Empty;
+        var chars = phone.Trim().Select(c => c switch
+        {
+            >= '\u06F0' and <= '\u06F9' => (char)('0' + (c - '\u06F0')),
+            >= '\u0660' and <= '\u0669' => (char)('0' + (c - '\u0660')),
+            _ => c
+        }).Where(char.IsDigit);
+        return new string(chars.ToArray());
+    }
+
+    public async Task<List<House>> GetAllAsync() => await _db.Houses.Include(h => h.Apartment).OrderBy(h => h.SortOrder).ThenBy(h => h.Id).ToListAsync();
+    public async Task<List<House>> GetByApartmentIdAsync(int apartmentId) => await _db.Houses.Where(h => h.ApartmentId == apartmentId).OrderBy(h => h.SortOrder).ThenBy(h => h.Id).ToListAsync();
+    public async Task<List<House>> GetActiveHousesAsync() => await _db.Houses.Where(h => h.IsActive).OrderBy(h => h.SortOrder).ThenBy(h => h.Id).ToListAsync();
     public async Task<House?> GetByIdAsync(int id) => await _db.Houses.Include(h => h.Apartment).FirstOrDefaultAsync(h => h.Id == id);
     public async Task<House?> GetByUserIdAsync(string userId) => await _db.Houses.Include(h => h.Apartment).FirstOrDefaultAsync(h => h.ApplicationUserId == userId);
-    public async Task<House> AddAsync(House house) { _db.Houses.Add(house); await _db.SaveChangesAsync(); return house; }
+    public async Task<House> AddAsync(House house)
+    {
+        // 0 means "not chosen": start from the number in a "واحد N" title (0 when the title has none).
+        if (house.SortOrder == 0) house.SortOrder = House.DefaultSortOrderFromTitle(house.Title);
+        _db.Houses.Add(house);
+        await _db.SaveChangesAsync();
+        return house;
+    }
     public async Task UpdateAsync(House house)
     {
         await _db.UpdateEntityAsync(_db.Houses, house.Id, house);
@@ -84,9 +155,16 @@ public class BillRepository : IBillRepository
     private readonly ApplicationDbContext _db;
     public BillRepository(ApplicationDbContext db) => _db = db;
 
-    public async Task<List<Bill>> GetAllAsync() => await _db.Bills.Include(b => b.BillItems).Include(b => b.House).ToListAsync();
+    public async Task<List<Bill>> GetAllAsync() => await _db.Bills.Include(b => b.BillItems).Include(b => b.House).OrderBy(b => b.House.SortOrder).ThenBy(b => b.HouseId).ThenBy(b => b.Id).ToListAsync();
     public async Task<List<Bill>> GetByHouseIdAsync(int houseId) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).ThenInclude(fi => fi.Tiers).Include(b => b.Payments).Where(b => b.HouseId == houseId).OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ToListAsync();
-    public async Task<List<Bill>> GetByMonthYearAsync(int year, int month) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).ThenInclude(fi => fi.Tiers).Include(b => b.House).Where(b => b.Year == year && b.Month == month).ToListAsync();
+    public async Task<List<Bill>> GetByMonthYearAsync(int year, int month) 
+        => await _db.Bills.Include(b => b.BillItems)
+                          .ThenInclude(bi => bi.FinancialItem)
+                          .ThenInclude(fi => fi.Tiers)
+                          .Include(b => b.House)
+                          .Where(b => b.Year == year && b.Month == month)
+                          .OrderBy(b => b.House.SortOrder).ThenBy(b => b.HouseId).ThenBy(b => b.Id)
+                          .ToListAsync();
     public async Task<Bill?> GetByIdAsync(int id) => await _db.Bills.Include(b => b.BillItems).ThenInclude(bi => bi.FinancialItem).ThenInclude(fi => fi.Tiers).Include(b => b.House).Include(b => b.Payments).FirstOrDefaultAsync(b => b.Id == id);
     public async Task<Bill?> GetByHouseMonthYearAsync(int houseId, int year, int month) => await _db.Bills.FirstOrDefaultAsync(b => b.HouseId == houseId && b.Year == year && b.Month == month);
     public async Task<Bill> AddAsync(Bill bill) { _db.Bills.Add(bill); await _db.SaveChangesAsync(); return bill; }
@@ -110,7 +188,7 @@ public class BillRepository : IBillRepository
         if (year.HasValue) query = query.Where(b => b.Year == year.Value);
         if (month.HasValue) query = query.Where(b => b.Month == month.Value);
         if (houseId.HasValue) query = query.Where(b => b.HouseId == houseId.Value);
-        return await query.ToListAsync();
+        return await query.OrderBy(b => b.House.SortOrder).ThenBy(b => b.HouseId).ThenBy(b => b.Id).ToListAsync();
     }
 
     public decimal CalculateEqualDivisionAmount(decimal totalAmount, int houseCount)
@@ -148,6 +226,19 @@ public class BillRepository : IBillRepository
     }
 }
 
+public class AuthorityBillRepository : IAuthorityBillRepository
+{
+    private readonly ApplicationDbContext _db;
+    public AuthorityBillRepository(ApplicationDbContext db) => _db = db;
+
+    public async Task<List<AuthorityBill>> GetAllAsync() => await _db.AuthorityBills.Include(a => a.FinancialItem).OrderByDescending(a => a.Year).ThenByDescending(a => a.Month).ToListAsync();
+    public async Task<AuthorityBill?> GetByIdAsync(int id) => await _db.AuthorityBills.Include(a => a.FinancialItem).FirstOrDefaultAsync(a => a.Id == id);
+    public async Task<AuthorityBill?> GetByItemMonthYearAsync(int financialItemId, int year, int month) => await _db.AuthorityBills.FirstOrDefaultAsync(a => a.FinancialItemId == financialItemId && a.Year == year && a.Month == month);
+    public async Task<AuthorityBill> AddAsync(AuthorityBill bill) { _db.AuthorityBills.Add(bill); await _db.SaveChangesAsync(); return bill; }
+    public Task UpdateAsync(AuthorityBill bill) => _db.UpdateEntityAsync(_db.AuthorityBills, bill.Id, bill);
+    public async Task DeleteAsync(int id) { var e = await _db.AuthorityBills.FindAsync(id); if (e != null) { _db.AuthorityBills.Remove(e); await _db.SaveChangesAsync(); } }
+}
+
 public class PaymentRepository : IPaymentRepository
 {
     private readonly ApplicationDbContext _db;
@@ -164,8 +255,8 @@ public class MonthlyUsageRepository : IMonthlyUsageRepository
     private readonly ApplicationDbContext _db;
     public MonthlyUsageRepository(ApplicationDbContext db) => _db = db;
 
-    public async Task<List<MonthlyUsage>> GetByMonthYearAsync(int year, int month) => await _db.MonthlyUsages.Include(m => m.House).Include(m => m.FinancialItem).Where(m => m.Year == year && m.Month == month).ToListAsync();
-    public async Task<List<MonthlyUsage>> GetByFinancialItemMonthYearAsync(int financialItemId, int year, int month) => await _db.MonthlyUsages.Include(m => m.House).Where(m => m.FinancialItemId == financialItemId && m.Year == year && m.Month == month).ToListAsync();
+    public async Task<List<MonthlyUsage>> GetByMonthYearAsync(int year, int month) => await _db.MonthlyUsages.Include(m => m.House).Include(m => m.FinancialItem).Where(m => m.Year == year && m.Month == month).OrderBy(m => m.House.SortOrder).ThenBy(m => m.HouseId).ThenBy(m => m.Id).ToListAsync();
+    public async Task<List<MonthlyUsage>> GetByFinancialItemMonthYearAsync(int financialItemId, int year, int month) => await _db.MonthlyUsages.Include(m => m.House).Where(m => m.FinancialItemId == financialItemId && m.Year == year && m.Month == month).OrderBy(m => m.House.SortOrder).ThenBy(m => m.HouseId).ThenBy(m => m.Id).ToListAsync();
     public async Task<MonthlyUsage?> GetByHouseItemMonthYearAsync(int houseId, int financialItemId, int year, int month) => await _db.MonthlyUsages.FirstOrDefaultAsync(m => m.HouseId == houseId && m.FinancialItemId == financialItemId && m.Year == year && m.Month == month);
     public async Task<MonthlyUsage?> GetLatestBeforeAsync(int houseId, int financialItemId, int year, int month) =>
         await _db.MonthlyUsages
@@ -174,8 +265,14 @@ public class MonthlyUsageRepository : IMonthlyUsageRepository
             .OrderByDescending(m => m.Year)
             .ThenByDescending(m => m.Month)
             .FirstOrDefaultAsync();
-    public async Task<MonthlyUsage> AddAsync(MonthlyUsage usage) { _db.MonthlyUsages.Add(usage); await _db.SaveChangesAsync(); return usage; }
-    public Task UpdateAsync(MonthlyUsage usage) => _db.UpdateEntityAsync(_db.MonthlyUsages, usage.Id, usage);
+    public async Task<MonthlyUsage> AddAsync(MonthlyUsage usage) { EnsureNonNegative(usage); _db.MonthlyUsages.Add(usage); await _db.SaveChangesAsync(); return usage; }
+    public Task UpdateAsync(MonthlyUsage usage) { EnsureNonNegative(usage); return _db.UpdateEntityAsync(_db.MonthlyUsages, usage.Id, usage); }
+
+    private static void EnsureNonNegative(MonthlyUsage usage)
+    {
+        if (usage.CurrentReading < usage.PreviousReading || usage.UsageCount < 0)
+            throw new InvalidOperationException("کنتور فعلی نمی‌تواند کمتر از کنتور قبلی باشد (مصرف منفی).");
+    }
 }
 
 public class AuditLogRepository : IAuditLogRepository

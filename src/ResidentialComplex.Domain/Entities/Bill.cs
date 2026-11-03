@@ -13,6 +13,12 @@ public class Bill
     public int Year { get; set; }
     public int Month { get; set; }
     public decimal TotalAmount { get; set; }
+
+    /// <summary>
+    /// The house's outstanding debt carried into this bill when it was generated.
+    /// Already included in <see cref="TotalAmount"/>; it is not part of any BillItem.
+    /// </summary>
+    public decimal PreviousDebt { get; set; }
     public string? Description { get; set; }
     public BillStatus Status { get; set; } = BillStatus.Draft;
     public DateTime CreatedDate { get; set; }

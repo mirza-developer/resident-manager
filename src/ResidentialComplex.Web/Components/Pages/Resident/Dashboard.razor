@@ -12,11 +12,6 @@
     </MudButton>
 </MudStack>
 
-@if (isLoading)
-{
-    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
-}
-
 @if (house is null)
 {
     <div><MudAlert Severity="Severity.Warning">واحدی برای حساب کاربری شما تعریف نشده است.</MudAlert></div>
@@ -73,3 +68,10 @@ else
         </MudPaper>
     </div>
 }
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

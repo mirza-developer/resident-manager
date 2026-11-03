@@ -1,0 +1,100 @@
+@page "/admin/send-sms"
+@attribute [Authorize(Roles = "Administrator")]
+@using ResidentialComplex.Domain.Entities
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h4">ارسال پیامک</MudText>
+        <HelpButton PageKey="sendSms" />
+    </MudStack>
+</MudStack>
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+    واحدهای مورد نظر را انتخاب کنید، متن پیامک را بنویسید و ارسال کنید. پیامک به شماره موبایل ثبت‌شده برای مالک/ساکن هر واحد ارسال می‌شود.
+</MudAlert>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <MudTextField T="string" Label="عنوان واحد" Value="filterTitle" ValueChanged="OnTitleFilterChanged"
+                          Immediate="true" DebounceInterval="300" Clearable="true" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudTextField T="string" Label="نام مالک" Value="filterName" ValueChanged="OnNameFilterChanged"
+                          Immediate="true" DebounceInterval="300" Clearable="true" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudTextField T="string" Label="شماره مالک" Value="filterPhone" ValueChanged="OnPhoneFilterChanged"
+                          Immediate="true" DebounceInterval="300" Clearable="true" Variant="Variant.Outlined" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudDataGrid T="House" Items="@filteredHouses" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
+        <Columns>
+            <TemplateColumn Sortable="false" Filterable="false">
+                <HeaderTemplate>
+                    <MudTooltip Text="انتخاب همه نتایج فیلتر">
+                        <MudCheckBox T="bool" Value="allSelected" ValueChanged="OnSelectAllChanged"
+                                     Disabled="@(selectableCount == 0 || isSending)" Color="Color.Primary" />
+                    </MudTooltip>
+                </HeaderTemplate>
+                <CellTemplate>
+                    <MudCheckBox T="bool" Value="@IsSelected(context.Item.Id)"
+                                 ValueChanged="@((bool value) => SetSelected(context.Item.Id, value))"
+                                 Disabled="@(!IsSelectable(context.Item) || isSending)" Color="Color.Primary" />
+                </CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Title" Title="عنوان واحد" />
+            <PropertyColumn Property="x => x.Apartment!.Title" Title="آپارتمان" />
+            <PropertyColumn Property="x => x.ResidentName" Title="نام مالک" />
+            <TemplateColumn Title="شماره مالک">
+                <CellTemplate>
+                    <MudText Typo="Typo.body2" Color="@(IsSelectable(context.Item) ? Color.Default : Color.Error)">
+                        @context.Item.ResidentPhoneNumber
+                        @if (!IsSelectable(context.Item))
+                        {
+                            <span> (نامعتبر)</span>
+                        }
+                    </MudText>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="وضعیت">
+                <CellTemplate>
+                    <MudChip T="string" Color="@(context.Item.IsActive ? Color.Success : Color.Default)" Variant="Variant.Outlined">
+                        @(context.Item.IsActive ? "فعال" : "غیرفعال")
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            <MudText>واحدی برای نمایش وجود ندارد.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudDataGridPager T="House" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>
+
+<MudPaper Class="pa-4">
+    <MudStack Spacing="3">
+        <MudText Typo="Typo.h6">متن پیامک</MudText>
+        <MudTextField T="string" @bind-Value="messageText" Label="متن پیامک" Lines="5" Variant="Variant.Outlined"
+                      Immediate="true" MaxLength="@MaxMessageLength" Counter="@MaxMessageLength" Disabled="isSending" />
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+            <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">تعداد انتخاب‌شده: @selectedIds.Count</MudChip>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send"
+                       OnClick="SendAsync" Disabled="@(!CanSend)">
+                ارسال پیامک
+            </MudButton>
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+<MudOverlay Visible="@(isLoading || isSending)"
+            DarkBackground="true">
+    @(isSending ? "در حال ارسال پیامک" : "درحال بارگذاری")
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

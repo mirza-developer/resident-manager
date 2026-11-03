@@ -55,14 +55,21 @@ public partial class BillingGenerateDialog
     private static string GetCalcLabel(CalculationType calculationType) => calculationType switch
     {
         CalculationType.EqualDivision => "تقسیم مساوی",
-        CalculationType.Grouping => "تعرفه‌ای (بر اساس کل مصرف)",
+        CalculationType.ParentChildTiering => "تعرفه‌ای والد-فرزند",
         _ => string.Empty
     };
+
+    private static bool IsWaterLine(FinancialItem item) =>
+        item.CalculationType == CalculationType.ParentChildTiering;
 
     private string GetBillItemDetail(Bill bill, BillItem billItem)
     {
         var financialItem = billItem.FinancialItem;
-        if (financialItem?.CalculationType != CalculationType.Grouping || !financialItem.Tiers.Any())
+        if (financialItem != null && IsWaterLine(financialItem))
+        {
+            return string.IsNullOrWhiteSpace(billItem.Description) ? "-" : billItem.Description;
+        }
+        if (financialItem?.CalculationType != CalculationType.ParentChildTiering || !financialItem.Tiers.Any())
         {
             return "-";
         }

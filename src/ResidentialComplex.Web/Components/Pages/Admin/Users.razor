@@ -10,12 +10,6 @@
         افزودن کاربر جدید
     </MudButton>
 </MudStack>
-
-@if (isLoading)
-{
-    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
-}
-
 <MudPaper Class="pa-4">
     <MudDataGrid T="UserInfo" Items="@users" Filterable="true" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
         <Columns>
@@ -37,3 +31,10 @@
         </PagerContent>
     </MudDataGrid>
 </MudPaper>
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

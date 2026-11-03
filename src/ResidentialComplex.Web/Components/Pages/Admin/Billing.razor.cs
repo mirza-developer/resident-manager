@@ -40,6 +40,33 @@ public partial class Billing
     private bool isLoading;
     private int? payingBillId;
     private bool CanPayOnline => PaymentService.IsGatewayConfigured;
+    private readonly Dictionary<int, decimal> pendingAmounts = new();
+    private readonly HashSet<int> selectedPrintIds = new();
+
+    private static bool IsPrintable(Bill bill) => bill.Status >= BillStatus.Approved;
+
+    private int PrintableCount => bills.Count(IsPrintable);
+
+    private bool AllPrintableSelected => PrintableCount > 0 && bills.Where(IsPrintable).All(b => selectedPrintIds.Contains(b.Id));
+
+    private static string PrintHref(IEnumerable<int> billIds) => $"/admin/billing/print?ids={string.Join(",", billIds)}";
+
+    private string SelectedPrintHref => PrintHref(bills.Where(b => selectedPrintIds.Contains(b.Id)).Select(b => b.Id));
+
+    private void SetPrintSelected(int billId, bool selected)
+    {
+        if (selected) selectedPrintIds.Add(billId);
+        else selectedPrintIds.Remove(billId);
+    }
+
+    /// <summary>Selects (or clears) every printable (approved or paid) bill of the loaded month.</summary>
+    private void OnSelectAllPrintableChanged(bool selected)
+    {
+        foreach (var bill in bills.Where(IsPrintable))
+        {
+            SetPrintSelected(bill.Id, selected);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,21 +104,13 @@ public partial class Billing
 
     private async Task LoadMissingUsageDataAsync()
     {
-        var groupingItems = activeItems.Where(item => item.CalculationType == CalculationType.Grouping && IsApplicable(item)).ToList();
+        var groupingItems = activeItems.Where(item => item.CalculationType == CalculationType.ParentChildTiering && item.ParentId.HasValue && (item.WaterKind == WaterKind.Hot || item.WaterKind == WaterKind.Cold) && IsApplicable(item)).ToList();
         if (!groupingItems.Any())
         {
             return;
         }
 
-        foreach (var item in groupingItems)
-        {
-            if (!item.Tiers.Any())
-            {
-                Snackbar.Add("ابتدا مقادیر مصرف تمام آیتم‌های گروه‌بندی را ثبت کنید.", Severity.Warning);
-            }
-        }
-
-        var itemsWithTiers = groupingItems.Where(item => item.Tiers.Any()).ToList();
+        var itemsWithTiers = groupingItems;
 
         if (!itemsWithTiers.Any())
         {
@@ -187,6 +206,8 @@ public partial class Billing
     private async Task LoadBillsCoreAsync()
     {
         bills = await BillRepo.GetByMonthYearAsync(year, month);
+        // Keep only selected bills that still exist and are printable (the period or statuses may have changed).
+        selectedPrintIds.IntersectWith(bills.Where(IsPrintable).Select(b => b.Id));
         var usages = await UsageRepo.GetByMonthYearAsync(year, month);
         usageByHouseItem = usages
             .GroupBy(usage => (usage.HouseId, usage.FinancialItemId))
@@ -210,7 +231,7 @@ public partial class Billing
         {
             var (userId, userName) = await GetCurrentUserAsync();
             
-            await BillingService.ApproveBillsAsync(year, month, userId, userName);
+            await BillingService.ApproveBillsOfPeriodAsync(year, month, userId, userName);
             
             await LoadBillsCoreAsync();
             
@@ -235,6 +256,42 @@ public partial class Billing
         {
             isLoading = false;
 
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ApproveBill(int billId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "تأیید قبض",
+            "آیا از تایید پیش نویس این قبض مطمئن هستید؟",
+            yesText: "تأیید",
+            cancelText: "انصراف");
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            var (userId, userName) = await GetCurrentUserAsync();
+
+            await BillingService.ApproveBillByIdAsync(billId, userId, userName);
+
+            await LoadBillsCoreAsync();
+
+            Snackbar.Add("قبض تایید شد.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"خطا در تایید قبض: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -293,9 +350,29 @@ public partial class Billing
         }
     }
 
+
+    private decimal GetPendingAmount(Bill bill)
+        => pendingAmounts.TryGetValue(bill.Id, out var value) ? value : bill.TotalAmount;
+
+    private void SetPendingAmount(Bill bill, decimal value)
+        => pendingAmounts[bill.Id] = value;
+
+    private async Task SaveBillAmountAsync(Bill bill)
+    {
+        if (!pendingAmounts.TryGetValue(bill.Id, out var value))
+        {
+            return;
+        }
+
+        await UpdateBillAmountAsync(bill, value);
+
+        pendingAmounts.Remove(bill.Id);
+    }
+
     private async Task UpdateBillAmountAsync(Bill bill, decimal value)
     {
         isLoading = true;
+
         try
         {
             bill.TotalAmount = value;

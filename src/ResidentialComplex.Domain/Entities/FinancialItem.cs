@@ -26,6 +26,13 @@ public class FinancialItem
 
     public long RowVersion { get; set; }
 
+    /// <summary>Parent item (e.g. water) for child items such as hot, cold and shared consumption.</summary>
+    public int? ParentId { get; set; }
+    public FinancialItem? Parent { get; set; }
+    /// <summary>For Grouping children of a WaterParent: whether this is the hot or the cold meter item.</summary>
+    public WaterKind WaterKind { get; set; }
+    public ICollection<FinancialItem> Children { get; set; } = new List<FinancialItem>();
+
     public ICollection<FinancialItemGroupPoint> GroupPoints { get; set; } = new List<FinancialItemGroupPoint>();
     /// <summary>IBT tiers for Grouping calculation type, ordered by TierOrder.</summary>
     public ICollection<FinancialItemTier> Tiers { get; set; } = new List<FinancialItemTier>();

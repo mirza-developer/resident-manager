@@ -8,11 +8,7 @@
     <MudText Typo="Typo.h4">نتیجه پرداخت آنلاین</MudText>
 </MudStack>
 
-@if (isLoading)
-{
-    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
-}
-else if (attempt is null)
+@if (attempt is null)
 {
     <div>
         <MudAlert Severity="Severity.Warning" Class="mb-4">
@@ -67,3 +63,10 @@ else
         </MudStack>
     </div>
 }
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

@@ -7,15 +7,15 @@
         <MudText Typo="Typo.h4">مدیریت واحدها</MudText>
         <HelpButton PageKey="houses" />
     </MudStack>
-    <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="NavigateToCreate">
-        افزودن واحد جدید
-    </MudButton>
+    <MudStack Row="true" Spacing="2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ManageAccounts" OnClick="CreateResidentAccountsAsync" Disabled="isLoading">
+            ایجاد حساب کاربری ساکنین
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="NavigateToCreate">
+            افزودن واحد جدید
+        </MudButton>
+    </MudStack>
 </MudStack>
-
-@if (isLoading)
-{
-    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
-}
 
 <MudPaper Class="pa-4 mb-4">
     <MudGrid>
@@ -39,6 +39,7 @@
 <MudPaper Class="pa-4">
     <MudDataGrid T="House" Items="@filteredHouses" Filterable="true" SortMode="SortMode.Multiple" RowsPerPage="10" Hover="true" Dense="true">
         <Columns>
+            <PropertyColumn Property="x => x.SortOrder" Title="ترتیب" />
             <PropertyColumn Property="x => x.Title" Title="عنوان" />
             <PropertyColumn Property="x => x.Apartment!.Title" Title="آپارتمان" />
             <PropertyColumn Property="x => x.ResidentName" Title="ساکن" />
@@ -73,3 +74,11 @@
         </PagerContent>
     </MudDataGrid>
 </MudPaper>
+
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

@@ -3,11 +3,7 @@
         <MudText Typo="Typo.h6">ویرایش قالب پیامک — @(template?.Title ?? "")</MudText>
     </TitleContent>
     <DialogContent>
-        @if (isLoading || template is null)
-        {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-        }
-        else
+        @if (template is not null)
         {
             <MudTextField T="string" @bind-Value="template.Title" Label="عنوان قالب" Variant="Variant.Outlined" Class="mb-4" />
 
@@ -42,3 +38,10 @@
         </MudButton>
     </DialogActions>
 </MudDialog>
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

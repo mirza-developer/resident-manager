@@ -28,6 +28,11 @@ public class SmsService : ISmsService
     {
         var client = _httpClientFactory.CreateClient(nameof(SmsService));
 
+        if (!text.EndsWith("لغو11"))
+        {
+            text += "\nلغو11";
+        }
+
         var requestBody = new
         {
             from = _options.ProviderPhone,

@@ -21,4 +21,7 @@ public class FinancialItemTier
 
     /// <summary>Rate charged per unit of usage that falls within this tier.</summary>
     public decimal RatePerUnit { get; set; }
+
+    /// <summary>Flat price per 30-day month for this tier (ParentChildTiering).</summary>
+    public decimal MonthlyPrice { get; set; }
 }

@@ -6,15 +6,6 @@
     <MudText Typo="Typo.h4">گزارشات مالی</MudText>
     <HelpButton PageKey="reports" />
 </MudStack>
-
-@* fixed-height slot so the page does not jump when the loading bar appears *@
-<div style="height: 4px" class="mb-2">
-    @if (isLoading)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-    }
-</div>
-
 <MudPaper Class="pa-3 mb-3">
     <MudGrid Spacing="2" Class="align-center">
         <MudItem xs="6" md="2">
@@ -66,7 +57,7 @@
             @* ============ first view: KPIs + charts ============ *@
             <MudTabPanel Text="نمای کلی" Icon="@Icons.Material.Filled.Dashboard">
                 <MudGrid Class="mb-2">
-                    <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4 mud-theme-primary"><MudText Typo="Typo.subtitle2">کل صورتحساب (ریال)</MudText><MudText Typo="Typo.h5">@report.TotalBilled.ToString("N0")</MudText></MudPaper></MudItem>
+                    <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">کل صورتحساب (ریال)</MudText><MudText Typo="Typo.h5">@report.TotalBilled.ToString("N0")</MudText></MudPaper></MudItem>
                     <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">کل پرداخت (ریال)</MudText><MudText Typo="Typo.h5" Color="Color.Success">@report.TotalPaid.ToString("N0")</MudText></MudPaper></MudItem>
                     <MudItem xs="12" sm="6" md="3"><MudPaper Class="pa-4"><MudText Typo="Typo.subtitle2">بدهی معوق (ریال)</MudText><MudText Typo="Typo.h5" Color="Color.Error">@report.OutstandingDebt.ToString("N0")</MudText></MudPaper></MudItem>
                     <MudItem xs="12" sm="6" md="3">
@@ -200,3 +191,10 @@
         </MudTabs>
     </div>
 }
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

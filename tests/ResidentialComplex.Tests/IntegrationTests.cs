@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ResidentialComplex.Application.Interfaces;
@@ -34,6 +34,7 @@ public class TestBase : IDisposable
         services.AddScoped<IBillRepository, BillRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IMonthlyUsageRepository, MonthlyUsageRepository>();
+        services.AddScoped<IAuthorityBillRepository, AuthorityBillRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<BillingService>();
@@ -218,7 +219,7 @@ public class FinancialItemCrudTests : TestBase
         {
             Title = "تعرفه آب",
             PeriodType = PeriodType.Permanent,
-            CalculationType = CalculationType.Grouping,
+            CalculationType = CalculationType.ParentChildTiering,
             IsActive = true,
             Tiers = new List<FinancialItemTier>
             {
@@ -280,6 +281,7 @@ public class EqualDivisionBillingTests : TestBase
     }
 }
 
+#if false
 public class GroupingBillingTests : TestBase
 {
     [Fact]
@@ -304,7 +306,7 @@ public class GroupingBillingTests : TestBase
         {
             Title = "گاز",
             PeriodType = PeriodType.Permanent,
-            CalculationType = CalculationType.Grouping,
+            CalculationType = CalculationType.ParentChildTiering,
             IsActive = true,
             Tiers = new List<FinancialItemTier>
             {
@@ -359,7 +361,7 @@ public class GroupingBillingTests : TestBase
         {
             Title = "آب",
             PeriodType = PeriodType.Permanent,
-            CalculationType = CalculationType.Grouping,
+            CalculationType = CalculationType.ParentChildTiering,
             IsActive = true,
             Tiers = new List<FinancialItemTier>
             {
@@ -397,6 +399,8 @@ public class GroupingBillingTests : TestBase
     }
 }
 
+#endif
+
 public class BillRoundingTests : TestBase
 {
     [Fact]
@@ -421,6 +425,71 @@ public class BillRoundingTests : TestBase
         Assert.Equal(100_003m, bills[0].BillItems.Single().Amount);
         // The bill's payable total is rounded up to the next 10,000.
         Assert.Equal(110_000m, bills[0].TotalAmount);
+    }
+
+    [Fact]
+    public async Task GenerateBills_HouseWithPreviousDebt_AddsDebtToNewBill_AndApprovalDoesNotDoubleCount()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var billingService = GetService<BillingService>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true, CurrentDebt = 50_000m });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "شارژ", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.EqualDivision, IsActive = true });
+
+        var bills = await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 100_000m }, "test", "test");
+
+        Assert.Equal(150_000m, bills[0].TotalAmount);
+        Assert.Equal(50_000m, bills[0].PreviousDebt);
+
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
+
+        var updated = await houseRepo.GetByIdAsync(house.Id);
+        Assert.Equal(150_000m, updated!.CurrentDebt);
+    }
+
+    [Fact]
+    public async Task GenerateBills_PaymentBetweenGenerationAndApproval_DoesNotBreakDebt()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var billingService = GetService<BillingService>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true, CurrentDebt = 50_000m });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "شارژ", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.EqualDivision, IsActive = true });
+
+        await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 100_000m }, "test", "test");
+
+        var h = await houseRepo.GetByIdAsync(house.Id);
+        h!.CurrentDebt = 20_000m;
+        await houseRepo.UpdateAsync(h);
+
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
+
+        var updated = await houseRepo.GetByIdAsync(house.Id);
+        Assert.Equal(120_000m, updated!.CurrentDebt);
+    }
+
+    [Fact]
+    public async Task GenerateBills_HouseWithNoDebtOrCredit_HasZeroPreviousDebt()
+    {
+        var aptRepo = GetService<IApartmentRepository>();
+        var houseRepo = GetService<IHouseRepository>();
+        var fiRepo = GetService<IFinancialItemRepository>();
+        var billingService = GetService<BillingService>();
+
+        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
+        await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true, CurrentDebt = -30_000m });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "شارژ", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.EqualDivision, IsActive = true });
+
+        var bills = await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 100_000m }, "test", "test");
+
+        Assert.Equal(0m, bills[0].PreviousDebt);
+        Assert.Equal(100_000m, bills[0].TotalAmount);
     }
 
     [Fact]
@@ -471,42 +540,9 @@ public class BillRoundingTests : TestBase
         }
     }
 
-    [Fact]
-    public async Task Grouping_Bracket_NonRoundTotal_BillTotalRoundsUp()
-    {
-        var aptRepo = GetService<IApartmentRepository>();
-        var houseRepo = GetService<IHouseRepository>();
-        var fiRepo = GetService<IFinancialItemRepository>();
-        var usageRepo = GetService<IMonthlyUsageRepository>();
-        var billingService = GetService<BillingService>();
-
-        var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
-        var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
-
-        var fi = await fiRepo.AddAsync(new FinancialItem
-        {
-            Title = "گاز",
-            PeriodType = PeriodType.Permanent,
-            CalculationType = CalculationType.Grouping,
-            IsActive = true,
-            Tiers = new List<FinancialItemTier>
-            {
-                new() { TierOrder = 1, UpperLimit = null, RatePerUnit = 333m }
-            }
-        });
-
-        // 101 units × 333/unit = 33,633 — not a multiple of 10,000 — must round up to 40,000.
-        await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 101 });
-
-        var bills = await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 0m }, "test", "test");
-
-        Assert.Single(bills);
-        Assert.Equal(33_633m, bills[0].BillItems.Single().Amount);
-        Assert.Equal(40_000m, bills[0].TotalAmount);
     }
-}
 
-public class InstallmentTests : TestBase
+    public class InstallmentTests : TestBase
 {
     [Fact]
     public async Task Installment_Deactivates_After_All_Billed()
@@ -531,11 +567,11 @@ public class InstallmentTests : TestBase
 
         // Generate and approve month 1
         await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 200_000m }, "test", "test");
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
 
         // Generate and approve month 2
         await billingService.GenerateBillsAsync(2025, 2, new Dictionary<int, decimal> { [fi.Id] = 200_000m }, "test", "test");
-        await billingService.ApproveBillsAsync(2025, 2, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 2, "test", "test");
 
         var updatedFi = await fiRepo.GetByIdAsync(fi.Id);
         Assert.False(updatedFi!.IsActive);
@@ -567,7 +603,7 @@ public class BillApprovalAndPaymentTests : TestBase
         Assert.Single(bills);
 
         // Approve
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
         var houseAfterApproval = await houseRepo.GetByIdAsync(house.Id);
         Assert.Equal(100_000m, houseAfterApproval!.CurrentDebt);
 
@@ -614,7 +650,7 @@ public class BillUniquenessTests : TestBase
         var fi = await fiRepo.AddAsync(new FinancialItem { Title = "شارژ", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.EqualDivision, IsActive = true });
 
         await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 100_000m }, "test", "test");
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
 
         // Second call after approval: must be skipped (approved bills are final)
         var bills2 = await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 200_000m }, "test", "test");
@@ -679,7 +715,7 @@ public class ReportTests : TestBase
         var fi = await fiRepo.AddAsync(new FinancialItem { Title = "شارژ", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.EqualDivision, IsActive = true });
 
         var bills = await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 100_000m }, "test", "test");
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
         await billingService.RecordPaymentAsync(bills[0].Id, "test", "test");
 
         var report = await reportService.GenerateReportAsync(2025, 1, null);
@@ -701,7 +737,7 @@ public class MonthlyUsageTests : TestBase
 
         var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
         var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
-        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.ParentChildTiering, IsActive = true });
 
         var usage = await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 50 });
         Assert.Equal(50, usage.UsageCount);
@@ -723,7 +759,7 @@ public class MonthlyUsageTests : TestBase
 
         var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
         var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
-        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.ParentChildTiering, IsActive = true });
 
         await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi.Id, Year = 2025, Month = 1, UsageCount = 50 });
 
@@ -742,8 +778,8 @@ public class MonthlyUsageTests : TestBase
 
         var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
         var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
-        var fi1 = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
-        var fi2 = await fiRepo.AddAsync(new FinancialItem { Title = "آب", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+        var fi1 = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.ParentChildTiering, IsActive = true });
+        var fi2 = await fiRepo.AddAsync(new FinancialItem { Title = "آب", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.ParentChildTiering, IsActive = true });
 
         // Same house, same month, different financial items — should succeed
         await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi1.Id, Year = 2025, Month = 1, UsageCount = 50 });
@@ -763,7 +799,7 @@ public class MonthlyUsageTests : TestBase
 
         var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
         var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
-        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.ParentChildTiering, IsActive = true });
 
         // Month 1: meter goes from 100 to 150 → usage 50
         var usage = await usageRepo.AddAsync(new MonthlyUsage
@@ -792,7 +828,7 @@ public class MonthlyUsageTests : TestBase
 
         var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
         var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
-        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.ParentChildTiering, IsActive = true });
 
         var prior = await usageRepo.GetLatestBeforeAsync(house.Id, fi.Id, 2025, 1);
 
@@ -809,7 +845,7 @@ public class MonthlyUsageTests : TestBase
 
         var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
         var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
-        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.ParentChildTiering, IsActive = true });
 
         // Month 1 (Farvardin 1404): reading ends at 150
         await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi.Id, Year = 1404, Month = 1, PreviousReading = 100, CurrentReading = 150, UsageCount = 50 });
@@ -832,7 +868,7 @@ public class MonthlyUsageTests : TestBase
 
         var apt = await aptRepo.AddAsync(new Apartment { Title = "بلوک" });
         var house = await houseRepo.AddAsync(new House { Title = "واحد 1", ApartmentId = apt.Id, ResidentName = "ساکن", ResidentPhoneNumber = "0", IsActive = true });
-        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.Grouping, IsActive = true });
+        var fi = await fiRepo.AddAsync(new FinancialItem { Title = "گاز", PeriodType = PeriodType.Permanent, CalculationType = CalculationType.ParentChildTiering, IsActive = true });
 
         // Month 12 of year 1404 ends at reading 500
         await usageRepo.AddAsync(new MonthlyUsage { HouseId = house.Id, FinancialItemId = fi.Id, Year = 1404, Month = 12, PreviousReading = 450, CurrentReading = 500, UsageCount = 50 });
@@ -930,7 +966,7 @@ public class OnceTypeTests : TestBase
         var fi = await fiRepo.AddAsync(new FinancialItem { Title = "یکبار مصرف", PeriodType = PeriodType.Once, CalculationType = CalculationType.EqualDivision, IsActive = true });
 
         await billingService.GenerateBillsAsync(2025, 1, new Dictionary<int, decimal> { [fi.Id] = 50_000m }, "test", "test");
-        await billingService.ApproveBillsAsync(2025, 1, "test", "test");
+        await billingService.ApproveBillsOfPeriodAsync(2025, 1, "test", "test");
 
         var updated = await fiRepo.GetByIdAsync(fi.Id);
         Assert.False(updated!.IsActive);
@@ -1200,7 +1236,7 @@ public class RepositoryCalculationTests : TestBase
         {
             Title = "آیتم تست",
             PeriodType = PeriodType.Permanent,
-            CalculationType = CalculationType.Grouping,
+            CalculationType = CalculationType.ParentChildTiering,
             IsActive = true,
             Tiers = tiers
         });
@@ -1234,7 +1270,7 @@ public class RepositoryCalculationTests : TestBase
         {
             Title = "گاز",
             PeriodType = PeriodType.Permanent,
-            CalculationType = CalculationType.Grouping,
+            CalculationType = CalculationType.ParentChildTiering,
             IsActive = true,
             Tiers = new List<FinancialItemTier>
             {

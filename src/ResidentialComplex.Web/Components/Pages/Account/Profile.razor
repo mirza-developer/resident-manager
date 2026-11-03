@@ -5,12 +5,6 @@
     <MudText Typo="Typo.h4">حساب کاربری من</MudText>
     <HelpButton PageKey="accountProfile" />
 </MudStack>
-
-@if (isLoading)
-{
-    <div><MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" /></div>
-}
-
 @if (!isLoading && !profileFound)
 {
     <div><MudAlert Severity="Severity.Error">حساب کاربری شما یافت نشد. لطفاً دوباره وارد شوید.</MudAlert></div>
@@ -74,3 +68,10 @@ else
         </MudGrid>
     </div>
 }
+<MudOverlay Visible="isLoading"
+            DarkBackground="true">
+    درحال بارگذاری
+    <MudProgressCircular Color="Color.Primary"
+                         Size="Size.Large"
+                         Indeterminate="true" />
+</MudOverlay>

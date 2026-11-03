@@ -50,9 +50,9 @@
                             </TemplateColumn>
                             <TemplateColumn Title="مبلغ (ریال)">
                                 <CellTemplate>
-                                    @if (context.Item.CalculationType == CalculationType.Grouping)
+                                    @if (context.Item.CalculationType == CalculationType.ParentChildTiering)
                                     {
-                                        <text><MudText Color="Color.Secondary">تعرفه‌ای (محاسبه از مصرف)</MudText></text>
+                                        <text><MudText Color="Color.Secondary">محاسبه از تعرفه</MudText></text>
                                     }
                                     else
                                     {
@@ -76,9 +76,12 @@
                     <TemplateColumn Title="نوع محاسبه">
                         <CellTemplate>@(context.Item.FinancialItem is null ? "-" : GetCalcLabel(context.Item.FinancialItem.CalculationType))</CellTemplate>
                     </TemplateColumn>
-                    <TemplateColumn Title="جزئیات">
-                        <CellTemplate>@GetBillItemDetail(Bill, context.Item)</CellTemplate>
-                    </TemplateColumn>
+                    @if (Mode == BillingDialogMode.Generate)
+                    {
+                        <TemplateColumn Title="جزئیات">
+                            <CellTemplate>@GetBillItemDetail(Bill, context.Item)</CellTemplate>
+                        </TemplateColumn>
+                    }
                     <TemplateColumn Title="مبلغ (ریال)">
                         <CellTemplate>@context.Item.Amount.ToString("N0")</CellTemplate>
                     </TemplateColumn>
@@ -88,6 +91,11 @@
                 </PagerContent>
             </MudDataGrid>
             <MudText Typo="Typo.subtitle1" Class="mt-3">جمع کل: @Bill.BillItems.Sum(x => x.Amount).ToString("N0")</MudText>
+            @if (Bill.PreviousDebt > 0)
+            {
+                <MudText Typo="Typo.subtitle1">بدهی قبلی: @Bill.PreviousDebt.ToString("N0") ریال</MudText>
+            }
+            <MudText Typo="Typo.subtitle1">مبلغ قابل پرداخت: @Bill.TotalAmount.ToString("N0") ریال</MudText>
         }
     </DialogContent>
     <DialogActions>

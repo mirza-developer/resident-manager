@@ -58,6 +58,7 @@ builder.Services.AddScoped<IFinancialItemRepository, FinancialItemRepository>();
 builder.Services.AddScoped<IBillRepository, BillRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IMonthlyUsageRepository, MonthlyUsageRepository>();
+builder.Services.AddScoped<IAuthorityBillRepository, AuthorityBillRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<ISmsTemplateRepository, SmsTemplateRepository>();
 builder.Services.AddScoped<IPaymentAttemptRepository, PaymentAttemptRepository>();

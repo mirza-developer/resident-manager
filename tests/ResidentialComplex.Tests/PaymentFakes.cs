@@ -61,6 +61,7 @@ public class FakeHouses : IHouseRepository
     public Task<House?> GetByIdAsync(int id) { lock (s.Gate) return Task.FromResult(s.Houses.FirstOrDefault(h => h.Id == id)); }
     public Task UpdateAsync(House house) { if (ThrowOnUpdate) throw new InvalidOperationException("db down"); return Task.CompletedTask; }
     public Task<List<House>> GetAllAsync() { lock (s.Gate) return Task.FromResult(s.Houses.ToList()); }
+    public Task<ResidentAccountsResult> CreateResidentAccountsAsync(string defaultPassword, string role) => throw new NotImplementedException();
     public Task<List<House>> GetByApartmentIdAsync(int apartmentId) => throw new NotImplementedException();
     public Task<List<House>> GetActiveHousesAsync() => throw new NotImplementedException();
     public Task<House?> GetByUserIdAsync(string userId) => throw new NotImplementedException();

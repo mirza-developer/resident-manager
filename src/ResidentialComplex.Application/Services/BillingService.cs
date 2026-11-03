@@ -18,7 +18,8 @@ public class BillingService
     private readonly IAuditService _audit;
     private readonly ISmsService _smsService;
     private readonly ISmsTemplateRepository _smsTemplateRepo;
-
+    private readonly IAuthorityBillRepository? _authorityBillRepo;
+    private readonly IMonthlyUsageRepository? _usageRepo;
     /// <summary>
     /// Fallback text used only if no "BillApproved" SmsTemplate row exists in the database
     /// yet (e.g. the AddSmsTemplates migration hasn't run). Identical to the wording that
@@ -34,8 +35,12 @@ public class BillingService
         IPaymentRepository paymentRepo,
         IAuditService audit,
         ISmsService? smsService = null,
-        ISmsTemplateRepository? smsTemplateRepo = null)
+        ISmsTemplateRepository? smsTemplateRepo = null,
+        IAuthorityBillRepository? authorityBillRepo = null,
+        IMonthlyUsageRepository? usageRepo = null)
     {
+        _authorityBillRepo = authorityBillRepo;
+        _usageRepo = usageRepo;
         _billRepo = billRepo;
         _houseRepo = houseRepo;
         _financialItemRepo = financialItemRepo;
@@ -61,22 +66,30 @@ public class BillingService
             throw new InvalidOperationException("واحد فعالی وجود ندارد.");
 
         var activeItems = await _financialItemRepo.GetActiveAsync();
+        var waterParentIds = activeItems
+            .Where(fi => fi.CalculationType == CalculationType.ParentChildTiering && !fi.ParentId.HasValue)
+            .Select(fi => fi.Id)
+            .ToHashSet();
+
+        // Water children (hot, cold, shared) are never billed independently; they are produced
+        // through their WaterParent's authority bill.
         var applicableItems = activeItems
             .Where(fi => finalAmounts.ContainsKey(fi.Id))
             .Where(fi => IsApplicable(fi))
+            .Where(fi => !(fi.ParentId.HasValue && waterParentIds.Contains(fi.ParentId.Value)))
             .ToList();
-
-        // Validate that Grouping items have tiers configured
-        var groupingItemsWithoutTiers = applicableItems
-            .Where(fi => fi.CalculationType == CalculationType.Grouping && !fi.Tiers.Any())
-            .ToList();
-        if (groupingItemsWithoutTiers.Any())
-        {
-            var names = string.Join("، ", groupingItemsWithoutTiers.Select(fi => fi.Title));
-            throw new InvalidOperationException($"آیتم‌های زیر نوع گروه‌بندی (تعرفه‌ای) دارند ولی هیچ تعرفه‌ای برای آن‌ها تعریف نشده است: {names}. لطفاً ابتدا تعرفه‌ها را در صفحه آیتم‌های مالی تنظیم کنید.");
-        }
 
         var bills = new List<Bill>();
+
+        // Old PITS
+        var authorityResults = new Dictionary<int, AuthorityBillResult>();
+        var waterChildren = new Dictionary<int, WaterChildren>();
+        foreach (var fi in applicableItems.Where(fi => fi.CalculationType == CalculationType.ParentChildTiering && !fi.ParentId.HasValue))
+        {
+            var children = ResolveWaterChildren(fi, activeItems);
+            waterChildren[fi.Id] = children;
+            authorityResults[fi.Id] = await CalculateAuthorityBillAsync(fi, children, activeHouses, year, month);
+        }
 
         foreach (var house in activeHouses)
         {
@@ -96,6 +109,7 @@ public class BillingService
                 Month = month,
                 Status = BillStatus.Draft,
                 CreatedDate = DateTime.Now,
+                PreviousDebt = Math.Max(0m, house.CurrentDebt),
                 BillItems = new List<BillItem>()
             };
 
@@ -113,9 +127,29 @@ public class BillingService
                 {
                     houseAmount = _billRepo.CalculateEqualDivisionAmount(finalAmount, activeHouses.Count);
                 }
-                else // Grouping — Whole-Consumption Bracket Pricing (entire usage billed at one tier's rate)
+                else if (fi.CalculationType == CalculationType.ParentChildTiering && !fi.ParentId.HasValue)
                 {
-                    houseAmount = await _billRepo.CalculateBracketAmountAsync(fi, house.Id, year, month);
+                    var result = authorityResults[fi.Id];
+                    var children = waterChildren[fi.Id];
+                    var r = result.Houses.First(x => x.HouseId == house.Id);
+                    var tierText = r.TierOrder.HasValue ? $"پله {r.TierOrder}" : "فرمول خارج از پله";
+                    bill.BillItems.Add(new BillItem
+                    {
+                        FinancialItemId = fi.Id,
+                        Amount = r.MeteredAmount,
+                        Description = $"{fi.Title} (مصرف {r.Use:0.##}، میانگین ماهانه {r.Average:0.##}، {tierText}، قیمت ماهانه {r.MonthPrice:0}، تعرفه+مالیات {r.TariffTotal:0}، ضریب {result.Increaser:0.####})"
+                    });
+                    bill.BillItems.Add(new BillItem
+                    {
+                        FinancialItemId = children.Shared.Id,
+                        Amount = r.SharedAmount,
+                        Description = $"{children.Shared.Title} (مصرف مشترک کل {result.TotalSharedUse:0.##}، مبلغ مشترک کل {result.TotalSharedPrice:0}، سهم هر واحد، گرد کردن {r.RoundPrice:0})"
+                    });
+                    continue;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"آیتم «{fi.Title}» فرزند است و باید از طریق آیتم والد محاسبه شود.");
                 }
 
                 bill.BillItems.Add(new BillItem
@@ -146,11 +180,11 @@ public class BillingService
             bills.Add(bill);
         }
 
-        // Apply rounding adjustments per financial item across all bills (EqualDivision only)
+        // Apply rounding adjustments
         foreach (var fi in applicableItems)
         {
-            if (fi.CalculationType == CalculationType.Grouping)
-                continue; // Bracket-priced items are billed independently per house; no target total to reconcile
+            if (fi.CalculationType == CalculationType.ParentChildTiering)
+                continue;
 
             var finalAmount = finalAmounts[fi.Id];
             if (fi.PeriodType == PeriodType.Installment && fi.TotalAmount.HasValue && fi.NumberOfInstallments.HasValue && fi.NumberOfInstallments.Value > 0)
@@ -178,7 +212,7 @@ public class BillingService
         // only the bill's payable TotalAmount is rounded up.
         foreach (var bill in bills)
         {
-            bill.TotalAmount = RoundUpToNearestTenThousand(bill.BillItems.Sum(bi => bi.Amount));
+            bill.TotalAmount = RoundUpToNearestTenThousand(bill.BillItems.Sum(bi => bi.Amount) + bill.PreviousDebt);
         }
 
         await _billRepo.AddRangeAsync(bills);
@@ -195,7 +229,7 @@ public class BillingService
     /// <summary>
     /// Approves bills for a given month, updating house debts.
     /// </summary>
-    public async Task ApproveBillsAsync(int year, int month, string userId, string userName)
+    public async Task ApproveBillsOfPeriodAsync(int year, int month, string userId, string userName)
     {
         var bills = await _billRepo.GetByMonthYearAsync(year, month);
         var draftBills = bills.Where(b => b.Status == BillStatus.Draft).ToList();
@@ -210,7 +244,8 @@ public class BillingService
             var house = await _houseRepo.GetByIdAsync(bill.HouseId);
             if (house != null)
             {
-                house.CurrentDebt += bill.TotalAmount;
+                // The bill total already includes the previous debt, which is in CurrentDebt
+                house.CurrentDebt += Math.Max(0m, bill.TotalAmount - bill.PreviousDebt);
                 await _houseRepo.UpdateAsync(house);
 
                 // Send SMS notification to household owner (only on Draft→Approved transition)
@@ -246,6 +281,38 @@ public class BillingService
         }
     }
 
+    public async Task ApproveBillByIdAsync(int billId, string userId, string userName)
+    {
+        var bill = await _billRepo.GetByIdAsync(billId);
+        if (bill is null)
+            throw new InvalidOperationException("قبض یافت نشد.");
+
+        if (bill.Status != BillStatus.Draft)
+            throw new InvalidOperationException("قبض باید در وضعیت پیش‌نویس باشد.");
+
+        bill.Status = BillStatus.Approved;
+        bill.ApprovedDate = DateTime.Now;
+        await _billRepo.UpdateAsync(bill);
+        // Update house debt
+        var house = await _houseRepo.GetByIdAsync(bill.HouseId);
+
+        if (house is not null)
+        {
+            // The bill total already includes the previous debt, which is in CurrentDebt
+            house.CurrentDebt += Math.Max(0m, bill.TotalAmount - bill.PreviousDebt);
+            await _houseRepo.UpdateAsync(house);
+            // Send SMS notification to household owner (only on Draft→Approved transition)
+            if (!string.IsNullOrWhiteSpace(house.ResidentPhoneNumber))
+            {
+                var smsText = await BuildBillApprovedSmsTextAsync(house, bill);
+                await _smsService.SendAsync(house.ResidentPhoneNumber, smsText);
+            }
+        }
+
+        await _audit.LogAsync(userId, userName, nameof(Bill), bill.Id.ToString(), "Approved", null,
+            $"TotalAmount={bill.TotalAmount}");
+    }
+
     /// <summary>
     /// Records a payment for a bill.
     /// </summary>
@@ -262,7 +329,7 @@ public class BillingService
             BillId = billId,
             Amount = bill.TotalAmount,
             PaymentDate = DateTime.Now,
-            Description = $"پرداخت قبض {bill.Year}/{bill.Month}"
+            Description = $"پرداخت قبض بصورت حضوری {bill.Year}/{bill.Month}"
         };
 
         await _paymentRepo.AddAsync(payment);
@@ -327,6 +394,48 @@ public class BillingService
         };
 
         return SmsTemplateRenderer.Render(templateText, tokens);
+    }
+
+    private sealed record WaterChildren(FinancialItem Hot, FinancialItem Cold, FinancialItem Shared);
+
+    private static WaterChildren ResolveWaterChildren(FinancialItem parent, IReadOnlyList<FinancialItem> allItems)
+    {
+        var children = allItems.Where(c => c.ParentId == parent.Id).ToList();
+        var hot = children.FirstOrDefault(c => c.CalculationType == CalculationType.ParentChildTiering && c.WaterKind == WaterKind.Hot)
+            ?? throw new InvalidOperationException($"برای آیتم «{parent.Title}» آیتم فرزند آب گرم تعریف نشده است.");
+        var cold = children.FirstOrDefault(c => c.CalculationType == CalculationType.ParentChildTiering && c.WaterKind == WaterKind.Cold)
+            ?? throw new InvalidOperationException($"برای آیتم «{parent.Title}» آیتم فرزند آب سرد تعریف نشده است.");
+        var shared = children.FirstOrDefault(c => c.CalculationType == CalculationType.ParentChildTiering && c.WaterKind == WaterKind.Shared)
+            ?? throw new InvalidOperationException($"برای آیتم «{parent.Title}» آیتم فرزند مصرف مشترک تعریف نشده است.");
+        return new WaterChildren(hot, cold, shared);
+    }
+
+    private async Task<AuthorityBillResult> CalculateAuthorityBillAsync(
+        FinancialItem parent, WaterChildren children, IReadOnlyList<House> houses, int year, int month)
+    {
+        if (_authorityBillRepo == null || _usageRepo == null)
+            throw new InvalidOperationException("سرویس قبض مرجع پیکربندی نشده است.");
+
+        var authorityBill = await _authorityBillRepo.GetByItemMonthYearAsync(parent.Id, year, month)
+            ?? throw new InvalidOperationException($"برای آیتم «{parent.Title}» قبض مرجع این ماه ثبت نشده است.");
+
+        var hotUsages = await _usageRepo.GetByFinancialItemMonthYearAsync(children.Hot.Id, year, month);
+        var coldUsages = await _usageRepo.GetByFinancialItemMonthYearAsync(children.Cold.Id, year, month);
+        var missing = houses
+            .Where(h => hotUsages.All(u => u.HouseId != h.Id) || coldUsages.All(u => u.HouseId != h.Id))
+            .ToList();
+        if (missing.Count > 0)
+            throw new InvalidOperationException(
+                $"مصرف آب گرم یا سرد برای {missing.Count} واحد ثبت نشده است. ابتدا مصرف همه واحدها را ثبت کنید.");
+
+        var houseUsages = houses
+            .Select(h => new WaterHouseUsage(
+                h.Id,
+                hotUsages.First(u => u.HouseId == h.Id).UsageCount,
+                coldUsages.First(u => u.HouseId == h.Id).UsageCount))
+            .ToList();
+
+        return AuthorityBillCalculator.Calculate(authorityBill, parent.Tiers.ToList(), houseUsages);
     }
 
     private static bool IsApplicable(FinancialItem fi)
