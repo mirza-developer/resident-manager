@@ -30,7 +30,6 @@
                     <MudNavLink Href="/admin/billing" Icon="@Icons.Material.Filled.Receipt">صورتحساب</MudNavLink>
                     <MudNavLink Href="/admin/payments" Icon="@Icons.Material.Filled.CreditCard">پرداخت‌های آنلاین</MudNavLink>
                     <MudNavLink Href="/admin/reports" Icon="@Icons.Material.Filled.Assessment">گزارشات</MudNavLink>
-                    <MudNavLink Href="/admin/sms-templates" Icon="@Icons.Material.Filled.Sms">قالب‌های پیامک</MudNavLink>
                     <MudNavLink Href="/admin/send-sms" Icon="@Icons.Material.Filled.Send">ارسال پیامک</MudNavLink>
                     <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">کاربران</MudNavLink>
                 </AuthorizeView>
@@ -72,6 +71,7 @@
     </MudLayout>
 </MudRTLProvider>
 <footer class="app-footer">
-    <MudText Typo="Typo.body2">© @DateTime.Now.Year @Configuration["ComplexName"] - تمامی حقوق محفوظ است.</MudText>
+    <MudText Typo="Typo.body2">© @persianCalendar.GetYear(DateTime.Now) @Configuration["ComplexName"] - تمامی حقوق محفوظ است.</MudText>
+    <a href="https://t.me/ARTav" target="_blank">@@ARTAV</a>
     <a class="app-footer__enamad" referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=8103864&Code=ZRV33MUHPEPjCuWxnFmN4t2XPaMvqphM'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=8103864&Code=ZRV33MUHPEPjCuWxnFmN4t2XPaMvqphM' alt='' style='cursor:pointer' code='ZRV33MUHPEPjCuWxnFmN4t2XPaMvqphM'></a>
 </footer>
