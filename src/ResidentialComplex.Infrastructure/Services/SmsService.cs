@@ -118,6 +118,46 @@ public class SmsService : ISmsService
         }
     }
 
+    public async Task SendPatternic(string toPhone, int patternCode, List<string> parameters)
+    {
+        var client = _httpClientFactory.CreateClient(nameof(SmsService));
+   
+        var requestBody = new
+        {
+            to = toPhone,
+            bodyId = patternCode,
+            args = parameters
+        };
+      
+        try
+        {
+            var httpResponse = await client.PostAsJsonAsync($"api/send/shared/{_options.ApiKey}", requestBody);
+
+            if (!httpResponse.IsSuccessStatusCode)
+            {
+                var body = await httpResponse.Content.ReadAsStringAsync();
+                _logger.LogWarning("SMS provider returned non-success status {StatusCode} for recipient {ToPhone}. Body: {Body}",
+                    (int)httpResponse.StatusCode, toPhone, body);
+                return;
+            }
+
+            var response = await httpResponse.Content.ReadFromJsonAsync<SmsResponse>();
+          
+            if (response is null)
+            {
+                _logger.LogWarning("SMS provider returned an empty or unparseable response for recipient {ToPhone}", toPhone);
+                return;
+            }
+
+            _logger.LogInformation("SMS provider response for recipient {ToPhone}: recId={RecId}, status={Status}",
+                toPhone, response.RecId, response.Status);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while sending SMS to recipient {ToPhone}", toPhone);
+        }
+    }
+
     private sealed class SmsResponse
     {
         [JsonPropertyName("recId")]

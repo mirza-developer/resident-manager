@@ -3,6 +3,7 @@ using ResidentialComplex.Domain.Enums;
 using ResidentialComplex.Application.Interfaces;
 using ResidentialComplex.Application.Helpers;
 using ResidentialComplex.Application.Constants;
+using Microsoft.Extensions.Configuration;
 
 namespace ResidentialComplex.Application.Services;
 
@@ -20,13 +21,12 @@ public class BillingService
     private readonly ISmsTemplateRepository _smsTemplateRepo;
     private readonly IAuthorityBillRepository? _authorityBillRepo;
     private readonly IMonthlyUsageRepository? _usageRepo;
+    private readonly int _billPatternCode;
     /// <summary>
     /// Fallback text used only if no "BillApproved" SmsTemplate row exists in the database
     /// yet (e.g. the AddSmsTemplates migration hasn't run). Identical to the wording that
     /// used to be hardcoded here before templates became admin-configurable.
     /// </summary>
-    private const string DefaultBillApprovedTemplateText =
-        "مالک محترم\nقبض شارژ {PeriodTitle}\nصادر شد.\nمبلغ قابل پرداخت {TotalAmount} تومان\nلطفا در اسرع وقت اقدام به پرداخت نمایید";
 
     public BillingService(
         IBillRepository billRepo,
@@ -37,12 +37,14 @@ public class BillingService
         ISmsService? smsService = null,
         ISmsTemplateRepository? smsTemplateRepo = null,
         IAuthorityBillRepository? authorityBillRepo = null,
-        IMonthlyUsageRepository? usageRepo = null)
+        IMonthlyUsageRepository? usageRepo = null,
+        IConfiguration configuration = null)
     {
         _authorityBillRepo = authorityBillRepo;
         _usageRepo = usageRepo;
         _billRepo = billRepo;
         _houseRepo = houseRepo;
+        _billPatternCode = int.Parse(configuration["Sms:BillPatternCode"] ?? "0");
         _financialItemRepo = financialItemRepo;
         _paymentRepo = paymentRepo;
         _audit = audit;
@@ -251,8 +253,11 @@ public class BillingService
                 // Send SMS notification to household owner (only on Draft→Approved transition)
                 if (!string.IsNullOrWhiteSpace(house.ResidentPhoneNumber))
                 {
-                    var smsText = await BuildBillApprovedSmsTextAsync(house, bill);
-                    await _smsService.SendAsync(house.ResidentPhoneNumber, smsText);
+                    await _smsService.SendPatternic(house.ResidentPhoneNumber, _billPatternCode, new () 
+                    {
+                        house.ResidentName,
+                        bill.TotalAmount.ToString() 
+                    });
                 }
             }
 
@@ -304,8 +309,7 @@ public class BillingService
             // Send SMS notification to household owner (only on Draft→Approved transition)
             if (!string.IsNullOrWhiteSpace(house.ResidentPhoneNumber))
             {
-                var smsText = await BuildBillApprovedSmsTextAsync(house, bill);
-                await _smsService.SendAsync(house.ResidentPhoneNumber, smsText);
+                await _smsService.SendPatternic(house.ResidentPhoneNumber, 123, new List<string> { bill.TotalAmount.ToString() });
             }
         }
 
@@ -366,8 +370,11 @@ public class BillingService
         if (string.IsNullOrWhiteSpace(house.ResidentPhoneNumber))
             throw new InvalidOperationException("شماره موبایل ساکن ثبت نشده است.");
 
-        var smsText = await BuildBillApprovedSmsTextAsync(house, bill);
-        await _smsService.SendAsync(house.ResidentPhoneNumber, smsText);
+        await _smsService.SendPatternic(house.ResidentPhoneNumber, _billPatternCode, new()
+                    {
+                        house.ResidentName,
+                        bill.TotalAmount.ToString()
+                    });
 
         await _audit.LogAsync(userId, userName, nameof(Bill), bill.Id.ToString(), "SmsResent", null,
             $"TotalAmount={bill.TotalAmount}");
@@ -378,23 +385,6 @@ public class BillingService
     /// house/bill's actual data. Falls back to <see cref="DefaultBillApprovedTemplateText"/>
     /// if no template row exists yet (e.g. migration not yet applied).
     /// </summary>
-    private async Task<string> BuildBillApprovedSmsTextAsync(House house, Bill bill)
-    {
-        var template = await _smsTemplateRepo.GetByKeyAsync(SmsTemplateKeys.BillApproved);
-        var templateText = string.IsNullOrWhiteSpace(template?.Text) ? DefaultBillApprovedTemplateText : template.Text;
-
-        var tokens = new Dictionary<string, string>
-        {
-            ["ResidentName"] = house.ResidentName,
-            ["HouseTitle"] = house.Title,
-            ["ApartmentTitle"] = house.Apartment?.Title ?? string.Empty,
-            ["PeriodTitle"] = PersianCalendarHelper.FormatYearMonth(bill.Year, bill.Month),
-            ["TotalAmount"] = bill.TotalAmount.ToString("N0"),
-            ["CurrentDebt"] = house.CurrentDebt.ToString("N0")
-        };
-
-        return SmsTemplateRenderer.Render(templateText, tokens);
-    }
 
     private sealed record WaterChildren(FinancialItem Hot, FinancialItem Cold, FinancialItem Shared);
 
@@ -463,6 +453,7 @@ public class BillingService
 
         public Task SendAsync(string toPhone, string text) => Task.CompletedTask;
         public Task<string?> SendOtpAsync(string toPhone) => Task.FromResult<string?>(null);
+        public Task SendPatternic(string toPhone, int patternCode, List<string> parameters) => Task.CompletedTask;
     }
 
     private sealed class NullSmsTemplateRepository : ISmsTemplateRepository

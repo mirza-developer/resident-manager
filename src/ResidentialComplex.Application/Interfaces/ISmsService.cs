@@ -12,4 +12,5 @@ public interface ISmsService
     /// <param name="text">Message text.</param>
     Task SendAsync(string toPhone, string text);
     Task<string?> SendOtpAsync(string toPhone);
+    Task SendPatternic(string toPhone, int patternCode, List<string> parameters);
 }
